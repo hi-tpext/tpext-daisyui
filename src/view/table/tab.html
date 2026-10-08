@@ -1,0 +1,11 @@
+{notempty name="$options"}
+<!-- 6.321：与表单页签共用 builder-core.css 的凹凸形样式（.tabs > a.tab 规则族），
+     daisyUI4 无 .tab-bordered，也不需要 tabs-bordered 容器修饰。
+     6.324 tabs-tablink：容器底线 + 与下方搜索表单的留距（表单页签下面是内容盒
+     自带顶线，搜索标签下面没有，需要自画一条并被激活页白缘遮断） -->
+<div id="{$id}" class="tabs tabs-tablink {$class}" {$attr|raw}>
+    {volist name="options" id="option"}
+    <a data-val="{$key}" data-tabkey="#tabkey_{$key}" class="tab {if condition="$key eq $active"}tab-active{/if}">{$option|raw}</a>
+    {/volist}
+</div>
+{/notempty}

@@ -1,0 +1,9 @@
+<div class="grid grid-cols-12 gap-4 {$class}" {$attr|raw}>
+    {volist name="$cols" id="col"}
+    <div class="{$col->getSizeClass()} {$col->getClass()}" {$col->getAttrWithStyle()|raw}>
+      {volist name="col->getElms()" id="elm"}
+        {:$elm->render()}
+      {/volist}
+    </div>
+    {/volist}
+</div>

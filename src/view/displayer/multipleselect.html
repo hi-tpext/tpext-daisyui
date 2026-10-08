@@ -1,0 +1,24 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <x-select class="{$class}" cfg="{$cfg|raw}">
+        <select class="select select-bordered w-full multiple-select" name="{$name}[]" id="{$id}" multiple="multiple"
+            data-selected="{$dataSelected}" {$attr|raw}>
+            {if condition="$group"}
+            {volist name="options" id="group"}
+            <optgroup label="{$group.label}">
+                {volist name="group.options" id="option"}
+                <option value="{$key}" {in name="'-'.$key" value="$checked" }selected{/in} {in name="'-'.$key"
+                    value="$disabledOptions" }disabled{/in}>{$option}</option>
+                {/volist}
+            </optgroup>
+            {/volist}
+            {else/}
+            {volist name="options" id="option"}
+            <option value="{$key}" {in name="'-'.$key" value="$checked" }selected{/in} {in name="'-'.$key"
+                value="$disabledOptions" }disabled{/in}>{$option}</option>
+            {/volist}
+            {/if}
+        </select>
+    </x-select>
+    {include file="$helptempl" /}
+</div>

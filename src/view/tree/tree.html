@@ -1,0 +1,44 @@
+{/**
+ * Tree widget — DaisyUI + Alpine.js 渲染模板
+ *
+ * Tree.php 的 render() 传递以下变量:
+ *   class             CSS class 字符串
+ *   attr              其他属性字符串 (HasDom trait)
+ *   id                DOM id
+ *   data              树数据 (已 json_encode)
+ *   expandAll         是否全部展开
+ *   onClick           点击回调脚本 (可能为 null)
+ *   trigger           trigger() 绑定的表单选择器
+ *   expandNodeOnclick 点击父节点自动展开
+ */}
+<div class="tree-div"
+     x-data='treeWidget("{$id}", {$data|raw}, {$expandAll|raw}, "{$trigger}", true)'>
+    <button type="button" class="hide-left" title="{:__blang('builder_action_close_left_tree')}">
+        <i class="mdi mdi-format-horizontal-align-left"></i>
+    </button>
+    <ul id="{$id}" class="tree-widget {$class}" {$attr|raw} x-init="init()">
+        {/** 6.287 平铺渲染（treeWidget.flatNodes）：嵌套树摊平成可见行，每行按深度画
+             表格树同款参考线（tline-guide × N + tline-elbow[elbow-last]），单层 x-for
+             支持任意层级。样式见 builder-core-layout.css 的「左侧树参考线」段。
+             与旧模板的差异：不再有 x-collapse 展开动画（行是兄弟节点，无折叠容器），
+             展开/收起即时生效。
+             6.385 tree 命令式形态：行点击 = 选中 + 有子级时展开/收起（x-data 第 5 参强制 true），
+             展开态由子行可见性表达，形态即 tree 命令输出。
+             6.403 行首恢复三角箭头（用户：箭头和 tree 命令结构不冲突）：父行 ▾（展开）/▸（收起）
+             随 flatNodes 的 open 响应式翻转，叶子空占位保住文字列对齐（6.384 同款）；
+             标记无独立点击处理，冒泡到行走 select() 的选中+展开逻辑 */}
+        <template x-for="item in flatNodes" :key="item.id">
+            <li>
+                <div class="flex items-center gap-1 cursor-pointer hover:bg-base-200 rounded px-1"
+                     :class="{ 'tree-node-selected': selected && selected.id === item.id }"
+                     @click="select(item.node)">
+                    <span class="tline" x-show="item.guides || item.elbow"><template x-for="g in item.guides" :key="g"><i class="tline-guide"></i></template><i class="tline-elbow" :class="{ 'tline-elbow-last': item.last }"></i></span>
+                    <span class="tree-marker" x-text="item.hasChildren ? (item.open ? '▾' : '▸') : ''"></span>
+                    <span x-text="item.text"
+                          :title="item.text"
+                          :class="{ 'font-semibold': selected && selected.id === item.id }"></span>
+                </div>
+            </li>
+        </template>
+    </ul>
+</div>

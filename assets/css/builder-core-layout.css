@@ -1,0 +1,2315 @@
+/*
+   表单底部按钮区 — 水平排列 + 居中
+   bottom-buttons 是 Form::bottomOffset() 创建的中间按钮组 fields 容器
+   里面每个按钮都有 row-submit / row-reset class（每个按钮一个 row wrapper）
+   覆盖 SizeAdapter 默认的 col-span-12（小屏占满整行），改为 flex 水平居中
+   */
+.bottom-buttons.fields-div,
+.bottom-buttons {
+  display: flex !important;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* fields-content 是 Field 基类渲染的内层包裹 div */
+/* grid 12列容器，让子元素 col-span-* 栅格生效 */
+.bottom-buttons .fields-content,
+.bottom-buttons > div {
+  display: grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.75rem;
+  width: 100% !important;
+}
+
+/*
+   按钮的行 wrapper（field-row）与 fields-div 容器清掉多余 padding/margin、
+   去掉内部无用的 12 列 grid。
+   注意：fields-div 必须一并清 GTC——它的 grid-cols-12 会把 fields-content
+   另注意 row-submit/row-button 这些类挂在**按钮元素本身**，
+   把 padding:0 写在它们头上会清掉按钮自身的 daisyUI 内边距、文字贴边
+   */
+.bottom-buttons .field-row,
+.bottom-buttons .fields-div {
+  padding: 0 !important;
+  margin: 0;
+  grid-template-columns: none;
+}
+/* 按钮在各自的栅格半区内水平居中 */
+.bottom-buttons .field-row > div {
+  justify-content: center;
+}
+
+/* 按钮本身也要去掉多余样式 */
+.bottom-buttons .btn {
+  margin: 0;
+}
+
+/*
+   搜索表单按钮区 — 与字段栅格对齐 + 双按钮各占一半、按钮居中（同底部按钮规则）
+   DOM: cell(grid grid-cols-12 ... search-buttons) > label(空,占4/12) + fields-div(内容,占8/12)
+   > row-search_buttons.fields-content(12列 grid,撑满) > 按钮 row ×2(col-span-6 各占一半)
+   > row 内 col-span-12 子 div(模板自带 flex，按钮在其中水平居中)
+   cell 必须保持 grid（不能覆盖成 flex，否则按钮脱离栅格、悬在格子中央）
+   */
+/* fields-content 撑满内容区（fields-div 是 cell 的 8/12 栅格项），恢复 12 列 grid 让 col-span-6 生效 */
+[class*="search-buttons"] .fields-content {
+  display: grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: center;
+  gap: 0.5rem;
+  width: 100% !important;
+  padding-top: 0;
+}
+
+/*
+   两个按钮 row 保持 col-span-6 各占一半；display 改 block：
+   row 自带 grid grid-cols-12 gap-x-4，82px 半区塞 11 个 16px 列距会把内层
+   col-span-12 撑到溢出（176px），按钮中心右偏 47px；block 后内层 flex 子 div
+   自然占满全宽，justify-content:center 即居中
+   */
+[class*="search-buttons"] .fields-content > div {
+  display: block !important;
+  padding: 0 !important;
+  margin: 0;
+}
+
+/* row 内部的 col-span-12 子 div：按钮在其中水平居中；
+   高度固定 28px（与输入框同高），按钮缩到 24px 后外层不跟随塌陷 */
+[class*="search-buttons"] .fields-content > div > div {
+  justify-content: center;
+  height: 1.75rem !important;
+}
+
+/* 按钮本体垂直方向由外层 flex items-center 居中；24px 高度规则见下方 .btn.btn-sm 块 */
+[class*="search-buttons"] .btn {
+  margin: 0;
+}
+
+/*
+   fields-div 对齐：搜索按钮 Row 没有 input/select，但按钮高度和 input 一样，
+   不能有 .4375rem 的 padding-top（来自 :not(:has(input)) 规则），否则按钮比输入框低 7px
+   */
+[class*="search-buttons"] > div:nth-child(2) {
+  padding-top: 0 !important;
+  align-self: start;
+}
+
+/* 按钮 Row 的 label 也要和普通 Row 一样对齐
+   普通 Row label 有 padding-top: .4375rem 补偿 input-sm 高度 */
+[class*="search-buttons"] > label {
+  padding-top: 0.4375rem !important;
+  align-self: start;
+}
+
+/*
+   搜索表单组件缩小 — 比普通表单紧凑一档
+   用作用域选择器只在 .search-form 内生效，不影响主题
+   */
+/* 6.217 label 与输入框间距收窄：field-row 上的 gap-x-4(16px) 对搜索区太松；
+   本规则未分层，压过模板上的 gap-x-4 工具类（@layer utilities） */
+.search-form .field-row {
+  column-gap: 0.5rem; /* 8px */
+}
+.search-form .input,
+.search-form .select {
+  height: 1.75rem !important; /* 28px — 比普通 input (40px) 小 12px */
+  min-height: 1.75rem !important;
+  font-size: 0.8125rem !important; /* 13px — 比默认 14px 小 */
+  line-height: 1.75rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 0.75rem !important; /* 12px — 与主表单一致 */
+  padding-right: 0.625rem !important;
+  border-radius: var(
+    --rounded-btn,
+    0.375rem
+  ); /* 跟随主题，与普通表单一致（2px） */
+}
+
+/*
+   搜索区 TomSelect 适配——注意 .tomselect 是被替换掉的原 select（ts-control 的兄弟节点，
+   不是祖先），旧写法 .tomselect .ts-control 是死选择器，ts-control 一直吃全局 2rem（32px）
+   */
+.search-form .ts-wrapper .ts-control {
+  min-height: calc(
+    1.75rem - 2px
+  ) !important; /* 26px = 28px wrapper 内容区（2px 边框） */
+  /* 左留白由 wrapper 提供（10px padding + 1px 边框），ts-control 不再叠加，
+     否则下拉文字比旁边的输入框深 14px（6.38 组件左侧留白统一） */
+  padding: 0 0.625rem 0 0 !important;
+}
+.search-form .ts-wrapper.multi .ts-control {
+  padding: 0 30px 0 0 !important; /* 右缘 clear(14px)+箭头(2px) 留位，同全局多选规则 */
+}
+.search-form .ts-wrapper.single .ts-control {
+  height: calc(1.75rem - 2px) !important;
+}
+/* 内层 input 同理不叠加左留白，文字起点 = wrapper 10px + 1px 边框 = 输入框一致 */
+.search-form .ts-wrapper .ts-control > input {
+  padding-left: 0 !important;
+}
+.search-form .ts-wrapper .ts-dropdown .option,
+.search-form .ts-wrapper .ts-dropdown .create {
+  font-size: 0.8125rem !important;
+  min-height: 1.75rem !important;
+  line-height: 1.75rem !important;
+  padding: 0 0.625rem !important;
+}
+
+/*
+   6.145 搜索区已选值行高协调：全局 `.ts-control > .item{line-height:2rem}` 是按
+   主表单 32px 盒定的定值，搜索区控件只有 26px（28 wrapper − 2px 边框）——
+   实测行盒 32px 溢出 6px、文字中心偏下 3px（占位 input 正常居中，两者对比明显）。
+   与下方 .table 区（3423）同款 28/32 等比覆盖；行盒 28px 超出的 1px 由
+   overflow:hidden 裁掉，文字无背景不受影响
+   */
+.search-form .ts-wrapper.single .ts-control > .item {
+  line-height: 1.75rem !important;
+}
+.search-form .ts-wrapper.multi .ts-control > .item {
+  height: 1.25rem !important;       /* 22.8 × 28/32 ≈ 20px 药丸 */
+  line-height: 1.125rem !important; /* 18px = 20px − 上下各 1px padding */
+  margin: 0 !important;
+}
+
+/*
+   6.206 左侧树（Alpine widget）选中行底色 → 6.377 改为无背景、文字变主题色
+   （用户：选中后不要背景色了，改变文字颜色；模板自带的 font-semibold 保留）。
+   放在本文件是因为列表页不加载 builder-trees.css（左侧树是 widget 注册不了
+   cssFamily，见 6.143 布局规则同址的注释）
+   */
+.tree-widget .tree-node-selected {
+  color: oklch(var(--p));
+}
+/*
+   6.203 搜索区 SelectTree tag 同步紧凑：主表单 tag 已升到 22.8px（对齐 ts 主表单
+   徽章），不压回会反超搜索区 ts 药丸（20px）2.8px。三连类名对抗
+   builder-trees.css 的 (0,4,0) 主表单规则（本文件在其后加载，(0,5,0) 即赢）
+   */
+.search-form .treeselect-wrap .treeselect-input__tags-element.treeselect-input__tags-element.treeselect-input__tags-element {
+  line-height: 1.125rem !important; /* 18px = 20px 药丸 − 上下各 1px padding */
+}
+.search-form .treeselect-wrap .treeselect-input__tags-name.treeselect-input__tags-name.treeselect-input__tags-name {
+  line-height: 1.125rem !important;
+}
+
+/* 搜索区 SelectTree 面板同缩 28px（全局 .treeselect-input 是 2rem 定值） */
+.search-form .treeselect-wrap .treeselect-input {
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  max-height: 1.75rem;
+}
+
+/* 搜索区日期选择器适配 */
+.search-form .date-input,
+.search-form .flatpickr-input {
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  font-size: 0.8125rem !important;
+}
+
+/* 搜索区日期图标在右侧——28px 高度输入框右侧留白给图标（图标缩小规则在统一规范节） */
+.search-form .date-input,
+.search-form .date-range-cell .input {
+  padding-left: 0.625rem !important;
+  padding-right: 2rem !important;
+}
+
+/* 搜索区 label 也缩小 */
+.search-form label,
+.search-form .full-label {
+  font-size: 0.8125rem !important;
+}
+
+/* 搜索区 checkbox/radio 缩小 */
+.search-form .checkbox,
+.search-form .radio {
+  width: 0.875rem !important; /* 14px */
+  height: 0.875rem !important;
+}
+
+/*
+   6.304 搜索区 choice-group 回到 28px 控件行高：builder-core.css 的
+   .form-wrapper .field-row .choice-group { min-height:2rem } 是给表单 32px 输入框的
+   （6.283 时代注释「搜索表单无 min-height:2rem」已失效——搜索表单现在也在
+   .form-wrapper 内），32px 组对 28px 搜索控件行高出 4px、label(28, 顶对齐)与
+   复选框组底部差 4px（cmscontent/index 属性多选框实测）。
+   (0,4,0) 压过 core 的 (0,3,0)，不依赖文件加载顺序
+   */
+.form-wrapper .search-form .field-row .choice-group {
+  min-height: 1.75rem;
+}
+
+/*
+   6.306 rangeSlider（x-slider）布局与高度
+   范围文字 .rs-output 原是滑块的 flex 兄弟且宽度随数值变化（位数增减、
+   前后缀），会挤占 .range 的 flex-1 宽度 → 拖动时滑块长度抖动。
+   提为独立行置右上方（order:-1 + width:100%），滑块行宽度从此固定；
+   行距用 row-gap 0.25rem（gap-2 的 0.5rem 太空）。
+   滑块高度 24→20px（用户：缩小 slider 高度）。
+   .tpb-rangeslider 双写 (0,2,0) 压过模板 utility .gap-2 (0,1,0)，不依赖加载顺序。
+   daisyUI .badge 自带 justify-content:center，text-align 对 flex 行内无效，
+   须同时给 flex-end 才能靠右。
+   只读/表格列分支（rs-readonly）是服务端静态展示，不经此元素，不受影响
+   */
+.tpb-rangeslider.tpb-rangeslider {
+  flex-wrap: wrap;
+  row-gap: 0.125rem; /* 6.306 用户反馈：文字更贴紧滑条（4px→2px） */
+}
+.tpb-rangeslider .rs-output {
+  order: -1;
+  width: 100%;
+  text-align: right;
+  justify-content: flex-end;
+  border: none; /* 6.306 用户反馈：badge 自带边框去掉 */
+}
+.tpb-rangeslider .range {
+  height: 1.25rem;
+}
+
+/*
+   搜索按钮再缩一档：24px 高（比 input 矮 4px），字号与旁边 13px 的字段一致；
+   按钮外层 wrapper 由上方规则固定 28px，flex items-center 让按钮垂直居中。
+   6.393 作用域加 .search-form：searchButtons() 包裹层路径之外，控制器用
+   btnSubmit()/btnReset() 独立加的按钮不带 search-buttons 类（如 Member），
+   只按包裹层找会漏——落回 daisyUI btn-sm 默认 32px，比旁边 28px 输入框还高。
+   6.393 二次统一：btn-xs→btn-sm 运行时改写已废除，搜索按钮 DOM 恒为
+   原生 btn-xs 档，规则同步兼容 btn-xs/btn-sm 两档（后者留给用户自定义）
+   */
+.search-form .btn.btn-xs,
+.search-form .btn.btn-sm,
+[class*="search-buttons"] .btn.btn-xs,
+[class*="search-buttons"] .btn.btn-sm {
+  height: 1.5rem !important; /* 24px */
+  min-height: 1.5rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0;
+  font-size: 0.8125rem !important; /* 13px — 与搜索字段统一 */
+  min-width: 4rem; /* 64px */
+}
+/*
+   表格内组件缩小 — 行内编辑更紧凑
+   用 .table 作用域选择器，只影响表格内，不影响表单
+   */
+.table .input,
+.table .select,
+.table .tomselect .ts-control {
+  height: 1.75rem !important; /* 28px */
+  min-height: 1.75rem !important;
+  font-size: 0.8125rem !important; /* 13px */
+  line-height: 1.75rem !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  padding-left: 0.5rem !important; /* 8px — 表格内更紧凑 */
+  padding-right: 0.5rem !important;
+}
+
+/* 表格内 TomSelect 适配 */
+.table .tomselect .ts-control {
+  min-height: 1.75rem !important;
+  padding: 0 0.5rem !important;
+}
+.table .tomselect .ts-wrapper.single .ts-control {
+  height: 1.75rem !important;
+}
+
+/*
+   单元格正文跟随控件字号：td 一直继承 body 的 14px，与 28px 紧凑控件同格显得偏大；
+   统一到 13px（.the-field 等无自身字号的文本都从这里继承）。
+   th 已有 table-sm 的 12px、按钮/徽章有自身字号，均不受影响。
+   （21px 文字行高不设在这里——td 会波及垂直多选框等 flex 组的行距，
+   6.226 起改设到纯文字组件的 .the-field 上，见下方规则）
+   */
+.table tbody td {
+  font-size: 0.8125rem; /* 13px */
+}
+
+/*
+   表格内纯文字展示组件（show/raw/matche/load/field/rating 共用 .the-field 模板 span）：
+   文字行高 21px（6.226 用户指定）。checkbox/radio 等控件组不含 .the-field，不受影响。
+   raw 的多行内容另有 31px 专属规则（在后方，同优先级按顺序覆盖）
+   */
+.table td .the-field {
+  line-height: 21px;
+}
+
+/*
+   6.230 表头冻结 / 列冻结
+   PHP：$table->freezeHeader() 给外层容器加 .table-freeze-head；
+   $table->freezeColumn($name, 'left'|'right') 给 th/td 加 .freeze-col-left/.freeze-col-right；
+   任一冻结启用时表格加 .table-freeze-on。
+   sticky 基准是外层 .overflow-x-auto 容器（overflow-x:auto 使其成为滚动容器）：
+   列冻结天然可用；表头冻结需容器限高（max-height 由 tpextbuilder.initTableFreeze 按
+   视口实测写入内联样式），否则容器随内容长高、随页面滚走，sticky 不生效。
+   */
+
+/*
+   6.231 冻结表格改用 separate 边框模式：collapse 的共享边框/半像素外溢不随 sticky
+   单元格走——冻结列间现缝隙、滚动中边框抖动（Firefox 尤甚）、滚到最右时末列从
+   吸附位跳回自然位。separate 下每个单元格自带边框背景，sticky 自包含无此问题。
+   行分隔线 daisyUI 原画在 tr 上（separate 不渲染），等价改画到单元格
+   */
+table.table-freeze-on {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.table-freeze-on :where(thead tr, tbody tr:not(:last-child), tbody tr:first-child:last-child) :where(th, td) {
+  border-bottom: 1px solid var(--fallback-b2, oklch(var(--b2)));
+}
+
+/* 表头冻结：th 需不透明底色（thead 的 bg-base-200 不会被 th 带走，
+   透明 th 吸顶后会透出底下滚动的行）；行分隔线已随单元格，无需再补 */
+.table-freeze-head thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background-color: var(--fallback-b2, oklch(var(--b2)));
+}
+
+/* 6.239 只冻结列、未冻结表头时：冻结 th 同样要是不透明底色，
+   否则横向滚动时行内容从冻结列底下穿过会透视 */
+.table-freeze-on thead .freeze-col-left,
+.table-freeze-on thead .freeze-col-right {
+  background-color: var(--fallback-b2, oklch(var(--b2)));
+}
+
+/* 列冻结：td 吸附后叠在其它单元格之上。th 角落（表头冻结+列冻结同时启用）
+   要压过普通吸顶 th（z 3）与普通冻结单元格（z 2），取 4 */
+.table .freeze-col-left,
+.table .freeze-col-right {
+  position: sticky;
+  z-index: 2;
+}
+.table-freeze-head thead .freeze-col-left,
+.table-freeze-head thead .freeze-col-right {
+  z-index: 4;
+}
+
+/*
+   冻结单元格底色按行状态对齐斑马纹/hover（daisyUI 把这些背景画在 tr 上，
+   sticky td 不能透明否则透出下方滚动行）。6.240：斑马纹；6.335 改用主题 b2
+   （原 #f6f6f6，夜间会画成白底，与普通列同步转深）；
+   hover=primary 色调——与行内非冻结格的半透明混合同色：
+   冻结格必须不透明，用「primary 15% 渐变叠 b1 底色」复现 tr 层
+   p/0.15 叠在 b1 表底的混合结果（hover 盖掉斑马纹，奇偶行同色）
+   */
+.table td.freeze-col-left,
+.table td.freeze-col-right {
+  background-color: var(--fallback-b1, oklch(var(--b1)));
+}
+.table-zebra tbody tr:nth-child(2n) td.freeze-col-left,
+.table-zebra tbody tr:nth-child(2n) td.freeze-col-right {
+  /* 6.362 与斑马纹同步减淡：sticky 格必须不透明，用 color-mix 复现
+     builder-core.css 的 b2/0.5 叠 b1 混合结果 */
+  background-color: color-mix(in oklab, oklch(var(--b2)) 50%, oklch(var(--b1)));
+}
+.table tr.hover:hover td.freeze-col-left,
+.table tr.hover:hover td.freeze-col-right,
+.table-zebra tr.hover:hover:nth-child(2n) td.freeze-col-left,
+.table-zebra tr.hover:hover:nth-child(2n) td.freeze-col-right {
+  background-image: linear-gradient(oklch(var(--p) / 0.15), oklch(var(--p) / 0.15));
+  background-color: var(--fallback-b1, oklch(var(--b1)));
+}
+/*
+   6.241 选中行（勾选加 tr.active）冻结格：p/0.28 叠 b1，与 tr 层混合结果同色
+   （6.240 漏了这组规则——普通列灰/主题色、冻结列白，两半边不一致）。
+   选择器必须带 tbody 凑到 (0,3,3) 与斑马纹静止规则同权重、靠源顺序压过——
+   少一个 tbody 元素就是 (0,3,2) 被 #f6f6f6 反赢；active+hover (0,5,3) 最高
+   */
+.table tbody tr.active td.freeze-col-left,
+.table tbody tr.active td.freeze-col-right {
+  background-image: linear-gradient(oklch(var(--p) / 0.28), oklch(var(--p) / 0.28));
+  background-color: var(--fallback-b1, oklch(var(--b1)));
+}
+.table tbody tr.active.hover:hover td.freeze-col-left,
+.table tbody tr.active.hover:hover td.freeze-col-right {
+  background-image: linear-gradient(oklch(var(--p) / 0.4), oklch(var(--p) / 0.4));
+  background-color: var(--fallback-b1, oklch(var(--b1)));
+}
+
+/* 冻结区边缘阴影：JS 给每行最后一个左冻结/第一个右冻结单元格加 .freeze-edge-* */
+.freeze-edge-r::after,
+.freeze-edge-l::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  width: 6px;
+  pointer-events: none;
+}
+.freeze-edge-r::after {
+  right: -6px;
+  background: linear-gradient(to right, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0));
+}
+.freeze-edge-l::after {
+  left: -6px;
+  background: linear-gradient(to left, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0));
+}
+
+/*
+   6.239 最外侧冻结列贴滚动裁切缘的 1px 透视缝：sticky 单元格是独立合成层，
+   Firefox 分数滚动下层的绘制位置被取整到设备像素，与分数坐标的滚动内容相差
+   ±0.5px——贴裁切缘的第一列左缘会露出下方滚过的内容。
+   用 ::before 从单元格自身取背景（inherit 整个 background——含 6.240 hover 时
+   的 primary 渐变叠底色，随斑马纹/hover 状态自动跟随）向外补 1px 盖住缝隙；
+   只在触及容器边缘的最外侧列生效（:first-child），内侧列间边界由 6.231 的
+   小数宽度对齐处理，加层反而会盖掉边缘渐变。
+   6.242 右侧（.freeze-col-right:last-child）同款遮盖条已删除：它向表格右缘
+   外画 1px，被算进 scrollWidth——表格恰好装得下时制造 1px 假溢出（滚动条常驻
+   却滚不动），滚到底/回退时表格右缘与裁切缘在 1px 区间来回错开（操作列
+   「接触/离开滚动条」抖动）。左侧向外是画进裁切缘内（向左溢出被裁、不产生
+   滚动区），无此副作用。右缘若日后出现同类透视，再用「容器 padding-right:1px
+   + 贴边」等不扩滚动区的手法处理
+   */
+.table td.freeze-col-left:first-child::before,
+.table th.freeze-col-left:first-child::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  width: 1px;
+  pointer-events: none;
+  background: inherit;
+  left: -1px;
+}
+
+/* 表格内日期选择器 */
+.table .date-input,
+.table .flatpickr-input {
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  font-size: 0.8125rem !important;
+}
+
+/* 表格内 tag 输入 */
+.table .input-tags {
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+}
+
+/*
+   表格内 Tags/多选：与其它输入框统一 28px（wrapper 28 = ts-control 26 + 2px 边框）。
+   需同时压掉三处撑高来源：① ts-control 自身 line-height:28px；② 内部自适应 input 高 28px；
+   ③ 徽章上下各 2px 外边距（徽章本体 23px 已在 26px 内）
+   */
+.table .input-tags,
+.table .ts-wrapper.multi {
+  height: auto !important;
+  min-height: 1.75rem !important;
+  max-height: none !important;
+}
+
+.table .input-tags .ts-control,
+.table .ts-wrapper.multi .ts-control {
+  height: auto !important;
+  min-height: calc(1.75rem - 2px) !important;
+  max-height: none !important;
+  line-height: 1 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.table .input-tags .ts-control > div,
+.table .ts-wrapper.multi .ts-control > div {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.table .input-tags .ts-control > input,
+.table .ts-wrapper.multi .ts-control > input {
+  height: 1.25rem !important;
+  line-height: 1 !important;
+}
+
+/*
+   items/表格（控件盒 28px）内「已选 tag」按 28/32 等比缩放（用户要求）：
+   表单（盒 32px）实测——单选 Select 已选值 `.item` 32px、多选 MultipleSelect/Tags 药丸 `.item` 22.8px；
+   28px 盒内目标 = 值 × 28/32 → 单选 28px、多选药丸 ≈ 20px。
+   全局 `.ts-wrapper .ts-control > .item{line-height:2rem}` 与徽章规则都是**定值**，不随盒高变化，
+   所以 28px 上下文里单选撑出盒子、药丸偏大；此处按上下文覆盖其高度。
+   注：`.ts-wrapper.select .ts-control` 有 overflow:hidden，单选 `.item` 超出 26px 控制区的部分会被裁，
+   不影响文字（无背景）垂直居中。
+   */
+.table .ts-wrapper.single .ts-control > .item {
+  line-height: 1.75rem !important;  /* 32 × 28/32 = 28px */
+}
+
+.table .ts-wrapper.multi .ts-control > .item {
+  height: 1.25rem !important;       /* 22.8 × 28/32 ≈ 20px */
+  line-height: 1.125rem !important; /* 18px = 20px − 上下各 1px padding，文字垂直居中 */
+  margin: 0 !important;             /* 表格内药丸无上下外边距（同上一条规则） */
+}
+
+/* 表格内 join 组件 */
+.table .join .input,
+.table .join .btn {
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+}
+
+/*
+   6.152 原来这里覆盖 .table .icon-picker-btn 的 1.75rem/32px 独立按钮尺寸——
+   新布局下图标按钮内嵌进输入框，已并入上方「输入框内嵌图标按钮统一规范」的
+   表格组（18×18 贴右 6px），此处不再需要单独规则
+   */
+
+/* 表格内 num-spinner（number 输入）最小宽度 */
+.table .num-spinner {
+  min-width: 4.5rem !important; /* 72px — 2026-09 由 6rem 收窄（td 121px→97px），仍保留约 5 位数字可见 */
+  width: 100%;
+}
+.table .num-spinner-input {
+  min-width: 0 !important; /* flex 子项允许收缩 */
+  padding-right: 1.75rem !important; /* 28px — 表格内按钮更小，省空间 */
+}
+.table .num-spinner-btns {
+  height: calc(100% - 2px);
+}
+.table .num-spinner-btn {
+  width: 16px !important;
+  font-size: 12px !important;
+}
+
+/* 表格内 td 最小宽度 — 防止列被挤到看不见 */
+.table td[style*="width"] {
+  min-width: 5rem !important; /* 80px — 至少能看见内容 */
+}
+
+/* 表格内 type=number 最小宽度 */
+.table input[type="number"] {
+  min-width: 4rem !important; /* 64px（2026-09 由 5rem 收窄，配合 .num-spinner 让 number 列更窄） */
+}
+
+/*
+   表格内联编辑文本框：width:100% —— 让 td 上的 addStyle('width:80px') 真正生效。
+   原因：<input> 的固有宽度（size 默认 20 ≈ 186px）会作为该列的“最小内容宽度”，
+   table-layout:auto 时列无法收缩到指定的 width，td 的 width:80px 被忽略（变成 211px）。
+   width:100% 与旧库 .form-control 行为一致：百分比宽度在固有尺寸计算中不产生最小宽度，
+   从而让 td 的 width 生效；flex-1 仍会让输入框填满单元格。
+   */
+.table td .text-suffix-wrap > .input,
+.table td .text-suffix-wrap > x-text > .input {
+  width: 100% !important;
+  min-width: 0;
+}
+
+/* 表格内 join 组件最小宽度（price 等）*/
+.table .join {
+  min-width: 5rem;
+} /* 表格内 switchBtn / checkbox / radio */
+.table .checkbox,
+.table .radio {
+  width: 0.875rem !important;
+  height: 0.875rem !important;
+  margin: 0;
+}
+.table .toggle {
+  --tglsize: 1rem; /* 16px */
+  margin: 0;
+}
+
+/* 表格内 th / td 间距：上下 5px、左右 6px（DaisyUI 默认左右 12px 过宽）
+   th 一并设置，否则表头文字与单元格内容左右不对齐 */
+.table.table-sm :where(th, td),
+.table :where(th, td) {
+  padding: 5px 6px !important;
+  vertical-align: middle;
+}
+
+/* 表格内 label gap 缩小 */
+.table label.flex.gap-2 {
+  gap: 0.25rem !important; /* 4px — 从 8px 缩小 */
+}
+.table label.flex.gap-1 {
+  gap: 0.125rem !important; /* 2px — 更紧凑 */
+}
+
+/* switchBtn 外层 x-data div 不要多余空间 */
+.table td > div[x-data] {
+  line-height: 1.25rem !important;
+  margin: 0;
+  padding: 0 !important;
+}
+
+/*
+   6.274 表格内 switchBtn 水平居中：label 是块级 flex + w-fit（6.272 收缩可点区），
+   贴在 td 左缘，td 的 text-center 罩不到块级盒子（6px vs 理想 44px）。
+   switch-group 是 switchbtn.html 的 label 标记类（模板 6.274 加入），
+   auto 内边距在 x-data 容器内水平居中；表单控件列一律贴左，此规则不套用
+   */
+.table .switch-group {
+  margin-inline: auto;
+}
+
+/*
+   表格树形参考线（6.278 HTML 化；6.280 定稿——6.279 的 |-/|--- 横贯线样式被用户否决）
+   —— __text__ 原是 &nbsp;×N + '├─' 文本，行高较高时标记悬在半空。
+   结构：<span class="tline"><i class="tline-guide"></i>N 层<i class="tline-elbow[-last]"></i>标题</span>
+   绘制：祖先层 .tline-guide 只画竖向通贯线（纯缩进参考，不画横线）；
+   自身层 .tline-elbow = ├（竖线贯行高 + 中部短横到文字）；末枝
+   .tline-elbow-last = └（竖线只上半段）；根级无前缀。
+   链路：td(单元格高) → .the-field(flex+100%) → .tline(stretch) → 参考线
+   align-self:stretch —— 无论行高多少参考线始终贴满。
+   非 HTML 场景（导出/表单 select）用同行的 __plain__ 纯文本（──├─ 风格）。
+   */
+.table .the-field:has(> .tline) {
+  display: flex;
+  height: 100%;
+}
+/*
+   6.285 拉伸链补点：raw 行距统一为 21px（.the-field 基准）后，tline 的 stretch
+   最终落到行盒（21px），参考线缩水、6.282 的跨行连接失效。让含 tline 的 raw
+   的外层 col-span wrapper（height:auto !important，6.226）撑满 td 内容区
+   （td 高 42px 定死 → 内容区 31px），参考线恢复满格；文字行距仍 21px 统一。
+   特异性 (0,3,2)+important > wrapper 规则 (0,2,1)+important；仅命中表格里
+   tline raw 的直接 wrapper，无波及
+   */
+.table td > div:has(> .the-field > .tline) {
+  height: 100% !important;
+}
+.tline {
+  display: inline-flex;
+  align-items: center;
+}
+.tline .tline-guide,
+.tline .tline-elbow,
+.tline .tline-spacer {
+  flex: none;
+  align-self: stretch; /* 参考线拉到 .tline 全高 */
+  width: 1.5rem; /* 每层 24px 缩进 */
+  position: relative;
+}
+/* 6.406 spacer：└ 祖先列的空白占位槽——线只画在 guide/elbow 的 ::before 上，
+   spacer 不在其中自然无线，列位（1.5rem）照留 */
+.tline .tline-guide::before,
+.tline .tline-elbow::before {
+  content: '';
+  position: absolute;
+  /*
+   6.282 竖线上下越界画进 td 内边距区（实测行距=5px padding + 1px 行分隔边框 + 5px padding），
+   上越 5px、下越 6px（多 1px 穿过本行 border-bottom），相邻两行竖线首尾对接成通长线；
+   overflow 可见所以能画出去
+   */
+  top: -5px;
+  bottom: -6px;
+  left: 11px;
+  border-left: 1px solid oklch(var(--bc) / 0.15);
+}
+/* 表体首行的竖线不上探（避免戳进表头）、末行不下探 */
+.table tr:first-child .tline-guide::before,
+.table tr:first-child .tline-elbow::before {
+  top: 0;
+}
+.table tr:last-child .tline-guide::before,
+.table tr:last-child .tline-elbow::before {
+  bottom: 0;
+}
+.tline .tline-elbow::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 11px;
+  width: 0.625rem; /* 10px 短横到文字 */
+  border-top: 1px solid oklch(var(--bc) / 0.15);
+}
+.tline .tline-elbow-last::before {
+  bottom: 50%; /* └：竖线只到中部（上探部分保留，用于与上一行相连） */
+}
+
+/*
+   左侧树参考线（6.287 用户：列表页左侧树改成表格树那样——tline 参考线 + ├/└）
+   模板：src/view/tree/tree.html 平铺渲染（treeWidget.flatNodes），行高 = 内容高，
+   行（li）之间无 padding/边框间隔，所以参考线不需要表格那套 6.282 越界补偿，
+   收回行内即可。选择器写成 (0,3,1) 而非 (0,2,1)，免得将来调换段落顺序时
+   被上面 .tline 段的同特异性规则反压。
+   */
+.tree-widget .tline {
+  /* 行是 flex（items-center），参考线容器自带 align-self:stretch →
+     拉到行高；.tline 里只有空的 <i>，不 stretch 则高度为 0、线画不出来 */
+  align-self: stretch;
+}
+.tree-widget .tline .tline-guide::before,
+.tree-widget .tline .tline-elbow::before {
+  top: 0;
+  bottom: 0;
+}
+.tree-widget .tline .tline-elbow-last::before {
+  bottom: 50%; /* 上面 (0,3,1) 会压过 .tline .tline-elbow-last::before，须重述 */
+}
+/*
+   6.293 参考线加深：共享 .tline 用 bc/0.15，在左树浅底上几乎不可见
+   （用户观感：横线看不清/像断开甚至空白）。仅作用左树——表格树的线
+   存在 6.282/6.186 的越界重叠叠深机制，颜色是按重叠调过的，不随动。
+   */
+.tree-widget .tline .tline-guide::before,
+.tree-widget .tline .tline-elbow::before {
+  border-left-color: oklch(var(--bc) / 0.35);
+}
+.tree-widget .tline .tline-elbow::after {
+  border-top-color: oklch(var(--bc) / 0.35);
+}
+
+/*
+   6.403 恢复行首三角箭头（6.385 移除、用户要求恢复——箭头与 tree 命令结构共存）：
+   父行 ▾/▸ 随展开翻转，叶子空占位保住与父行文字列对齐（6.384 同款）。
+   flex:none 由下方 6.290 的 :not(:last-child) 规则覆盖，勿把标题挪出末位
+   */
+.tree-widget .tree-marker {
+  flex: none;
+  width: 16px;
+  font-size: 10px;
+  line-height: 1;
+  text-align: center;
+  color: oklch(var(--bc) / 0.55);
+}
+
+/*
+   6.288 左侧树左边距收紧（用户：树左侧太空了，往左靠一些）
+   左内缩原有三层：ul 内联 padding-left:5px（widget 构造函数 addStyle 遗留）+
+   行 px-1 的 4px + 叶子行的 16px 箭头占位。前两层是旧库遗留的纯空档（6.287 后
+   缩进已全部由 tline 槽位承担），去掉让箭头/参考线贴齐内容左缘（=页面内容边，
+   与搜索表单、表格同一条线）；叶子行的箭头占位当时保留（叶行标题与父级标题对齐），
+   6.294 已从模板移除该占位（用户：├ 横钩与文字之间空白太大）。
+   !important 必须加：5px 来自元素内联 style（HasDom getAttrWithStyle）。
+   */
+.left-tree .tree-widget {
+  padding-left: 0 !important;
+}
+.left-tree .tree-widget > li > div {
+  padding-left: 0;
+}
+
+/*
+   6.290 窄屏树行不换行（用户：屏幕过小时树文字会换行）
+   树列是栅格 1/12：视口 1280 时列宽仅 88px、1024 时 67px，二级标题（缩进槽 24 +
+   gap 4 + 箭头占位 16 + gap 4 = 48px——6.290 当时叶行还有占位，6.294 起叶行为
+   24+4=28px、父行 48px 不变）只剩 19~38px → 折成 2~3 行、行高 42~63px，
+   参考线被拉成一段段长线。规则：行内只有标题参与收缩，缩进槽位/箭头/叶子占位
+   一律 flex:none（免得被压扁），标题超出部分省略号（模板 :title 提供完整文本悬停提示）。
+   容器补 overflow:hidden——极窄 + 深层级时缩进本身就可能超出列宽，裁掉避免画到表格区
+   */
+.tree-widget > li > div > *:not(:last-child) {
+  flex: none;
+}
+.tree-widget > li > div > *:last-child {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.left-tree .tree-widget {
+  /*
+   max-width 必须有：ul 是 float，宽度走 shrink-to-fit，而 flex 行的 min-content
+   含 nowrap 标题的全宽 → 不加约束时 ul 会「撑宽自己」而不是让标题省略号
+   （实测 1024 视口：列宽 67px、ul 撑到 90px 并溢出到栅格间隙）
+   */
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* 表格内垂直排列的 checkbox（multiCheckbox）间距 */
+.table .flex-col.gap-2 > * + *,
+.table .flex-col.gap-1 > * + * {
+  margin-top: 0.125rem !important; /* 2px — 从默认 8px/4px 缩小 */
+}
+.table .vertical-list > * + * {
+  margin-top: 0.125rem !important;
+}
+/*
+   窄列里 flex-wrap 换行成垂直排列的 checkbox 组（match/matches 实际输出 flex flex-wrap gap-3）：
+   只压行距（row-gap 12px → 4px），横向间距不变；:has 限定是 checkbox 组，避免误伤表格里其它 flex 容器
+   */
+@supports selector(:has(*)) {
+  .table .flex.flex-wrap.gap-3:has(> label > input[type="checkbox"]) {
+    row-gap: 0.25rem;
+  }
+}
+
+/*
+   switchBtn td 内的 wrapper div（col-span-12）不要高度。
+   （line-height 曾在此设 1，会截断 td 的 21px 行高继承、把文字压贴——6.226 起
+   删除，让 wrapper 继承 td 行高；控件格高度由控件自身决定，strut 撑不到）
+   */
+.table td [class*="col-span-"] {
+  height: auto !important;
+  line-height: 1 !important;
+}
+
+/* 表格内按钮图标与文字间距：daisyUI .btn 默认 gap .5rem(8px)，按旧版紧凑观感收紧
+   （6.234 收到 4px，6.236 用户要求图标再往文字靠拢 → 2px） */
+.table .btn {
+  gap: 0.125rem;
+}
+
+/*
+   6.238 按钮行容器：Actionbar/MultipleToolbar 的按钮按行数组渲染（Toolbar::rowsHtml），
+   br() 显式开启新行，每行一个 div.action-row，外层 .action-rows 纵向堆叠。
+   行内不自动折行——没有明确调用 br() 就不换行；列宽由最宽行决定
+   */
+.action-rows {
+  display: flex;
+  flex-direction: column;
+  row-gap: 2px;
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-wrap: wrap; /* 顶部工具栏兜底：超长行降级为行内折行；操作列由下方规则禁掉 */
+}
+
+/* 表格内按钮（操作列）。6.236：padding 再压缩——btn-sm 8px→4px、btn-xs 6px→4px */
+.table .btn.btn-sm {
+  height: 1.5rem !important; /* 24px — 表格内按钮更小 */
+  min-height: 1.5rem !important;
+  font-size: 0.75rem !important; /* 12px */
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
+}
+.table .btn.btn-xs,
+.table .btn-xs {
+  height: 1.375rem !important; /* 22px */
+  min-height: 1.375rem !important;
+  font-size: 0.6875rem !important; /* 11px */
+  padding-left: 0.25rem !important;
+  padding-right: 0.25rem !important;
+}
+
+/*
+   6.236 纯图标按钮（ActionBtn label 为空时加 .btn-icon-only）：
+   去掉左右 padding、宽度=高度（btn-sm 24px / btn-xs 22px），收成正方形。
+   必须放在上面尺寸块之后——同特异性 (0,3,0)+!important 靠源顺序压过 btn-xs 的 padding
+   */
+.table .btn.btn-icon-only {
+  width: 1.5rem !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.table .btn.btn-xs.btn-icon-only,
+.table .btn-icon-only.btn-xs {
+  width: 1.375rem !important;
+}
+
+/* 表格内空状态 / no_results 也缩小 */
+.table .no-results {
+  font-size: 0.8125rem !important;
+  padding: 0.375rem 0.5rem !important;
+}
+
+/* Filter 按钮 — 主操作 (btn-info)。6.393 同步加 .search-form 作用域（独立 btnSubmit 路径） */
+.search-form .btn.btn-info.btn-xs,
+.search-form .btn.btn-info.btn-sm,
+[class*="search-buttons"] .btn.btn-info.btn-xs,
+[class*="search-buttons"] .btn.btn-info.btn-sm {
+  box-shadow:
+    0 1px 3px -1px oklch(var(--in) / 0.35),
+    0 1px 2px 0 oklch(var(--in) / 0.15);
+}
+
+/*
+   Reset 等次级按钮：6.395 起无色按钮统一映射为 btn-secondary（主题定义为
+   浅灰底 #e4e7ea + 深灰字，对齐原库 btn-default 观感）——:not(.btn-info)
+   表达「非主操作」，次级阴影对 btn-secondary/btn-neutral 等次级色同样生效
+   */
+.search-form .btn.btn-xs:not(.btn-info),
+.search-form .btn.btn-sm:not(.btn-info),
+[class*="search-buttons"] .btn.btn-xs:not(.btn-info),
+[class*="search-buttons"] .btn.btn-sm:not(.btn-info) {
+  box-shadow: 0 1px 2px 0 oklch(var(--bc) / 0.08);
+}
+
+/*
+   Card 直接子元素 row 间距
+   form-wrapper 内的 row 靠 form grid gap-y-2 (8px) 控制
+   但有些 row（Month/Year/File 上传等）直接是 .card 的 flex 子元素，
+   card 用 flex-direction: column 没有 gap → row 贴在一起
+   给 card 直接子元素的 row 之间补 8px margin-top
+   */
+.card > .field-row + .field-row {
+  margin-top: 0.5rem;
+}
+
+/* 如果 card 直接子元素 row 前面是 div（如 card header/tabs），也要留间距 */
+.card > div + .field-row {
+  margin-top: 0.5rem;
+}
+
+/*
+   纯显示组件（Load/Loads/Matche/Matches/Raw/Show 等）垂直居中
+   这些组件没有 input，只有 span/div 纯文字，默认 inline 导致文字在 row 里偏上
+   给它们的 size div 加 display:flex + align-items:center
+   定位方式：这些组件的 content area 里都有 .the-field 元素（load/matche/raw/show
+   及复用同一模板的 loads/matches），用 :has(> .the-field) 选中 size div。
+   —— 不能用 row-<字段名>-div 定位：字段名是业务数据，演示页写死的 load/matche/raw
+   等字段名一旦换成真实字段（status/remark/...）规则就失效。:has 已在库内使用，
+   目标站点为现代浏览器，兼容性可接受。
+   按钮类组件（button.html 根 div 本身即 flex items-center）无需此规则。
+   */
+@supports selector(:has(*)) {
+  .field-row > div:nth-child(2):has(> .the-field) {
+    display: flex !important;
+    align-items: center !important;
+    min-height: 2rem;
+  }
+}
+
+/* 确保里面的 span 不被拉伸 */
+.field-row .the-field {
+  display: inline !important;
+  min-height: 0;
+}
+
+/*
+   只读/纯显示 row 的 content area 垂直居中对齐 label
+   label 列是 display:flex + align-items:center（全局 label 样式）
+   content area 默认 display:block，inline 文字靠 line-height 排，中心偏上
+   统一给纯显示类 row 的 content area 加 flex 居中
+   注意：不能给所有 row 加，否则会破坏 input/select 等表单控件的内部布局
+   */
+
+/*
+   统一 row 内 label 和 content 的 line-height，确保文字基线对齐
+   DaisyUI/Tailwind 给 label 加了 leading-5 (20px)，
+   但 content 里的 inline span 用浏览器默认 line-height (≈21px)，
+   即使 flex 居中了 div，文字本身还是因为 line-height 不同而视觉错位
+   统一 line-height 为 1.25（= 14px * 1.25 = 17.5px，合理）
+   */
+.field-row > label,
+.field-row > div > label,
+.field-row label.control-label {
+  line-height: 1.25 !important;
+  padding-top: 0 !important; /* 覆盖 Tailwind lg:pt-2 等额外 padding，让 label 纯靠 flex 居中 */
+  padding-bottom: 0;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.field-row > div:nth-child(2),
+.field-row > div:nth-child(2) span,
+.field-row > div:nth-child(2) div,
+.field-row > div:nth-child(2) p,
+.field-row > div:nth-child(2) a {
+  line-height: 1.25 !important;
+}
+
+/* blockStyle 方块选项例外：高度由 flex + padding 撑起，行高压回去会让文字贴边（6.56） */
+.field-row > div:nth-child(2) .checkbox-block > label > span,
+.field-row > div:nth-child(2) .radio-block > label > span {
+  line-height: 1.3 !important;
+}
+
+/*
+   上下布局（label 独占一行，size[0]=12 时 Field 会加 full-label 类）：
+   label 文字靠左对齐——labeltempl 模板硬编码 justify-end 是给左右布局用的
+   （label 贴右侧控件），上下布局时 label 应靠左
+   */
+label.full-label {
+  justify-content: flex-start;
+}
+
+/*
+   小屏（<sm 640px）字段栅格退化为每字段一整行：label col-span-12 独占一行、
+   控件换行到下方（上下布局）。justify-end 是给左右布局"贴右侧控件"用的，
+   堆叠后应靠左。普通表单与搜索表单的 label 同为 col-span-12 sm:col-span-N 模式，
+   */
+@media (max-width: 639.98px) {
+  .form-wrapper .field-row > label,
+  .form-wrapper .field-row > div > label,
+  .form-wrapper .field-row label.control-label {
+    justify-content: flex-start !important;
+    margin-bottom: 0 !important; /* 模板 mb-1 会让 label 悬在半空，去掉后贴紧下方控件 */
+    min-height: 0 !important; /*
+   搜索 1.75rem/表单 2rem 的 min-height 是给左右布局对齐输入框的，
+   堆叠时保留会把文字垂直居中在 28px 盒子里，下方留 5px 空白显得没贴紧
+   */
+  }
+  .form-wrapper .field-row {
+    row-gap: 2px !important; /* label 与控件 2px 呼吸感（同 6.92 普通表单上下布局节奏） */
+  }
+}
+
+/*
+   搜索表单 2 列过渡档：字段栅格现为 4 列(≥md)/3 列(sm)/1 列(<sm)，
+   3→1 跨度大；在 480–640px 让字段格 span 6（每行 2 个），label 竖排样式
+   沿用上面 <sm 的规则。按钮区（search-buttons）保持整行不被压成半宽
+   */
+@media (min-width: 480px) and (max-width: 639.98px) {
+  .search-form > .field-row:not(.search-buttons) {
+    grid-column: span 6;
+  }
+}
+
+/*
+   搜索窄字段（col=1/2）的 md 档放疏：SizeAdapter 对 col=2 输出 md/lg/xl 全部
+   span 2（6 列/行），768–1100px 时每格仅 ~130px，缩窗要到 768px 才突然掉到
+   3 列——切换太晚。按断点逐级放疏：md 3 列/行、lg 4 列/行，xl(≥1280) 才
+   恢复开发者要的 6 列/行；col=3/4 在 md 档本来就 ≤4 列/行，不需要处理
+   */
+@media (min-width: 768px) and (max-width: 1023.98px) {
+  .search-form > [class*="md:col-span-1"],
+  .search-form > [class*="md:col-span-2"] {
+    grid-column: span 4;
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1279.98px) {
+  .search-form > [class*="md:col-span-1"],
+  .search-form > [class*="md:col-span-2"] {
+    grid-column: span 3;
+  }
+}
+
+/*
+   上下布局的行距节奏：label 收紧为文字高度、紧贴下方输入框；
+   字段行自身加大与上方组件的间距（左右布局/搜索栏不受影响）
+   */
+@supports selector(:has(*)) {
+  form:not(.search-form) .field-row:has(> label.full-label) {
+    row-gap: 2px !important; /* label 与下方输入框留一点呼吸感（0 太贴） */
+    margin-top: 0.5rem !important; /* 叠加表单 gap-y-2(8px)，与上方组件拉开约 14px */
+  }
+  form:not(.search-form) .field-row:has(> label.full-label) > label.full-label {
+    align-self: start !important; /* 不再被拉伸到与输入框同高（32px） */
+    height: auto !important;
+    min-height: 0 !important;
+    line-height: 1.4 !important; /* 文字高度 */
+  }
+}
+
+/*
+   Row 间距统一（view/form 通用）
+   原版 Bootstrap 3 .form-group 默认 margin-bottom: 15px，行间距 ≈ 15-18px
+   现在用 grid gap-y-2 = 8px 太紧凑 → 统一提到 12px
+   同时覆盖 form grid gap 和 card flex margin-top
+   */
+
+/* form-wrapper 内 grid 的 gap-y 改成 12px */
+.form-wrapper form.grid {
+  row-gap: 1rem;
+}
+
+/* 搜索表单例外：行间距收紧到 6px（放在通用 form.grid 规则之后，同优先级靠后者胜出） */
+.form-wrapper form.search-form {
+  row-gap: 6px;
+}
+
+/* card 里 flex 子元素 row 间距改成 12px */
+.card > .field-row + .field-row {
+  margin-top: 1rem !important;
+}
+.card > div + .field-row {
+  margin-top: 1rem !important;
+}
+
+/* Submit 按钮 — 主操作，最醒目 */
+.bottom-buttons .btn-bottom-submit.btn-primary {
+  box-shadow:
+    0 2px 6px -1px oklch(var(--p) / 0.4),
+    0 1px 2px 0 oklch(var(--p) / 0.2);
+}
+
+/* Reset 按钮 — 次级操作，柔和 */
+.bottom-buttons .btn-bottom-reset.btn-warning {
+  box-shadow:
+    0 2px 6px -1px oklch(var(--wa) / 0.35),
+    0 1px 2px 0 oklch(var(--wa) / 0.15);
+}
+
+/* Back 按钮 — 最轻量 */
+.bottom-buttons .btn-bottom-back.btn-ghost {
+  box-shadow: 0 1px 2px 0 oklch(var(--bc) / 0.1);
+}
+
+/*
+   Form row 的 label 在顶部对齐（不要被 grid stretch 后文字居中）
+   Tailwind grid 默认 align-items: normal → 子项 align-self: stretch
+   高组件（editor 1000px, upload 等）的 label 会被 stretch 到同样高度，
+   然后 label 内部 flex items-center 把文字居中到 label 中间 —— 看起来 label 居中了
+   原版 Bootstrap 3 form-horizontal:
+   - label 高度由内容决定（float 布局，没 stretch）
+   - padding-top: 7px 只是让文字和 input 居中（input 34px 高）
+   - 对于高 editor，label 自然在顶部附近
+   修复：label 的 align-self 设为 start（不 stretch，高度由内容决定）
+   */
+
+/*
+   label 不 stretch — 高度由内容决定，自然在顶部
+   padding-top: 7px — 和 input 32px 高的文字中心对齐
+   （label span 18px 高，加 7px top offset → label 中心 = 7+9 = 16px = input 中心）
+   原版 Bootstrap 3 .form-horizontal .control-label 就是 padding-top: 7px
+   */
+.field-row > label,
+.field-row > div > label,
+.field-row label.control-label {
+  align-self: start !important;
+  min-height: 2rem;
+}
+
+/**搜索表单 减少label高度为 28px**/
+.search-form .field-row > label,
+.search-form .field-row > div > label,
+.search-form .field-row label.control-label {
+  min-height: 1.75rem;
+}
+
+/* content area（第二列）也不要 stretch — 让它由内部内容决定高度
+   但 flex 居中保持（纯显示组件如 view 模式） */
+.field-row > div:nth-child(2) {
+  align-self: start !important;
+}
+
+/*
+   form 模式：content area 里有大控件（text/select/number/textarea/tomselect）
+   — 不加 padding（靠 input 自身固定 32px 高对齐）
+   排除 checkbox/radio/hidden — 它们是小控件或无控件，和纯显示一样需要 pt=7px
+   switchBtn 里有 input[type=hidden]（不是大控件！），不能命中这条规则
+   */
+@supports selector(:has(*)) {
+  .field-row
+    > div:nth-child(2):has(
+      input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+      select,
+      textarea,
+      .tomselect
+    ) {
+    padding-top: 0 !important;
+  }
+
+  /* checkbox/radio：小控件 (16px)，content area 加 7px 和 field label 对齐 */
+  .field-row
+    > div:nth-child(2):has(input[type="checkbox"], input[type="radio"]) {
+    padding-top: 0.4375rem !important; /* 7px */
+  }
+
+  /*
+   6.283 form 内 inline choice-group 列不要这 7px：6.270 起 .form-wrapper .field-row
+   .choice-group 有 min-height:2rem（32px），单行组内 16px 小控件 flex 自居中于 16px
+   —— 与 32px 输入框中心同轨；再叠列级 7px 会把控件中心压到 23px ≠ label 中心
+   16px，差 7px（用户：单选/多选与行标签垂直没对齐）。
+   仅限 flex-wrap（inline 单行组）：flex-col 纵向组首项贴顶排布（首项中心 8.75px），
+   恰好需要上面那条 7px 才能与 label 中心 16px 对齐，故不命中、回落原规则。
+   特异性 (0,5,1) > 上条 (0,3,1)；搜索表单无 min-height:2rem，不命中本条
+   */
+  .form-wrapper
+    .field-row
+    > div:nth-child(2):has(
+      .choice-group.flex.flex-wrap
+    ) {
+    padding-top: 0 !important;
+  }
+
+  /*
+   switchBtn：DaisyUI .toggle 24px 高，外层 label 用 flex items-center 自动居中，
+   不需要额外 padding-top（总高规范 32px，pt=4px 会撑到 36px）。
+   用 :has(input.toggle) 语义定位，不依赖字段名（row-switchBtn-div 已废）；
+   .toggle.toggle 双写抬高 :has 内特异性，压过上面通用 checkbox 规则的 7px
+   */
+  .field-row > div:nth-child(2):has(input.toggle.toggle) {
+    padding-top: 0 !important;
+  }
+  .field-row label:has(input.toggle) {
+    padding-top: 0 !important;
+    padding-bottom: 0;
+  }
+
+  /*
+   6.118 blockStyle 的 radio/checkbox：可见控件是 ~30px 的按钮块（input 已 display:none），
+   不是 16px 小控件——上面那条「小控件加 7px」的补白会把按钮块整体压低 7px，与相邻的
+   32px 输入框（text/select/date，content 区 pt=0）顶边错位（用户：这两个组件垂直方向没对齐）。
+   `.radio-block.radio-block` 双写抬高 :has 内特异性，压过上面通用 checkbox/radio 的 7px。
+   注：按钮块 30px、输入框 32px，pt=0 后两者顶边对齐（中心仅差 1px，肉眼不可见）。
+   */
+  .field-row > div:nth-child(2):has(.radio-block.radio-block),
+  .field-row > div:nth-child(2):has(.checkbox-block.checkbox-block) {
+    padding-top: 0 !important;
+  }
+}
+
+/* === radio/checkbox 尺寸修正 === */
+/* DaisyUI 默认 1.5rem (24px) 太大，旧库浏览器原生约 16px */
+.radio:not(.tab),
+.checkbox:not(.tab) {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+/*
+   === EasyMDE 工具栏按钮类名冲突：已由官方选项解决，无需 CSS 覆盖 ===
+   坑：EasyMDE 的 createToolbar() 会把工具栏项的 name 直接作为 class 加到 button 上，
+   于是出现 <button class="table">、class="link"、class="italic"，
+   正好撞上 daisyUI 的全局类：
+   .table  → width:100% + display:table → 图标被撑满整行（"table 图标独占一行"）
+   .link   → text-decoration-line:underline
+   .italic → font-style:italic（图标字形被拉斜）
+   解决：MDEditor 传官方选项 toolbarButtonClassPrefix: 'mde'，
+   按钮变成 <button class="mde-table">，从根上避开重名。
+   注意图标本身是 <i class="mdi mdi-table">（带 mdi- 前缀），不会被 .table 命中，
+   真正被污染的是外层 button。
+   */
+
+/*
+   === Markdown 预览排版（MDReader / MDEditor 只读态） ===
+   坑：Tailwind preflight 把 h1~h6 / ul / ol / blockquote / table 的浏览器默认样式
+   全部清零，marked 渲染出来的标签若不补样式，观感就是"没排版的纯文本"——
+   这是 MDReader 内容显示不正常的两层原因之一（另一层是容器 id 对不上）。
+   这里只写最小可用排版，颜色走 daisyUI 主题变量，13 个主题自动适配。
+   */
+.md-body {
+  line-height: 1.75;
+  word-wrap: break-word;
+  padding: 1rem; /* 内容不贴边。不能用 p-3——该 Tailwind 类未编译进 builder.css */
+  min-height: 6rem; /* 空/短内容也保留一块内容区高度 */
+}
+.md-body > :first-child { margin-top: 0; }
+.md-body > :last-child { margin-bottom: 0; }
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4,
+.md-body h5,
+.md-body h6 {
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 1.25rem 0 .5rem;
+}
+.md-body h1 { font-size: 1.75rem; }
+.md-body h2 { font-size: 1.5rem; }
+.md-body h3 { font-size: 1.25rem; }
+.md-body h4 { font-size: 1.125rem; }
+.md-body h5 { font-size: 1rem; }
+.md-body h6 { font-size: .875rem; color: oklch(var(--bc) / .7); }
+.md-body p { margin: .5rem 0; }
+.md-body ul { list-style: disc; padding-left: 1.5rem; margin: .5rem 0; }
+.md-body ol { list-style: decimal; padding-left: 1.5rem; margin: .5rem 0; }
+.md-body ul ul { list-style: circle; }
+.md-body ol ol { list-style: lower-alpha; }
+.md-body li { margin: .125rem 0; }
+.md-body li > ul,
+.md-body li > ol { margin: .125rem 0; }
+.md-body a { color: oklch(var(--p)); text-decoration: underline; }
+.md-body blockquote {
+  margin: .75rem 0;
+  padding: .25rem .75rem;
+  border-left: 3px solid oklch(var(--bc) / .2);
+  color: oklch(var(--bc) / .7);
+}
+.md-body code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .875em;
+  background: oklch(var(--bc) / .08);
+  padding: .125rem .25rem;
+  border-radius: .25rem;
+}
+.md-body pre {
+  margin: .75rem 0;
+  padding: .75rem;
+  background: oklch(var(--bc) / .06);
+  border-radius: .25rem; /* 6.363 圆角归一 8px→4px，与 inline code 一致 */
+  overflow-x: auto;
+}
+.md-body pre code { background: none; padding: 0; }
+.md-body table { width: 100%; border-collapse: collapse; margin: .75rem 0; }
+.md-body th,
+.md-body td {
+  border: 1px solid oklch(var(--bc) / .15);
+  padding: .375rem .5rem;
+}
+.md-body th { background: oklch(var(--bc) / .05); font-weight: 600; }
+.md-body img { max-width: 100%; height: auto; }
+.md-body hr {
+  border: 0;
+  border-top: 1px solid oklch(var(--bc) / .15);
+  margin: 1rem 0;
+}
+
+/*
+   * DaisyUI dropdown-content 默认隐藏/显示
+   *  —— 覆盖 DaisyUI 默认的 visibility:hidden 方案（避免撑 scrollHeight）
+   *  —— 统一 .menu 的 display:flex，隐藏时用 display:none
+   *  —— bridge 伪元素：填充按钮和面板间 gap，防止 hover 中断
+   *  —— margin: dropdown-content 紧贴按钮，无 gap
+   *  ============================================================
+   */
+
+/* 默认隐藏：display:none + visibility:hidden + opacity:0
+   优先级高于 DaisyUI 默认 visibility:hidden 和 .menu 的 display:flex */
+.dropdown > .dropdown-content {
+    display: none !important;
+    visibility: hidden;
+    opacity: 0;
+    transform: scale(0.95);
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* 6.116 面板圆角与触发按钮统一：daisyUI 面板默认 --rounded-box(4px)，
+   而触发 .btn=--rounded-btn(2px)，不一致 → 面板改用 --rounded-btn */
+.dropdown > .dropdown-content,
+.dropdown-content {
+    border-radius: var(--rounded-btn, 0.5rem);
+}
+
+/*
+   6.348 全局浮层光影层级（dropdown / modal）—— 承接 6.347 卡片「静止高度」
+   daisyUI corporate 的 dropdown-content 默认阴影极弱（0 1px 3px/.1）且无边框，
+   菜单展开后与页面几乎不分层；modal-box 同理偏平。这里按「卡面 < 浮层 < 模态」
+   分三档悬浮高度，纯黑半透明取色（夜间主题浅文字色不会画成发光）。
+   builder-core-layout.css 在 builder.css(daisyUI) 之后加载，同特异度即取胜，
+   无需 !important。
+   */
+
+/*
+   6.411 液态玻璃（Liquid Glass）材质层 —— 无动画，纯静态光影
+   在 6.347/6.348 三档悬浮体系上叠加玻璃质感：半透明底 + backdrop-filter
+   模糊取景 + 顶缘内高光。三档只差透明度/模糊半径，高光与阴影语言统一。
+   令牌集中在 :root，@supports 不支持 backdrop-filter 时（老浏览器）整组
+   退化到近实心底，视觉只是少了「透」，不掉可读性。透明底用 oklch(var(--b1)/α)，
+   亮暗主题自动跟随；顶缘高光固定用白（两种主题下都是玻璃该有的反光）。
+   */
+:root {
+  /* 6.424 增强：用户反馈效果不明显。玻璃感来自「背后有东西可透」——色斑层
+     （body::before）同步加大浓度才是主杠杆；α 再往下降文字对比度开始吃紧，
+     blur/sat/高光补足质感。仍无动画。 */
+  --glass-blur: 22px;
+  --glass-sat: 1.8;
+  --glass-card-bg: oklch(var(--b1) / 0.52);
+  --glass-float-bg: oklch(var(--b1) / 0.60);
+  --glass-modal-bg: oklch(var(--b1) / 0.70);
+  --glass-highlight: inset 0 1px 0 oklch(1 0 0 / 0.40);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  :root {
+    --glass-blur: 0px;
+    --glass-card-bg: oklch(var(--b1) / 0.97);
+    --glass-float-bg: oklch(var(--b1) / 0.98);
+    --glass-modal-bg: oklch(var(--b1) / 0.99);
+  }
+}
+
+/*
+   背景深度层：玻璃要有「透」的素材。给 body 垫一组静态柔和色斑（主题
+   primary/secondary/accent 低透明度径向渐变），玻璃面模糊取景后才有色彩
+   层次。fixed 定位不随滚动、无任何动画；z-index:-1 垫在内容之下、body
+   半透明底之上。色彩取自主题变量，亮暗主题自动适配。
+   */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  /* 6.424 浓度约翻倍 + 加一枚中部小斑：玻璃透出的色彩层次才看得见。
+     斑心从画布四角往内收（卡片几乎占满视口，斑太靠边透不过玻璃） */
+  background:
+    radial-gradient(48rem 48rem at 18% -6%, oklch(var(--p) / 0.22), transparent 62%),
+    radial-gradient(56rem 50rem at 104% 22%, oklch(var(--s) / 0.17), transparent 64%),
+    radial-gradient(52rem 46rem at 46% 112%, oklch(var(--a) / 0.14), transparent 62%),
+    radial-gradient(38rem 38rem at 62% 46%, oklch(var(--p) / 0.12), transparent 60%);
+}
+
+/* 卡面档：半透明底 + 模糊 + 顶缘高光 + 1px 分离边（阴影沿用 6.347） */
+main .card.bg-base-100 {
+  background-color: var(--glass-card-bg);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  border: 1px solid oklch(var(--bcc) / 0.12);
+  box-shadow:
+    var(--glass-highlight),
+    0 1px 2px rgb(0 0 0 / 0.05),
+    0 6px 16px -6px rgb(0 0 0 / 0.12);
+}
+
+/* 下拉 / 菜单面板：补 1px 分离边框 + 一档悬浮阴影（6.348 原规则）+ 玻璃底 */
+.dropdown > .dropdown-content,
+.dropdown-content {
+    border: 1px solid oklch(var(--bc) / 0.12);
+    background-color: var(--glass-float-bg);
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+    box-shadow:
+        var(--glass-highlight),
+        0 1px 2px rgb(0 0 0 / 0.06),
+        0 8px 24px -8px rgb(0 0 0 / 0.18);
+}
+
+/* 模态框：最高层，扩散范围与深度都更大一档，玻璃也最厚（透明度最高） */
+.modal-box {
+    background-color: var(--glass-modal-bg);
+    -webkit-backdrop-filter: blur(28px) saturate(1.9);
+    backdrop-filter: blur(28px) saturate(1.9);
+    box-shadow:
+        var(--glass-highlight),
+        0 2px 4px rgb(0 0 0 / 0.08),
+        0 16px 40px -12px rgb(0 0 0 / 0.30);
+}
+
+/* 激活条件：hover / focus-within / dropdown-open class
+   dropdown-content 默认是 .menu 类，本身 display:flex，只需 display:block 激活 */
+.dropdown:hover > .dropdown-content,
+.dropdown:focus-within > .dropdown-content,
+.dropdown.dropdown-open > .dropdown-content {
+    display: block !important;
+    visibility: visible;
+    opacity: 1 !important;
+    transform: scale(1) !important;
+}
+
+/* bridge: 透明伪元素填充按钮→面板 gap，保证 :hover 连续 */
+.dropdown::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 1rem;
+    pointer-events: auto;
+    z-index: 0;
+}
+.dropdown-top::after   { top: auto; bottom: 100%; }
+.dropdown-left::after,
+.dropdown-right::after { top: 0; bottom: 0; width: 1rem; height: auto; }
+.dropdown-left::after  { left: auto; right: 100%; }
+.dropdown-right::after { left: 100%; right: auto; }
+
+/* dropdown 方向变体：margin 清零（紧贴触发按钮）*/
+.dropdown-bottom > .dropdown-content { top: 100% !important; bottom: auto !important; margin-top: 0 !important; }
+.dropdown-top    > .dropdown-content { top: auto !important; bottom: 100% !important; margin-bottom: 0 !important; }
+/* 旧库 dropup 类兼容：等价于 dropdown-top */
+.dropup > .dropdown-content,
+.dropup.dropdown > .dropdown-content {
+    top: auto;
+    bottom: 100%;
+    margin-bottom: 0 !important;
+    margin-top: 0 !important;
+}
+.dropup::after {
+    top: auto;
+    bottom: 100%;
+}
+.dropdown-left   > .dropdown-content { left: auto !important; right: 100% !important; margin-right: 0 !important; }
+.dropdown-right  > .dropdown-content { left: 100% !important; right: auto !important; margin-left: 0 !important; }
+
+/* dropdown-toggle 按钮：收紧图标-文字间距 */
+.btn.dropdown-toggle {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    gap: 0.25rem !important;
+    justify-content: flex-start;
+}
+.btn.dropdown-toggle > i,
+.btn.dropdown-toggle > svg {
+    margin-right: 0;
+    margin-left: 0;
+}
+.btn.dropdown-toggle svg[class*="ml-"] {
+    margin-left: 0;
+}
+
+/* dropdown-content 面板宽度：w-52(208px) → 10rem(160px) */
+.dropdown > .dropdown-content,
+.dropdown-content.w-52 {
+    width: 10rem !important;
+    min-width: 0;
+}
+
+/*
+   dropdown-content 内部：紧凑型（菜单项 padding 2/8px，字号 13px）
+   6.192 面板上下边距 2px→6px：2px 时首末项文字贴边，视觉局促
+   6.364 菜单项纵向 2px→4px：保持紧凑定位不变，仅给图标行一点呼吸
+   */
+.dropdown > .dropdown-content.menu,
+.dropdown-content.menu {
+    padding: 0.375rem 0.125rem !important;
+    gap: 0;
+}
+.dropdown > .dropdown-content.menu > li > a,
+.dropdown-content.menu > li > a {
+    padding: 0.25rem 0.5rem !important;
+    line-height: 1.25 !important;
+    font-size: 0.8125rem !important;
+    min-height: 0;
+    height: auto !important;
+}
+.dropdown > .dropdown-content.menu > li > label,
+.dropdown-content.menu > li > label {
+    padding: 0.25rem 0.5rem !important;
+    line-height: 1.25 !important;
+    font-size: 0.8125rem !important;
+    min-height: 0 !important;
+    height: auto !important;
+}
+.dropdown-content.menu > li > label > .checkbox,
+.dropdown-content.menu > li > label > .radio {
+    margin-right: 0.375rem;
+}
+/*
+   按钮 hover / focus / active 文字色锁定
+   —— layui.css 里 a:hover{color:rgb(119,119,119)}（未加 !important）的优先级
+   (0,1,1) 高于 DaisyUI 的 .btn-xxx (0,1,0)，导致 <a class="btn"> 悬停时文字变灰。
+   这里按各变体原样锁回文字色（选择器优先级 (0,2,0)，且本文件在 layui.css 之后加载），
+   实现「文字不变色、只变背景」。
+   注意：.btn-accent 在 DaisyUI 里没有 color 声明（文字沿用 .btn 基色 --bc），
+   故不给它单独规则，交给下面的 .btn 兜底，避免反而改变其文字色。
+   */
+.btn:hover, .btn:focus, .btn:active {
+    color: var(--fallback-bc, oklch(var(--bc) / var(--tw-text-opacity, 1)));
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    color: var(--fallback-pc, oklch(var(--pc) / var(--tw-text-opacity, 1)));
+}
+.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active {
+    color: var(--fallback-sc, oklch(var(--sc) / var(--tw-text-opacity, 1)));
+}
+.btn-neutral:hover, .btn-neutral:focus, .btn-neutral:active {
+    color: var(--fallback-nc, oklch(var(--nc) / var(--tw-text-opacity, 1)));
+}
+.btn-info:hover, .btn-info:focus, .btn-info:active {
+    color: var(--fallback-inc, oklch(var(--inc) / var(--tw-text-opacity, 1)));
+}
+.btn-success:hover, .btn-success:focus, .btn-success:active {
+    color: var(--fallback-suc, oklch(var(--suc) / var(--tw-text-opacity, 1)));
+}
+.btn-warning:hover, .btn-warning:focus, .btn-warning:active {
+    color: var(--fallback-wac, oklch(var(--wac) / var(--tw-text-opacity, 1)));
+}
+.btn-error:hover, .btn-error:focus, .btn-error:active {
+    color: var(--fallback-erc, oklch(var(--erc) / var(--tw-text-opacity, 1)));
+}
+.btn-danger:hover, .btn-danger:focus, .btn-danger:active {
+    color: var(--fallback-erc, oklch(var(--erc) / 1));
+}
+
+/*
+   原库 LightYearAdmin 扩展按钮颜色类
+   —— DaisyUI 只有 primary/secondary/accent/info/success/warning/error/neutral
+   这几个变体，原库的 btn-dark / btn-purple / btn-pink / btn-cyan /
+   btn-yellow / btn-brown / btn-link 在 DaisyUI 里不存在，会退化成灰底。
+   这里按 lightyearadmin/css/style.min.css 的原色补齐。
+   —— 必须放在本文件末尾（上面的 .btn:hover 文字色锁定块之后），
+   否则同优先级(0,2,0)下会被 .btn:hover 兜底规则覆盖掉文字色。
+   —— 文字色锁定为原色不变，仅背景随 hover 变化（沿用原库 hover 色）。
+   —— 6.339 设计债 Batch D：与主题 token 重合的色值改引变量——
+   btn-dark = neutral 同值（--n/--nc），btn-link = info 同值（--in）；
+   purple/pink/cyan/yellow/brown 是 LightYear 扩展色板（不在 DaisyUI
+   8 语义色内），保留 hex 作为该色板的唯一定义处（文档化例外）。
+   hover 提亮档（#515d70 等）无对应 token，也属该色板的组成部分。
+   —— 6.339 对比度修复（用户已确认有意的视觉变化）：btn-yellow(#fcc525)
+   与 btn-cyan(#57c7d4) 白字实测约 1.9:1 / 2.1:1，远低于 WCAG AA，
+   文字改深灰 = secondary-content 同档（引 --sc，全主题恒定 #4d5259）；
+   其余深色底（purple/pink/brown/dark）白字达标不动。
+   */
+.btn-dark { background-color: oklch(var(--n)); border-color: oklch(var(--n)); color: oklch(var(--nc)); }
+.btn-dark:hover, .btn-dark:focus, .btn-dark:active { background-color: #515d70; border-color: #515d70; color: oklch(var(--nc)); }
+
+.btn-purple { background-color: #926dde; border-color: #926dde; color: #fff; }
+.btn-purple:hover, .btn-purple:focus, .btn-purple:active { background-color: #a282e3; border-color: #a282e3; color: #fff; }
+
+.btn-pink { background-color: #f96197; border-color: #f96197; color: #fff; }
+.btn-pink:hover, .btn-pink:focus, .btn-pink:active { background-color: #fa75a4; border-color: #fa75a4; color: #fff; }
+
+/*
+   6.355：刷新按钮（btn-cyan）文字/图标改白，背景保持青色不动。
+   注：#57c7d4 上白字对比约 2:1（低于 6.339 深灰的 4:1），若觉得图标偏淡可改深青底。
+   */
+.btn-cyan { background-color: #57c7d4; border-color: #57c7d4; color: #fff; }
+.btn-cyan:hover, .btn-cyan:focus, .btn-cyan:active { background-color: #77d2dc; border-color: #77d2dc; color: #fff; }
+
+.btn-yellow { background-color: #fcc525; border-color: #fcc525; color: oklch(var(--sc)); }
+.btn-yellow:hover, .btn-yellow:focus, .btn-yellow:active { background-color: #fdd04d; border-color: #fdd04d; color: oklch(var(--sc)); }
+
+.btn-brown { background-color: #8d6658; border-color: #8d6658; color: #fff; }
+.btn-brown:hover, .btn-brown:focus, .btn-brown:active { background-color: #9d7162; border-color: #9d7162; color: #fff; }
+
+.btn-link { background-color: transparent; border-color: transparent; color: oklch(var(--in)); text-decoration: none; }
+.btn-link:hover, .btn-link:focus, .btn-link:active { background-color: transparent; border-color: transparent; color: oklch(var(--in)); text-decoration: none; }
+
+/*
+   6.356：回退 6.353——.btn-default/.btn-secondary 恢复主题自适应浅灰底+深字
+   （用户看后觉得深石板底太重，尤其搜索表单重置按钮 btn-default）。删除原
+   `.btn-default,.btn-secondary{--btn-color:var(--n);color:--nc}` 覆盖后，
+   .btn-default 回落裸 .btn 基色 --b2、.btn-secondary 走 --s（皆浅灰底 + --bc/--sc 深字）。
+   注：6.354/6.355 的刷新按钮 btn-cyan 白图标不受本回退影响（那是独立色）。
+   */
+
+/*
+   6.358 .btn-default / .btn-secondary 回退 6.357，改回原版浅底配色（用户对照原版确认）
+   —— 用户参考原版 UI 发现：default/secondary 本就是【浅底 + 深/灰字】，并非深底白字。
+   6.357 的中灰底属多余改动，回退。原版精确值：
+   .btn-default   bg #fcfdfe / border #ebebeb / color #8b95a5
+   .btn-secondary bg #e4e7ea / border #e4e7ea / color #4d5259
+   —— 直接写死 background/border/color（不再走 --btn-color 机制），并显式给 hover，
+   避免 daisyUI .btn:hover{background:color-mix(--btn-color,black)} 把浅底刷成中灰。
+   hover 取略深一档、文字保持可读。只碰这两族，不动 primary/info/success/warning/error/cyan。
+   */
+.btn-default {
+    background-color: #fcfdfe;
+    border-color: #ebebeb;
+    color: #8b95a5;
+}
+.btn-default:hover, .btn-default:focus, .btn-default:active {
+    background-color: #f1f3f5;
+    border-color: #ebebeb;
+    color: #6b7683;
+}
+
+.btn-secondary {
+    background-color: #e4e7ea;
+    border-color: #e4e7ea;
+    color: #4d5259;
+}
+.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active {
+    background-color: #d7dbdf;
+    border-color: #e4e7ea;
+    color: #4d5259;
+}
+
+/*
+   旧版状态标记类兼容（6.266；6.267 扩展作用域；6.271 纯文字化；6.273 两类分治）
+   —— mapClass/mapClassGroup 的 class 原样落在值元素 <span class="the-field ..."> 上
+   （displayer/show.html）。旧库存量控制器大量使用裸 success/danger/info/warning
+   与 label-* 系列（LightYear/Bootstrap3 语义），DaisyUI 无定义，状态色静默丢失。
+   —— 6.267：存量控制器还会把整段 <label class="label label-success">xx</label> 写进
+   match 列的 options 值（如 tpextmyadmin Admin::buildTable enable 列），
+   类落在外层 .the-field 的【内】部元素上，作用域选择器罩不到 ——
+   故 label-* 系列改为独立类 + 复合 .label.label-X（0,2,0 压过 daisyUI 内置
+   .label 的 display:flex/padding，不依赖加载顺序）。
+   注意：不能重定义裸 .label（daisyUI 保留类），只用复合选择器。
+   —— 6.273（用户澄清两类是【不同类型】，6.271 一刀切纯文字化对 label-X 是误伤）：
+   ① 裸词类（the-field 上的 success/danger/...）：同旧库
+   `span.the-field.success { color:#72b754 }` 式【纯文字着色】——只设 color，
+   不设背景/高度/内边距/圆角，字号字重随所在单元格继承；
+   ② label-X 系列（含内嵌 <label class="label label-X">、the-field 上的
+   label-X、独立 .label-X）：Bootstrap/LightYear 徽章语义，【实心底 + 内容色
+   白字】（6.269 定稿尺寸 20px 高 badge-sm 档），恢复徽章版式。
+   颜色均用主题 oklch 变量，13 主题自动适配；裸词 default 用 bc/0.6 中性灰。
+   —— 裸 success/danger 等单词类过泛，仍限定 .the-field 作用域防误伤；
+   新代码需要徽章观感请直接用 badge badge-*。
+   */
+
+/* ① 裸词类：纯文字着色（6.271/6.273） */
+.the-field.success {
+    color: var(--fallback-su, oklch(var(--su) / 1));
+}
+
+.the-field.danger, .the-field.error {
+    color: var(--fallback-er, oklch(var(--er) / 1));
+}
+
+.the-field.warning {
+    color: var(--fallback-wa, oklch(var(--wa) / 1));
+}
+
+.the-field.info {
+    color: var(--fallback-in, oklch(var(--in) / 1));
+}
+
+.the-field.primary {
+    color: var(--fallback-p, oklch(var(--p) / 1));
+}
+
+.the-field.secondary {
+    /*
+   原取 --s（次级【背景】色 #e4e7ea，L≈0.93 近白）当文字色：落在浅色白卡上
+   几乎不可读；而 --sc 系 sharedColors 恒定值（夜间仍是深灰）也会翻车。
+   改指主题自适应的浅灰（同 .default 用 --bc 的做法），语义上「次要＝弱化文字」，
+   深浅主题都可读，且比 .the-field.default(bc/.6) 再淡一档以区分。
+   */
+    color: oklch(var(--bc) / 0.5);
+}
+
+.the-field.default {
+    color: var(--fallback-bc, oklch(var(--bc) / 0.6));
+}
+
+/* ② label-X 系列：徽章版式（实心底 + 内容色白字，6.269 尺寸） */
+.label-success, .label.label-success, .the-field.label-success,
+.label-danger, .label.label-danger, .the-field.label-danger,
+.label-error, .label.label-error, .the-field.label-error,
+.label-warning, .label.label-warning, .the-field.label-warning,
+.label-info, .label.label-info, .the-field.label-info,
+.label-primary, .label.label-primary, .the-field.label-primary,
+.label-secondary, .label.label-secondary, .the-field.label-secondary,
+.label-default, .label.label-default, .the-field.label-default {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    /* 6.269 20px（badge-sm 档）：用户要求状态徽章高度缩小些，与分页条按钮一档 */
+    height: 1.25rem;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    vertical-align: middle;
+    border-radius: var(--rounded-badge, 1.9rem);
+}
+
+.label-success, .label.label-success, .the-field.label-success {
+    background-color: var(--fallback-su, oklch(var(--su) / 1));
+    color: var(--fallback-suc, oklch(var(--suc) / 1));
+}
+
+.label-danger, .label.label-danger, .the-field.label-danger,
+.label-error, .label.label-error, .the-field.label-error {
+    background-color: var(--fallback-er, oklch(var(--er) / 1));
+    color: var(--fallback-erc, oklch(var(--erc) / 1));
+}
+
+.label-warning, .label.label-warning, .the-field.label-warning {
+    background-color: var(--fallback-wa, oklch(var(--wa) / 1));
+    color: var(--fallback-wac, oklch(var(--wac) / 1));
+}
+
+.label-info, .label.label-info, .the-field.label-info {
+    background-color: var(--fallback-in, oklch(var(--in) / 1));
+    color: var(--fallback-inc, oklch(var(--inc) / 1));
+}
+
+.label-primary, .label.label-primary, .the-field.label-primary {
+    background-color: var(--fallback-p, oklch(var(--p) / 1));
+    color: var(--fallback-pc, oklch(var(--pc) / 1));
+}
+
+.label-secondary, .label.label-secondary, .the-field.label-secondary {
+    background-color: var(--fallback-s, oklch(var(--s) / 1));
+    color: var(--fallback-sc, oklch(var(--sc) / 1));
+}
+
+.label-default, .label.label-default, .the-field.label-default {
+    background-color: var(--fallback-n, oklch(var(--n) / 1));
+    color: var(--fallback-nc, oklch(var(--nc) / 1));
+}
+
+/*
+   RangeSlider（daisyUI .range）
+   —— daisyUI 4 的 .range:disabled 只去掉 pointer-events，观感上无区分，
+   补透明度降级与禁用手势提示。
+   —— .rs-readonly 只读展示框沿用 .input 外观，仅还原鼠标手势。
+   */
+.range:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.rs-readonly {
+    cursor: default;
+}
+
+/*
+   列表页左侧树 展开/隐藏（6.47；6.184 从 builder-trees.css 移入——左侧树是
+   widget 不是 displayer，注册不了 cssFamily，规则必须随 core-layout 每页加载；
+   否则 shopgoods/index 等无 trees 族的页面按钮裸奔、点击无 CSS 响应，
+   且 table.html 无条件输出的 a.show-left 会在所有表格页裸露）
+   .hide-left 在树列右上角（点击收起）；.show-left 在表格列左上角、仅收起时可见
+   状态类 body.left-tree-collapsed 由 tpextbuilder.js 委托点击切换
+   小屏 (<768px) 直接隐藏树列与开关（用户要求：屏幕尺寸很小时直接隐藏）
+   */
+.left-tree {
+  position: relative;
+}
+
+/*
+   show-left 锚点由 table.html 无条件输出（保证 AJAX 局部刷新不丢失），但只有
+   树形布局（.right-table 包裹存在）收起时才有意义——普通列表页表格没有
+   .right-table 前缀规则管束会以裸链接露出（用户：所有 table 页左上角多出箭头），
+   故全局默认隐藏，展示规则见下方 body.left-tree-collapsed
+   */
+a.show-left {
+  display: none !important;
+}
+
+.left-tree .hide-left {
+  position: absolute !important;
+  top: 0.25rem;
+  right: 0.25rem;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: oklch(var(--bc) / 0.4);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+
+.left-tree .hide-left:hover {
+  color: oklch(var(--bc) / 0.8);
+  background: oklch(var(--bc) / 0.08);
+}
+
+.right-table {
+  position: relative;
+}
+
+.right-table .show-left {
+  /* 文档流内显示（6.185）：收起时出现在工具栏行上方，不用绝对定位悬浮——
+     列顶上方就是页头标题，悬浮会压标题 */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.25rem;
+  padding: 0;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: oklch(var(--bc) / 0.4);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+}
+
+.right-table .show-left:hover {
+  color: oklch(var(--bc) / 0.8);
+  background: oklch(var(--bc) / 0.08);
+}
+
+body.left-tree-collapsed .left-tree {
+  display: none !important;
+}
+
+/* 收起后表格列占满整行（覆盖 lg:col-span-11） */
+body.left-tree-collapsed .right-table {
+  grid-column: 1 / -1;
+}
+
+body.left-tree-collapsed .right-table .show-left {
+  /* !important 必须加：要赢过上面全局 a.show-left 的 display:none !important
+     （两者都 !important 时回退到特异性比较，此处特异性更高） */
+  display: inline-flex !important;
+}
+
+@media (max-width: 767px) {
+  .left-tree,
+  .right-table .show-left {
+    display: none !important;
+  }
+}
+
+/*
+   表格内 switchBtn 开关缩小一档（toggle-sm 尺寸），表单内保持默认大小
+   daisyUI toggle 的把手由 inset box-shadow 绘制，
+   缩小需同步 --handleoffset / height / width 三个值
+   （想再小可改 --handleoffset:0.625rem; height:1rem; width:1.75rem）
+   */
+table.table .toggle {
+  --handleoffset: 0.75rem;
+  height: 1.25rem;
+  width: 2rem;
+}
+
+/*
+   6.331 表格页「现代简洁」打磨（纯 CSS，未分层，本文件在 builder.css 之后加载）
+   目标：让内容卡片在灰色画布上「浮起来」、表头更精致、边框更克制。
+   全部走 daisyUI 主题变量（oklch var），13 个主题 + 夜间自动适配。
+   刻意不改表头填充色（冻结表头 .table-freeze-head thead th 依赖不透明 b2 底色），
+   只做描边 / 阴影 / 字色字重，零破坏冻结与紧凑行逻辑。
+   */
+
+/*
+   内容卡片：柔和环境光阴影 + 发丝描边，替代原模板的 shadow-sm（工具类在 @layer，未分层必胜）
+   6.332 光影收敛：去掉大扩散，改「近距离双层软影」，边界更干净不脏
+   */
+.card.bg-base-100 {
+  box-shadow:
+    0 1px 1px 0 oklch(var(--bc) / 0.04),
+    0 2px 6px -2px oklch(var(--bc) / 0.10);
+  border: 1px solid oklch(var(--b2) / 0.7);
+}
+
+/* 表格容器外框减淡：base-300 → base-200，边界更轻 */
+.table-wrap {
+  border-color: oklch(var(--b2));
+}
+
+/* 表头：文字降饱和 + 适度加粗 + 轻微字距 + 纵向留白，读起来更像现代数据表
+   6.362 对比度微调：0.6 → 0.75（用户反馈表头文字偏淡） */
+.table thead th {
+  color: oklch(var(--bc) / 0.75);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+
+/* 表头底部分隔线加深一档，明确表头/表体分界（覆盖 daisyUI 默认的淡 b2 线） */
+.table thead tr {
+  border-bottom-color: oklch(var(--b3));
+}
+
+/* 工具栏与表格间距：6.331 曾提到 12px，6.365 用户反馈偏大，
+   回落到 8px——与搜索表单 mb-2(8px) 同节奏，三段间距统一由 8px 承担 */
+.table-toolbar {
+  margin-bottom: 0.5rem;
+}
+
+/*
+   6.333 全局布局「现代简洁」细化（纯未分层 CSS，本文件在 builder.css 之后加载）
+   ① 页面外边距：layout.html 的 main 是 p-1 md:p-2（4/8px），卡片贴边偏挤；
+   提到 12/16px 给内容四周呼吸（工具类在 @layer，未分层必胜）。
+   ② 左树 / 右表分隔：树列原为裸文字与表格同处一张卡片、无边界；补一条发丝
+   竖分隔线 + 右内边距，让树读作独立侧栏。仅 .left-tree 存在时生效
+   （普通列表页无此列），收起/小屏时该列 display:none 不受影响。
+   */
+main {
+  padding: 0.75rem;
+}
+@media (min-width: 768px) {
+  main {
+    padding: 1rem;
+  }
+}
+
+.left-tree {
+  border-right: 1px solid oklch(var(--b2));
+  padding-right: 0.75rem;
+}
+
+/*
+   6.334 表单页「现代简洁」细化（纯未分层 CSS，走 oklch 主题变量）
+   标签原为全黑常规字重，与右侧输入框抢视觉、层级平。降饱和 + 中字重，
+   让「标签退后、控件突出」。刻意只动 color/font-weight，不碰 line-height /
+   min-height / align-self / padding（那些是 6.x 系列精细调校的左右对齐契约）。
+   覆盖普通表单与搜索表单的字段标签（同为 .form-wrapper .field-row 结构）。
+   */
+.form-wrapper .field-row > label,
+.form-wrapper .field-row > div > label,
+.form-wrapper .field-row label.control-label {
+  color: oklch(var(--bc) / 0.7);
+  font-weight: 500;
+}
+
+/*
+   6.359 标题区层次（本批：表格页观感，纯未分层 CSS）
+   页头 card-body 上下 8px 偏扁、主标题 16px 与正文同级：header 提到 14px、
+   标题 17px（副标题 span 仍 text-sm/50% 不动，拉开主副层次）。
+   工具类在 @layer utilities，未分层必胜；只动 padding/font-size。
+   6.365 撤销：搜索收起时 form-wrapper 以 display:none 占位兄弟位，相邻选择器
+   照样命中，工具栏上方出现「8px 卡垫 + 12px margin」叠加空带。间距归属改为
+   由搜索表单自身 mb-2(8px) 撑开——无表单/收起时随表单一起消失（用户模型）。
+   */
+.card > .card-body.border-b {
+  padding-top: 0.875rem;
+  padding-bottom: 0.875rem;
+}
+.card > .card-body.border-b .card-title {
+  font-size: 1.0625rem;
+}
+
+/*
+   6.360 操作行/徽标按钮间隙：.action-row 4px→6px、.action-rows 行距 2px→4px
+   （顶部工具栏与表格操作列共用结构，test1~test6 这类 btn-secondary 徽标
+   不再贴死；同选择器置于 774 行原规则之后，源顺序取胜）
+   6.387 用户：表格操作列按钮间距减小一些——.action-row 6px→2px（仅操作列，
+   顶部工具栏按钮间距不受影响）
+   */
+.action-rows {
+  row-gap: 0.25rem;
+}
+.action-row {
+  gap: 0.375rem;
+}
+
+/* 表格操作列（td.row-__action__ 内）：按钮间距收紧 6px→2px */
+td.row-__action__ .action-row {
+  gap: 0.125rem;
+}
+
+/*
+   6.361 左树节点行距：Alpine tree-widget 节点实测行高 21px 偏挤，提到 26px。
+   hover 圆角底色不变。只动高度/间距，不动列宽与截断逻辑
+   （宽度由业务/模板控制，本批不碰）。
+   6.366 修正：去掉行间 margin-top: 2px。树的竖线（.tline-guide/.tline-elbow）
+   是逐行绘制的（tree.html 每行一个 li > div > span.tline），行间一旦有
+   空隙竖线就断开。26px 行高由 min-height 保持，行紧邻后竖线连续。
+   */
+.tree-widget li > div {
+  min-height: 1.625rem;
+}
+
+/*
+   6.368 layui layer 弹层皮肤对齐 daisyUI 体系
+   layer（layui.css 自带皮肤）仍是 layui 原貌：白底/2px 圆角/50px 高标题/
+   #1e9fff 蓝按钮，与本库 4px 圆角 + 浮层档阴影（6.348）+ oklch 主题色不
+   协调，且硬编码深色文字在 dark 主题下黑底黑字。本文件在 layui.css 之后
+   加载（Builder $commonCss 顺序），同特异度天然取胜，无需 !important。
+   只改皮肤（色/圆角/阴影/标题高度），不动布局行为：setwin 定位、iframe
+   尺寸、tpb.js layerOpen 的 autoH 自适应高度读的是标题实际 offsetHeight，
+   标题 50→42px 无需 JS 配合。
+   刻意不改：.layui-layer-hui / -tips 黑底轻提示（toast 语义本就深底白字）、
+   .layui-layer-lan / -molv 备用皮肤（库内无调用点）。
+   */
+.layui-layer {
+  background-color: var(--glass-modal-bg, oklch(var(--b1)));
+  -webkit-backdrop-filter: blur(28px) saturate(1.9);
+  backdrop-filter: blur(28px) saturate(1.9);
+  border-radius: 0.25rem;
+  box-shadow:
+    var(--glass-highlight, inset 0 1px 0 oklch(1 0 0 / 0.25)),
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 8px 24px -8px rgb(0 0 0 / 0.18);
+}
+.layui-layer-border {
+  border-color: oklch(var(--b2));
+}
+/* 6.419 layer iframe 装载期白闪：iframe 在内部文档首绘前显示 UA 默认白，
+   页面内的内联预设管不到（文档尚不存在）。暗色主题下给 iframe 元素本体上
+   dark b1 底（值与 content.html 6.419 预设同源，两处同步改）；装载期 layui
+   给它挂 .layui-layer-load、加载完成清类名，id 前缀选择器两种状态都命中；
+   文档就绪后自绘底色覆盖元素底，无缝。切非 dark 主题选择器自动失配 */
+html[data-theme="dark"] iframe[id^="layui-layer-iframe"],
+html[data-theme="dark"] iframe.layui-layer-load {
+  background-color: oklch(25.3267% 0.015896 252.417568);
+}
+.layui-layer-title {
+  height: 2.625rem;
+  line-height: 2.625rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: oklch(var(--bc) / 0.85);
+  background-color: transparent; /* 6.411 透出弹层玻璃底，整框一块材质 */
+  border-bottom-color: oklch(var(--b2));
+  border-radius: 0.25rem 0.25rem 0 0;
+}
+.layui-layer-setwin span {
+  color: oklch(var(--bc) / 0.55);
+}
+.layui-layer-setwin span:hover {
+  color: oklch(var(--bc) / 0.9);
+}
+.layui-layer-setwin .layui-layer-max:after,
+.layui-layer-setwin .layui-layer-max:before {
+  border-color: oklch(var(--bc) / 0.55);
+}
+.layui-layer-setwin .layui-layer-min:hover:before,
+.layui-layer-setwin .layui-layer-max:hover:after,
+.layui-layer-setwin .layui-layer-max:hover:before {
+  background-color: oklch(var(--p));
+  border-color: oklch(var(--p));
+}
+/* 底部按钮 → btn-sm 档：28px 高、2px 圆角（--rounded-btn 同档）、主题描边 */
+.layui-layer-btn a {
+  height: 1.75rem;
+  line-height: calc(1.75rem - 2px);
+  padding: 0 0.875rem;
+  border: 1px solid oklch(var(--b2));
+  border-radius: 0.125rem;
+  background-color: oklch(var(--b1));
+  color: oklch(var(--bc) / 0.8);
+  font-size: 0.8125rem;
+}
+.layui-layer-btn a:hover {
+  background-color: oklch(var(--b2));
+  border-color: oklch(var(--b2));
+  color: oklch(var(--bc));
+}
+.layui-layer-btn .layui-layer-btn0 {
+  border-color: oklch(var(--p));
+  background-color: oklch(var(--p));
+  color: oklch(var(--pc));
+}
+.layui-layer-btn .layui-layer-btn0:hover {
+  border-color: color-mix(in oklab, oklch(var(--p)) 90%, black);
+  background-color: color-mix(in oklab, oklch(var(--p)) 90%, black);
+  color: oklch(var(--pc));
+}
+.layui-layer-msg {
+  border-color: oklch(var(--b2));
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 8px 24px -8px rgb(0 0 0 / 0.18);
+}
+.layui-layer-loading-icon {
+  color: oklch(var(--bc) / 0.5);
+}
+.layui-layer-loading-2:after,
+.layui-layer-loading-2:before {
+  border-color: oklch(var(--b3));
+}
+.layui-layer-loading-2:after {
+  border-color: transparent;
+  border-left-color: oklch(var(--p));
+}
+
+/*
+   6.369 左树列宽 1/12 → 2/12（md 以上）
+   实测 1280 视口树列仅 96px：缩进槽 24px/层 + gap + 箭头后，二级标题只剩
+   tree('2 …')/table('10 …')，6.295 按用户要求回退 1/11（当时叶行占位已删、
+   树显空）；本轮用户点名处理截断，改在 CSS 侧恢复 2/10——不动 HasIndex
+   的 PHP 尺寸声明（保持 1/11 为基线，宿主可按需再调），且收起态规则
+   body.left-tree-collapsed .right-table (0,2,1) 特异性更高，不受影响。
+   sm 以下本就是 col-span-12/4 堆叠布局，不介入。
+   */
+@media (min-width: 768px) {
+  .left-tree {
+    grid-column: span 2 / span 2;
+  }
+  .right-table {
+    grid-column: span 10 / span 10;
+  }
+}
+
+/*
+   6.370 表格空状态/加载态统一
+   空态 markup 来自 config table_empty_text（站点可覆写，只兼容默认结构：
+   .items-empty-text 包裹 + img(empty.png 97×64 线稿) + p 文案），
+   加载态是 Table.php 换入的同容器「加载中…」。原状：图按固有尺寸满 opacity
+   摆着、文字 text-base 偏大、上下 64px 空区偏沉；empty.png 是深色线稿，
+   dark 主题深底上几乎不可见。统一为：32px 空区、图 64px 宽 + 弱化、
+   13px 弱化文字。dark 下线稿必须 invert 翻成浅灰（透明度只会让深线在
+   深底上更不可见），invert 后 0.45 透明度与浅色档观感等强。
+   */
+.items-empty-text {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+  font-size: 0.8125rem;
+  color: oklch(var(--bc) / 0.5);
+}
+.items-empty-text img {
+  width: 4rem;
+  height: auto;
+  opacity: 0.55;
+  margin-bottom: 0.5rem;
+}
+[data-theme='dark'] .items-empty-text img {
+  filter: invert(1);
+  opacity: 0.45;
+}
+.items-empty-text p {
+  margin: 0;
+}
+
+/*
+   6.331/6.332 操作列悬停下拉（Actionbar::dropdown）：平时只显示 [...] 触发器，
+   悬停展开菜单——菜单内容 = rowsHtml() 原样输出（按 br() 分行、按钮行内横排，
+   与操作列正常形态一致），菜单列内纵向堆放各行。菜单需盖过表格行/冻结族
+   （角格 z4 → 菜单 z5）；底色/圆角/阴影自备（daisyUI dropdown-content 默认无
+   背景）。dropdown-left 让菜单向触发器左侧弹出，右缘操作列不溢出
+   */
+.action-dropdown .action-dropdown-menu {
+  /* 6.334 关闭态 display:none（不占布局）——visibility:hidden 仍保留盒子，
+     绝对定位菜单伸出表格容器会让数据很少的表格也常驻滚动条 */
+  display: none !important;
+  padding: 0.25rem 0.375rem;
+  min-width: max-content;
+  max-width: 280px;
+  background: var(--fallback-b1, oklch(var(--b1) / 1));
+  border-radius: var(--rounded-box, 0.25rem);
+  box-shadow: 0 1px 6px oklch(var(--bc) / 0.18);
+  z-index: 5;
+  opacity: 0;
+}
+
+/* 悬停/键盘聚焦展开：display 一并 !important，防止 daisyUI 悬停态规则把 display 压掉 */
+.action-dropdown:hover .action-dropdown-menu,
+.action-dropdown:focus-within .action-dropdown-menu {
+  display: block !important;
+  visibility: visible;
+  opacity: 1;
+}
+
+/*
+   菜单内的按钮行：保持原操作列行内排布；超宽行（如测试页 test1-6）在菜单内
+   允许折行防溢出（本规则在 builder-core.css 的 td nowrap 规则之后加载）
+   */
+.action-dropdown .action-dropdown-menu .action-row {
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-inline: auto;
+  width: max-content;
+  max-width: 100%;
+}
+
+.action-dropdown .action-dropdown-menu > .action-row + .action-row {
+  margin-top: 0.25rem;
+}
+
+/* 6.332 触发器在操作列内水平居中 */
+.action-row.action-row-dropdown {
+  justify-content: center;
+  width: max-content;
+  margin-inline: auto;
+}
+
+/*
+   6.333 面板锚定到操作列单元格：顶部对齐本行顶（而非触发器中线），向左弹出
+   覆盖前几列——最后一行弹出时面板落在本行高度内，不再伸出容器下缘导致表格
+   滚动。做法：td 设 relative 作定位上下文；daisyUI 的 .dropdown 退回 static
+   （否则它才是上下文），dropdown-left 的 inset-inline-end:100% 使面板贴 td 左
+   侧、top:0 贴行顶
+   */
+td.row-__action__ {
+  position: relative;
+}
+
+.action-row.action-row-dropdown .action-dropdown {
+  position: static !important;
+}
+
+.action-row.action-row-dropdown .action-dropdown-menu {
+  top: 0;
+}
+
+/*
+   -13px 连接父行中心、下探 -6px 与下一行衔接；elbow-last（└）竖线 -13px 起
+   止于 50%。行首标记字符由模板的 ↓/→/* span 承担（见 tree.html）
+   */
+.tree-widget .tline .tline-guide::before,
+.tree-widget .tline .tline-elbow::before {
+  top: -13px;
+  bottom: -6px;
+}
+
+.tree-widget .tline .tline-elbow-last::before {
+  top: -13px;
+  bottom: 50%;
+}
+
+/*
+   6.378 竖线对齐展开箭头：箭头按钮 16px，其中心在本段 8px 处（行 padding 4px 后），
+   参考线原 left:11px 偏右 3px；tree-widget 内改 8px，箭头/竖线/横钩三点一线
+   */
+.tree-widget .tline-guide::before,
+.tree-widget .tline-elbow::before,
+.tree-widget .tline-elbow::after {
+  left: 8px;
+}
+
+/*
+   6.333 根级脊柱线（已废弃——用户：思路偏了，ul 左侧一根竖线只覆盖顶级，
+   子级没有竖线；恢复各级参考竖线后此线冗余，2026-09-21 删除）
+   */
+
+/*
+   6.386 表格树参考竖线贯通（无 :has 依赖）：guide/elbow 段依赖
+   .the-field:has(> .tline) 的 flex 链拉伸满行高——Firefox<121 或链路断裂时
+   段高塌陷为 0，竖线只剩 ::before 的 11px 短桩（行界断开，用户截图所见）。
+   改为无条件：.the-field 撑满单元格并纵向拉伸 .tline，段满行高后相邻行
+   线段经 -5/-6 越界必然重叠贯通
+   */
+.table td .the-field {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  vertical-align: middle;
+}
+
+.table td .the-field > .tline {
+  align-self: stretch;
+  height: auto;
+}

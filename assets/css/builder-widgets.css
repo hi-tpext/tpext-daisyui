@@ -1,0 +1,901 @@
+/*
+   Number 数字输入框 — 自定义 spinner 按钮
+   用明确的 CSS class 替代容易 Tailwind JIT 漏编译的原子类
+   */
+.num-spinner {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+.num-spinner-input {
+  padding-right: 2.5rem; /* 留出按钮空间 40px（比之前宽一点，按钮区域更大气） */
+  width: 100%;
+}
+
+/*
+   按钮容器 — 两个独立小按钮，风格对齐 transfer 的 btn btn-xs：
+   b2 底色、边框与底同色、圆角跟主题 --rounded-btn、字重 600、深色文字
+   （6.62：原"灰底容器+内阴影+分隔线"风格与 transfer 箭头不协调）
+   */
+.num-spinner-btns {
+  position: absolute !important;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%) !important;
+  display: flex !important;
+  flex-direction: column;
+  gap: 2px;
+  height: calc(100% - 8px) !important;
+  background: transparent !important;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.num-spinner-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  min-height: 0;
+  width: 22px;
+  padding: 0;
+  border: 1px solid oklch(var(--b2) / 1);
+  background: oklch(var(--b2) / 1);
+  color: oklch(var(--bc) / 1);
+  border-radius: var(--rounded-btn, 0.25rem);
+  cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  user-select: none; /* 防止点击选中 +/- 文字 */
+}
+
+.num-spinner-btn:hover {
+  background: oklch(var(--b3) / 1);
+  border-color: oklch(var(--b3) / 1);
+}
+
+.num-spinner-btn:active {
+  background: oklch(var(--bc) / 0.25);
+  border-color: oklch(var(--bc) / 0.25);
+}
+
+/* 隐藏浏览器原生 number spinner（有自定义按钮了） */
+.num-spinner-input::-webkit-outer-spin-button,
+.num-spinner-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.num-spinner-input {
+  -moz-appearance: textfield;
+}
+
+/* prefix / postfix —— 内嵌在输入框首/尾（沿用 .date-icon-btn 的思路：
+   绝对定位 + 输入框 padding 让位；JS 会按实测宽度写成精确的 important 内联值） */
+.num-spinner-prefix,
+.num-spinner-postfix {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: oklch(var(--bc) / 0.6);
+  font-size: 0.875rem;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none; /* 不挡输入框的点击/选择 */
+  z-index: 1;
+}
+
+.num-spinner-prefix {
+  left: 0.75rem; /* 12px，与其他组件文字左缘一致 */
+}
+
+/* 放在 +/- 按钮左侧（按钮区 right:4px + 宽 22px = 26px，再留 4px 间距） */
+.num-spinner-postfix {
+  right: 1.875rem; /* 30px */
+}
+
+/* 无 JS 时的兜底预留（JS 会用实测宽度覆盖成精确值） */
+@supports selector(:has(*)) {
+  .num-spinner:has(.num-spinner-prefix) .num-spinner-input {
+    padding-left: 2rem; /* 32px ≈ 12 + 单字符 + 间距 */
+  }
+
+  .num-spinner:has(.num-spinner-postfix) .num-spinner-input {
+    padding-right: 3.25rem !important; /* 52px ≈ 30 + 单字符 + 间距 */
+  }
+}
+
+/* 表格内（28px 盒、按钮宽 16px、padding-right 带 !important）单独兜底 */
+@supports selector(:has(*)) {
+  .table .num-spinner:has(.num-spinner-prefix) .num-spinner-input {
+    padding-left: 1.75rem !important;
+  }
+}
+
+.table .num-spinner-postfix {
+  right: 1.5rem; /* 24px：按钮区 right:4px + 宽 16px = 20px，再留 4px */
+}
+
+@supports selector(:has(*)) {
+  .table .num-spinner:has(.num-spinner-postfix) .num-spinner-input {
+    padding-right: 2.75rem !important;
+  }
+}
+
+/*
+   Password 密码可见性切换 — 右侧眼睛按钮（password.html × alpine passwordEye）
+   按钮样式见上方「输入框内嵌图标按钮统一规范」（6.138 与日期/地图图标收敛为一份）
+   */
+.pwd-eye-wrap {
+  position: relative;
+  width: 100%;
+  display: flex;
+}
+
+.pwd-eye-input {
+  padding-right: 2.25rem; /* 36px：图标 24px + 贴右 8px + 4px 缝隙，与日期组件一致 */
+}
+
+/*
+   icon 选择器 —— 6.152 布局对齐日期组件：输入框显示图标编码，
+   已选图标内嵌在输入框右缘（几何参数见上方「输入框内嵌图标按钮统一规范」）。
+   6.157 清除 × 已按用户要求移除——清空值=清空编码输入框。
+   DOM: .icon-picker-wrap > [input.hidden 载体] + .icon-code-input
+   + .icon-picker-btn + .icon-picker-panel
+   */
+.icon-picker-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* 编码输入框：右侧给图标按钮让路（与 .date-input 单图标 2.25rem 同基准） */
+.icon-picker-wrap .icon-code-input {
+  padding-left: 0.75rem !important; /* 12px 对齐其他组件 */
+  padding-right: 2.25rem !important; /* 36px = 8 边距 + 24 按钮 + 4 间距 */
+}
+
+/* 已选图标颜色比统一规范(.date-icon-btn 的 bc/0.4 提示色)更实——图标本身是内容 */
+.icon-picker-btn {
+  color: oklch(var(--bc) / 0.75);
+}
+
+.icon-picker-btn:hover {
+  color: oklch(var(--bc) / 1);
+}
+
+/* icon 选择器下拉面板——绝对定位不挤占空间 */
+.icon-picker-panel {
+  position: absolute;
+  z-index: 999;
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  /* 6.411 浮层玻璃底：模板上的 bg-base-100 是 @layer 工具类，未分层规则必胜，
+     直接覆盖为浮层档半透明底 + 模糊（令牌见 builder-core-layout.css :root） */
+  background-color: var(--glass-float-bg, oklch(var(--b1) / 1));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(var(--glass-sat, 1.4));
+  backdrop-filter: blur(var(--glass-blur, 14px)) saturate(var(--glass-sat, 1.4));
+}
+
+/* panel 内 grid 图标区 —— 预留滚动条空间防止水平溢出 */
+.icon-picker-panel .grid {
+  scrollbar-gutter: stable; /* 预先留滚动条空位, 出现/消失不影响内容宽度 */
+  overflow-x: hidden;
+}
+
+/* 搜索区（28px 控件）：按钮 20×20 贴右 6px（统一规范），右内边距与 date-input 搜索档一致 */
+.search-form .icon-picker-wrap .icon-code-input {
+  padding-right: 2rem !important; /* 32px = 6 + 20 + 6 */
+}
+
+/* 表格 / items（28px 控件）：按钮 18×18 贴右 6px（统一规范） */
+.table .icon-picker-wrap .icon-code-input {
+  padding-right: 1.75rem !important; /* 28px = 6 + 18 + 4 */
+}
+
+/*
+   month/year 触发按钮 (.picker-trigger) —— 下拉三角与清除 × 与 select 一致 (6.69)
+   三角 = ts-wrapper.single .ts-control::after 同参 (border 4px / bc 0.5 / right 3px);
+   清除 × = ts-control clear-button 同位同款 (right 14px, 16×16, 13px 中性灰)
+   */
+.picker-trigger {
+  position: relative;
+}
+
+.picker-trigger::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  margin-top: -2px;
+  width: 0;
+  height: 0;
+  border: 4px solid transparent;
+  border-top-color: var(--fallback-bc, oklch(var(--bc) / 0.5));
+  pointer-events: none;
+}
+
+.picker-trigger .mv-clear {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  font-size: 13px;
+  color: oklch(var(--bc) / 0.5);
+  cursor: pointer;
+}
+
+.picker-trigger .mv-clear:hover {
+  color: oklch(var(--bc) / 0.8);
+}
+
+/*
+   Rating 评分——只读/表格列静态展示的半星遮罩（6.338，rating.html）
+   星形几何 1.25rem 用模板静态 Tailwind w-5 h-5；clip-path 无标度工具类，
+   收录于此（编辑态 rating 为纯 daisyUI radio，无需本文件之外的私有样式）
+   */
+.rating-half-clip {
+  clip-path: inset(0 50% 0 0);
+}
+
+/*
+   Transfer 穿梭框（6.338：旧 .transfer-wrap/.transfer-panel/.transfer-list/
+   .transfer-mid 结构规则已在 Alpine 重写（transfer.html + transferBox）后失效，
+   面板几何改由模板静态 Tailwind 类（h-56 等）承担，此处仅保留组件私有样式）
+   */
+
+/*
+   6.211 已选项移除 × 与全局清除图标同款（ts clear-button / treeselect __clear）：
+   16×16 flex 居中盒、13px 字形、中性灰、hover 错误红（原 text-error 常红裸文本）
+   */
+.transfer-item-x {
+  width: 16px;
+  height: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  font-size: 13px;
+  color: oklch(var(--bc) / 0.5);
+  transition: color 0.15s;
+}
+.transfer-item-x:hover {
+  color: oklch(var(--er) / 1);
+}
+
+/*
+   Transfer 搜索框紧凑化（6.338：选择器从死结构 .transfer-wrap/
+   [class*="transfer"] 改挂到模板根节点 .transfer-box，内联样式并入此处）
+   */
+.transfer-box .input-sm {
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+  font-size: 0.8125rem !important;
+  padding: 0 8px !important;
+}
+
+/* join 里的按钮自动拉伸匹配 input 高度 */
+.join .btn {
+  height: auto !important;
+  min-height: 0 !important;
+  align-self: stretch;
+}
+
+/* 上传组件 —— sm 尺寸 + 图片预览 + 间距 */
+
+/*
+   表格中的图片/文件列——列宽收缩贴住缩略图宽度，不吸收表格多余空间。
+   File/Image 在表格列时会给 td 加 in-table-in-items 类；width:1px 是
+   auto 布局的「收缩到内容」惯用法，实际宽度 = 缩略图宽 + 单元格 padding；
+   左右 padding 从默认 12px 压到 4px，减少图片两侧留白
+   */
+.table td.in-table-in-items {
+  width: 1px !important;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+/*
+   只读列的 .join 行只包着一个隐藏 input，但它的 min-content 会把列撑宽 20px+，
+   直接隐藏（:not(:has(button)) 排除 items 里带「选择」按钮的 join，不影响可编辑场景）
+   */
+@supports selector(:has(*)) {
+  .table td.in-table-in-items .join:not(:has(button)) {
+    display: none !important;
+  }
+}
+
+/* join 内按钮高度匹配 input */
+.join-sm .btn {
+  height: 2rem !important;
+  min-height: 2rem !important;
+  align-self: stretch;
+  border: 1px solid oklch(var(--bc) / 0.2);
+  border-radius: 0 !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  color: oklch(var(--bc) / 0.7) !important;
+  font-size: 0.8125rem !important;
+  padding: 0 10px !important;
+  gap: 4px !important;
+}
+
+.join-sm .btn:first-child:not(:last-child) {
+  border-radius: 0 0 0 0;
+}
+.join-sm .btn:last-child {
+  border-radius: 0 var(--rounded-btn, 0.5rem) var(--rounded-btn, 0.5rem) 0;
+}
+.join-sm .btn:first-child {
+  border-radius: var(--rounded-btn, 0.5rem) 0 0 var(--rounded-btn, 0.5rem);
+}
+
+.join-sm .input {
+  border-right: none;
+}
+
+/*
+   文件上传：操作按钮移入输入框内右侧（6.76，用户：后面的两个按钮移动到输入框里面）
+   input 的 padding-right 按按钮数量自适应（:has 探测）；表格里按钮只留图标
+   */
+.upload-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/*
+   6.289 下列 padding-right 只是 JS 就绪前的兜底值（按英文标签的最宽情形取上界，
+   宁大勿小免得文字压住按钮）；实际值由 tpext-uploader.js 的 syncInputPadding()
+   按按钮组实测宽度回写内联 important，中/英文、图标模式、按钮增减都能贴合
+   */
+.upload-input-wrap .file-url-input {
+  width: 100% !important;
+  padding-right: 5rem !important; /* 单按钮兜底 */
+}
+
+@supports selector(:has(*)) {
+  .upload-input-wrap:has(.upload-file):has(.choose-file) .file-url-input {
+    padding-right: 9rem !important; /* 双按钮兜底 */
+  }
+}
+
+.upload-input-btns {
+  position: absolute;
+  top: 50%;
+  right: 0.25rem;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.upload-input-btns .btn {
+  height: 1.5rem;
+  min-height: 0 !important;
+  /* 6.209 左右 6px→4px 再收窄 */
+  padding: 0 0.25rem !important;
+  font-size: 0.75rem;
+  /* 6.209 圆角跟全局 --rounded-btn(2px)——btn-ghost 平时透明，hover 显形时
+     原 0.25rem(4px) 才露馅看着比别处圆 */
+  border-radius: var(--rounded-btn, 0.125rem);
+  white-space: nowrap;
+  gap: 2px !important; /* daisyUI .btn 默认 0.5rem，压扁后太宽 */
+}
+
+/* 6.200 上传/选择按钮改用与遮罩钮统一的内联 SVG（原 .mdi 字体图标规则已随宿主移除） */
+.upload-input-btns .btn svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* 表格内空间窄：按钮只留图标 */
+.table .upload-input-btns .opt-btn-text {
+  display: none;
+}
+.table .upload-input-wrap .file-url-input {
+  padding-right: 2.5rem !important;
+}
+
+/* 图片预览条 */
+.upload-preview-list {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px !important;
+  margin-bottom: 6px !important; /* 预览图与下方输入框之间留距离 */
+}
+
+/* 无文件时空列表不占间距 */
+.upload-preview-list:empty {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* 6.150 预览图拖动排序：光标反馈（拖拽中的半透明由 JS 内联控制） */
+.upload-preview-list [draggable='true'] {
+  cursor: grab;
+}
+
+.upload-preview-list [draggable='true']:active {
+  cursor: grabbing;
+}
+
+/*
+   6.337 设计债收敛（Batch B）：tpext-uploader 动态 DOM 集成 class
+   （viewBtn/delBtn/dlBtn/addMaskBtn/cover），危险动作红色用的
+   rgba(220,38,38)（Tailwind red-600）与系统 error token
+   (#f96868 = --er) 漂移，现统一收敛到本文件。
+   —— .upload-preview-item 系复活旧死规则（原 6.304 注释）：删去
+   64px !important 写死尺寸（与动态 thumbnailWidth/Height 冲突，
+   尺寸改由 JS 内联给出），object-fit 回归 6.277 fill 契约。
+   —— 遮罩显隐从 JS mouseenter/mouseleave 监听改为纯 CSS :hover
+   （少挂监听、AJAX 局部刷新天然安全）。
+   —— 图上的黑 scrim 与白色半透明按钮不过主题：它们浮在照片/缩略图上，
+   任何主题下都应与底图深色对比，属【记录在案的例外】；
+   仅 danger 底色改走 --er token（浅红 #f96868 系，视觉可感知变化）。
+   */
+.upload-preview-item {
+  position: relative;
+  border: 1px solid oklch(var(--bc) / 0.15);
+  border-radius: 6px;
+  overflow: hidden;
+  background: oklch(var(--bc) / 0.04);
+}
+
+.upload-preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+}
+
+.upload-preview-item--readonly {
+  cursor: pointer;
+}
+
+.upload-preview-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.upload-preview-item:hover .upload-preview-overlay,
+.upload-add-block:hover .upload-preview-overlay {
+  opacity: 1;
+}
+
+.upload-mask-btn {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 4px;
+  cursor: pointer;
+  color: #fff; /* 6.200 currentColor 图标契约：svg stroke=currentColor 继承白描边 */
+}
+
+.upload-mask-btn--danger {
+  background: oklch(var(--er) / 0.7);
+}
+
+/* "+" 添加占位块（hover 边框加深，原为 JS 监听改 CSS） */
+.upload-add-block {
+  position: relative;
+  border: 2px dashed oklch(var(--bc) / 0.25);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.upload-add-block:hover {
+  border-color: oklch(var(--bc) / 0.5);
+}
+
+/* 上传中本地预览块的角标删除钮 */
+.upload-local-del {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 18px;
+  height: 18px;
+  line-height: 18px;
+  font-size: 12px;
+  color: #fff;
+  text-align: center;
+  background: oklch(var(--er) / 0.8);
+  border: none;
+  cursor: pointer;
+}
+
+/* 非 image 类型的文件预览：链接样式 */
+.upload-preview-file {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem !important;
+  padding: 2px 6px !important;
+  margin: 2px 4px 2px 0;
+  border-radius: 0.25rem;
+  background: oklch(var(--bc) / 0.05) !important;
+  color: oklch(var(--p) / 0.8) !important;
+}
+
+/* 确保隐藏 input 始终不可见（某些 JS/CSS 可能改变其显示状态） */
+input.ignore[type="hidden"] {
+  display: none !important;
+  visibility: hidden;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden;
+}
+
+/*
+   上传组件只读展示（归档6.148）：canUpload=false（表格列 / 搜索区 / readonly / 查看）
+   模板只做服务端静态输出，不再产生 input、picker_、uploadConfigs、上传按钮
+   */
+.upload-readonly-list {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+/* 图片缩略图：宽度/高度由模板内联 style 给出（随 thumbSize 变化），此处不写死尺寸 */
+.upload-readonly-item {
+  position: relative !important;
+  display: block !important;
+  flex: none;
+  border: 1px solid oklch(var(--bc) / 0.15);
+  border-radius: 0 !important;
+  overflow: hidden;
+  line-height: 0 !important;
+  background: oklch(var(--bc) / 0.04) !important;
+  cursor: pointer !important;
+}
+
+.upload-readonly-item img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+
+/*
+   鼠标经过：半透明遮罩 + 居中预览按钮（观感对齐编辑态预览项覆盖层）；
+   遮罩 pointer-events:none → 点击穿透到 <a>，由 tpext-uploader.js 委托打开 layer.photos 灯箱
+   */
+.upload-readonly-view {
+  position: absolute !important;
+  inset: 0;
+  z-index: 2;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  opacity: 0 !important;
+  transition: opacity 0.15s;
+  pointer-events: none !important;
+}
+
+.upload-readonly-item:hover .upload-readonly-view {
+  opacity: 1 !important;
+}
+
+.upload-readonly-view i {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 28px !important;
+  height: 22px !important;
+  font-size: 1rem !important;
+  line-height: 1 !important;
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 0.25rem !important;
+}
+
+/* 非图片文件：小胶囊链接 */
+.upload-readonly-file {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  max-width: 100% !important;
+  padding: 2px 8px !important;
+  border-radius: 0.25rem !important;
+  background: oklch(var(--bc) / 0.05) !important;
+  color: oklch(var(--p) / 0.85) !important;
+  font-size: 0.8125rem !important;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.upload-readonly-file .mdi {
+  font-size: 1rem !important;
+  flex: none;
+}
+
+.upload-readonly-file span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap !important;
+}
+
+.upload-readonly-file:hover {
+  background: oklch(var(--p) / 0.18) !important;
+}
+
+/* 表格列里只读图片更紧凑；单元格宽高由 .table td.in-table-in-items 收缩到图片宽度 */
+.table .upload-field-readonly .upload-readonly-list {
+  gap: 4px !important;
+}
+
+/*
+   编辑器家族暗色适配（6.143）—— dist CSS 全是浅色硬编码
+   - EasyMDE/CodeMirror：纯 div 结构，全面板 + token 高亮色全部交给主题变量
+   - CKEditor 4 / UEditor / TinyMCE：外壳（chrome/工具栏/状态栏）适配；
+   CKEditor 单色 sprite 图标在 dark 皮肤下 invert，UEditor 彩色 sprite 不动；
+   iframe 编辑区保留白底（内部样式来自 iframe 内的 contents.css，外部 CSS
+   管不到，视作"纸张"，与主流产品暗色模式处理一致）
+   全部 !important 压第三方 dist；颜色一律 oklch(var(--x)/α) 随皮肤翻转
+   */
+
+/* ---------- EasyMDE / CodeMirror 5 ---------- */
+.CodeMirror {
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  color: oklch(var(--bc) / 1) !important;
+  /* 6.205：0.15→0.2 与 .input-bordered 等标准组件边框色对齐 */
+  border-color: oklch(var(--bc) / 0.2) !important;
+}
+.CodeMirror-gutters {
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border-right: 1px solid oklch(var(--bc) / 0.1);
+}
+.CodeMirror-linenumber { color: oklch(var(--bc) / 0.35) !important; }
+.CodeMirror-cursor { border-left: 1px solid oklch(var(--bc) / 1) !important; }
+.CodeMirror-selected { background: oklch(var(--p) / 0.25) !important; }
+.CodeMirror-focused .CodeMirror-selected { background: oklch(var(--p) / 0.25) !important; }
+.CodeMirror-activeline-background { background: oklch(var(--bc) / 0.04) !important; }
+.CodeMirror-placeholder { color: oklch(var(--bc) / 0.4) !important; }
+
+/* 工具栏：透明底 + mdi 字体图标，只需接管文字色与悬停态。
+   边框随 6.205 与编辑区一同对齐标准边框色（工具栏三边+编辑区四边构成同一外框） */
+.editor-toolbar {
+  border-color: oklch(var(--bc) / 0.2) !important;
+}
+.editor-toolbar button,
+.editor-toolbar .adedan {
+  color: oklch(var(--bc) / 0.65) !important;
+  border-color: transparent !important;
+}
+.editor-toolbar button:hover,
+.editor-toolbar button.active {
+  border-color: oklch(var(--p) / 0.4) !important;
+  background: oklch(var(--p) / 0.12) !important;
+  color: oklch(var(--p) / 1) !important;
+}
+.editor-toolbar .separator {
+  border-left: 1px solid oklch(var(--bc) / 0.15);
+  border-right: none;
+}
+
+/* 状态栏 / 字数统计 */
+.editor-statusbar {
+  color: oklch(var(--bc) / 0.45) !important;
+  border-top-color: oklch(var(--bc) / 0.08) !important;
+}
+.editor-statusbar .lines::before,
+.editor-statusbar .words::before { color: oklch(var(--bc) / 0.45) !important; }
+
+/* 预览面板（分割/全屏预览） */
+.editor-preview,
+.editor-preview-side {
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  color: oklch(var(--bc) / 0.85) !important;
+}
+.EasyMDEContainer .CodeMirror-fullscreen {
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+}
+
+/* Markdown token 高亮：cm-s-easymde 色板是浅色设计，暗底可读性差的类型重新映射 */
+.cm-s-easymde .cm-header { color: oklch(var(--p) / 1) !important; }
+.cm-s-easymde .cm-link, .cm-s-easymde .cm-string { color: oklch(var(--s) / 1) !important; }
+.cm-s-easymde .cm-url, .cm-s-easymde .cm-comment, .cm-s-easymde .cm-meta {
+  color: oklch(var(--bc) / 0.45) !important;
+}
+.cm-s-easymde .cm-quote { color: oklch(var(--bc) / 0.7) !important; }
+.cm-s-easymde .cm-atom, .cm-s-easymde .cm-keyword { color: oklch(var(--a) / 1) !important; }
+.cm-s-easymde .cm-variable-2 { color: oklch(var(--bc) / 0.9) !important; }
+.cm-s-easymde .cm-variable-3, .cm-s-easymde .cm-type { color: oklch(var(--s) / 0.9) !important; }
+/* 行内代码/等宽 */
+.cm-s-easymde .cm-comment.cm-code, .cm-s-easymde .cm-m-comment { color: oklch(var(--bc) / 0.65) !important; }
+
+/* ---------- CKEditor 4（moono 皮肤）外壳 ---------- */
+.cke_chrome {
+  border-color: oklch(var(--bc) / 0.15) !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  box-shadow: none !important;
+}
+.cke_top, .cke_bottom {
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border-color: oklch(var(--bc) / 0.1) !important;
+}
+.cke_toolgroup, .cke_combo_button {
+  background: oklch(var(--bc) / 0.05) !important;
+  border-color: oklch(var(--bc) / 0.1) !important;
+  box-shadow: none !important;
+}
+.cke_toolgroup a.cke_button, .cke_combo_button {
+  color: oklch(var(--bc) / 0.75) !important;
+}
+a.cke_button:hover, a.cke_button:focus, a.cke_button_on {
+  background: oklch(var(--p) / 0.15) !important;
+  border-color: oklch(var(--p) / 0.3) !important;
+  box-shadow: none !important;
+}
+/* sprite 图标：CKEditor moono 是深灰单色，暗色下反色成浅灰可见（仅 dark 皮肤）；
+   UEditor 是彩色 sprite，不反色（反色会产生怪异补色，见 UEditor 段） */
+html[data-theme="dark"] .cke_button_icon,
+html[data-theme="dark"] .cke_resizer {
+  filter: invert(0.9);
+}
+.cke_combo_text { color: oklch(var(--bc) / 0.75) !important; }
+.cke_wysiwyg_frame, .cke_wysiwyg_div {
+  background: #fff !important; /* 编辑区白纸，见文件头说明 */
+}
+
+/* ---------- UEditor 外壳 ---------- */
+.edui-editor {
+  border-color: oklch(var(--bc) / 0.15) !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+}
+.edui-editor-toolbarbox,
+.edui-editor-bottomContainer {
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+}
+/* 工具栏真正的白底在内层 toolbarboxouter 的白色渐变（只盖外层则内层透出白） */
+.edui-editor-toolbarboxouter {
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  background-image: none !important;
+}
+.edui-editor-bottomContainer td {
+  border-color: oklch(var(--bc) / 0.1) !important;
+  color: oklch(var(--bc) / 0.5) !important;
+}
+.edui-editor-toolbarbox .edui-button-body,
+.edui-editor-toolbarbox .edui-splitbutton-body,
+.edui-editor-toolbarbox .edui-menubutton-body {
+  background: oklch(var(--bc) / 0.05) !important;
+}
+.edui-editor-toolbarbox .edui-button-body:hover,
+.edui-editor-toolbarbox .edui-splitbutton-body:hover,
+.edui-editor-toolbarbox .edui-menubutton-body:hover,
+.edui-editor-toolbarbox .edui-state-hovered {
+  background: oklch(var(--p) / 0.15) !important;
+}
+/* UEditor 图标是彩色 sprite（非单色黑），invert 会变成怪异补色，不做反色 */
+.edui-editor-iframeholder { background: #fff !important; } /* 编辑区白纸 */
+
+/* UEditor 下拉（自定义标签/段落格式/字体等 combox） */
+.edui-editor-toolbarbox .edui-combox-body {
+  background: oklch(var(--bc) / 0.05) !important;
+  color: oklch(var(--bc) / 0.75) !important;
+}
+.edui-editor-toolbarbox .edui-combox-body:hover {
+  background: oklch(var(--p) / 0.15) !important;
+}
+html[data-theme="dark"] .edui-editor-toolbarbox .edui-arrow {
+  filter: brightness(2.2); /* 黑色下拉箭头在暗色上不可见，提亮（灰度变换不产生补色） */
+}
+
+/* ---------- TinyMCE（silver/oxide 主题）外壳 ---------- */
+.tox-tinymce {
+  border-color: oklch(var(--bc) / 0.15) !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+}
+.tox .tox-menubar {
+  background: transparent !important;
+}
+.tox .tox-mbtn {
+  color: oklch(var(--bc) / 0.75) !important;
+}
+.tox .tox-mbtn:hover {
+  background: oklch(var(--p) / 0.15) !important;
+  color: oklch(var(--bc) / 1) !important;
+}
+.tox .tox-toolbar-overlord,
+.tox .tox-toolbar,
+.tox .tox-toolbar__primary,
+.tox .tox-toolbar__overflow {
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+}
+.tox .tox-toolbar__group {
+  border-color: oklch(var(--bc) / 0.1) !important;
+}
+.tox .tox-tbtn {
+  color: oklch(var(--bc) / 0.7) !important;
+}
+.tox .tox-tbtn svg,
+.tox .tox-mbtn svg {
+  fill: currentColor;
+}
+.tox .tox-tbtn:hover {
+  background: oklch(var(--p) / 0.15) !important;
+  color: oklch(var(--bc) / 1) !important;
+}
+.tox .tox-statusbar {
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+}
+.tox .tox-statusbar a,
+.tox .tox-statusbar__path-item,
+.tox .tox-statusbar__wordcount {
+  color: oklch(var(--bc) / 0.5) !important;
+}
+.tox .tox-edit-area__iframe {
+  background: #fff !important; /* 编辑区白纸，同 CK/UE */
+}
+
+/* ---------- wangEditor 4 ---------- */
+.w-e-toolbar {
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  border-color: oklch(var(--bc) / 0.1) !important;
+  /*
+   6.276 列宽不足时按钮换行（vendor 默认 nowrap）：窄列里 nowrap 工具栏
+   （scrollWidth 684 > 列 599）overflow visible 直接画进右栏相邻字段；
+   wrap 后整行工具按钮全部可见，编辑器高度随行数自然增加
+   */
+  flex-wrap: wrap;
+}
+.w-e-menu {
+  color: oklch(var(--bc) / 0.7) !important;
+}
+.w-e-menu:hover {
+  background: oklch(var(--p) / 0.15) !important;
+  color: oklch(var(--bc) / 1) !important;
+}
+.w-e-text-container {
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+}
+.w-e-text {
+  color: oklch(var(--bc) / 0.9) !important;
+}
+.w-e-text-placeholder {
+  color: oklch(var(--bc) / 0.35) !important;
+}
+/* 字体颜色/表情等弹出面板与下拉列表 */
+.w-e-panel-container,
+.w-e-droplist {
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  border-color: oklch(var(--bc) / 0.15) !important;
+  color: oklch(var(--bc) / 0.8) !important;
+}
+.w-e-panel-container .w-e-button-container button {
+  color: oklch(var(--bc) / 0.8) !important;
+  background: oklch(var(--bc) / 0.06) !important;
+  border-color: oklch(var(--bc) / 0.15) !important;
+}

@@ -1,0 +1,511 @@
+/*
+   TomSelect × DaisyUI 集成
+   TomSelect 会把原 select 的 .select/.select-bordered 类复制到 .ts-wrapper 上，
+   导致 wrapper（DaisyUI 边框）+ .ts-control（TomSelect 自带边框）双层边框。
+   这里去掉 .ts-control 的自带外观，让外层 DaisyUI 样式生效。
+   */
+.ts-wrapper .ts-control {
+  border: none;
+  box-shadow: none;
+  background: transparent;
+  padding: 0 4px;
+  min-height: unset;
+  font-size: 0.875rem;
+  border-radius: 0;
+  align-items: center;
+}
+
+.ts-wrapper .ts-control > input {
+  font-size: inherit;
+  min-width: 2.5rem;
+}
+
+.ts-wrapper.multi .ts-control > item,
+.ts-wrapper.multi .ts-control > div {
+  margin: 2px 4px 2px 0;
+}
+
+/* [x-cloak] 已迁往 builder-core.css（6.219：Alpine 全局工具，任何页面都可能用，
+   不能放在按需加载的族文件里） */
+
+/*
+   Tags 徽章样式（TomSelect 多选项）
+   让 TomSelect 的 tags 看起来像 DaisyUI badge
+   */
+.ts-wrapper.multi .ts-control > div {
+  background-color: var(--fallback-p, oklch(var(--p) / 0.2));
+  color: var(--fallback-p, oklch(var(--p) / 1));
+  border-radius: var(--rounded-badge, 1.9rem);
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.5;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ts-wrapper.multi .ts-control > div .remove {
+  color: var(--fallback-p, oklch(var(--p) / 0.7));
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0 2px;
+  transition: color 0.15s;
+}
+
+.ts-wrapper.multi .ts-control > div .remove:hover {
+  color: var(--fallback-er, oklch(var(--er) / 1));
+}
+
+/*
+   Select — 消除 DaisyUI .select 与 TomSelect .ts-arrow 的双重 chevron
+   DaisyUI .select 自带 mask-image 下拉箭头，TomSelect 也渲染 .ts-arrow
+   TomSelect 复制 .select 到 .ts-wrapper 上 → 两处同时显示
+   */
+.ts-wrapper.select {
+  /* DaisyUI .select v4 用 mask-image 画 chevron，TomSelect 也会渲染 .ts-arrow */
+  mask-image: none;
+  -webkit-mask-image: none;
+  background-image: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  padding-right: 1.75rem; /* 让 TomSelect .ts-arrow 有空间 */
+}
+
+/*
+   Tags — TomSelect 在 <input type="text"> 上初始化
+   DaisyUI .input 有 border 但 TomSelect 会创建 .ts-wrapper 替代原元素
+   原 <input class="input input-bordered"> 的 border 不会被 TomSelect 复制
+   所以 .ts-wrapper 需要继承 DaisyUI border 样式
+   */
+.ts-wrapper.input,
+.ts-wrapper.input-bordered {
+  border-width: 1px;
+  border-style: solid;
+  /* 复用 DaisyUI .input-bordered 的 border-color（oklch 变量，和主题一致） */
+  border-color: oklch(var(--bc) / 0.2) !important;
+  border-radius: var(--rounded-btn, 0.375rem) !important;
+  background-color: oklch(var(--b1) / 1);
+  padding: 0 0.5rem !important;
+}
+
+/* TomSelect 的 items/buttons 在 DaisyUI themed wrapper 内对齐 */
+.ts-wrapper.input .ts-control {
+  min-height: 2rem;
+}
+
+/*
+   toggle 圆角规则已迁往 builder-core.css（6.219：通用规则不能放在按需加载的
+   族文件里——只有含 select 族组件的页面才挂本文件，漏挂页 toggle 圆角退回
+   daisyUI 默认，造成不同表格页样式不一致）
+   */
+
+/*
+   TomSelect 集成（final）—— 所有 TomSelect 样式在此统一
+   tpextbuilder.js 已从 wrapper 移除 .select/.select-bordered 类，
+   wrapper 只保留 .ts-wrapper/.ts-wrapper.multi/.ts-wrapper.single，
+   下面由 .ts-control 自行携带 DaisyUI input 视觉样式。
+   !important 确保覆盖 tom-select.min.css 和上方可能残留的旧规则。
+   */
+.ts-wrapper .ts-control {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap;
+  border: 1px solid oklch(var(--bc) / 0.1);
+  border-radius: var(--rounded-btn, 0.5rem) !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  min-height: 2rem !important;
+  height: auto !important;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0 !important; /* 左留白由 wrapper 提供，ts-control 不叠加；右预留宽交还 vendor（6.178） */
+  font-size: 0.875rem;
+  box-shadow: none;
+  color: oklch(var(--bc) / 1) !important; /* 6.141 dist 硬编码 #303030，暗色下占位/选中值不可读 */
+}
+
+.ts-wrapper.single .ts-control {
+  cursor: pointer;
+}
+
+.ts-wrapper .ts-control > input {
+  font-size: inherit !important;
+  min-width: 3rem;
+  line-height: inherit !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.ts-wrapper.single .ts-control::after {
+  content: "";
+  display: block !important;
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  margin-top: -2px;
+  width: 0;
+  height: 0 !important;
+  border: 4px solid transparent !important;
+  border-top-color: var(--fallback-bc, oklch(var(--bc) / 0.5));
+  pointer-events: none;
+}
+
+.ts-wrapper.single .ts-control {
+  position: relative !important;
+}
+
+.ts-wrapper .ts-dropdown,
+.ts-dropdown {
+  border: 1px solid oklch(var(--bc) / 0.1) !important;
+  /*
+   6.116 面板圆角与输入框统一：面板原用 --rounded-box(4px)，而控件盒
+   (.ts-control 继承 wrapper 的 .input)=--rounded-btn(2px)，两者不一致（用户反馈）。
+   面板改用 --rounded-btn，与盒/按钮同圆角。
+   */
+  border-radius: var(--rounded-btn, 0.5rem) !important;
+  /* 6.364 阴影并入 6.348 浮层档（与 dropdown-content 同层同影，原 0 4px 14px/.08 偏弱） */
+  /* 6.411 浮层玻璃底（令牌见 builder-core-layout.css :root），悬停下拉透出下层内容 */
+  background: var(--glass-float-bg, var(--fallback-b1, oklch(var(--b1) / 1))) !important;
+  -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(var(--glass-sat, 1.4)) !important;
+  backdrop-filter: blur(var(--glass-blur, 14px)) saturate(var(--glass-sat, 1.4)) !important;
+  box-shadow:
+    var(--glass-highlight, inset 0 1px 0 oklch(1 0 0 / 0.25)),
+    0 1px 2px rgb(0 0 0 / 0.06),
+    0 8px 24px -8px rgb(0 0 0 / 0.18) !important;
+  overflow: hidden;
+  font-size: 0.875rem !important;
+  z-index: 900;
+  /* 6.141 dist 的 .ts-control,.ts-dropdown 硬编码 color:#303030，
+     暗色主题下 = 暗底深字。显式交给主题变量（面板内 option/optgroup 全部继承此色） */
+  color: oklch(var(--bc) / 0.8) !important;
+}
+
+/*
+   6.141 选中/悬停行：dist .active 硬编码 #f5fafd/#495c68（浅蓝灰），暗色下不可读。
+   inherit 只会拿到上面那条被 dist 覆盖前的 #303030，必须显式给主题前景色
+   */
+.ts-dropdown .active,
+.ts-dropdown .option:hover {
+  background-color: oklch(var(--p) / 0.15) !important;
+  color: oklch(var(--bc) / 1) !important;
+}
+
+/* 6.141 dist 硬编码的其余浅色项：create 提示、optgroup 分组头、搜索命中高亮 */
+.ts-dropdown .create {
+  color: oklch(var(--bc) / 0.5) !important;
+}
+.ts-dropdown .optgroup-header {
+  background: var(--fallback-b2, oklch(var(--b2) / 1)) !important;
+  color: oklch(var(--bc) / 0.6) !important;
+}
+.ts-dropdown [data-selectable] .highlight {
+  background-color: oklch(var(--p) / 0.2) !important;
+  color: oklch(var(--bc) / 1) !important;
+}
+
+.ts-wrapper .clear-button {
+  color: oklch(var(--bc) / 0.5) !important;
+}
+.ts-wrapper .clear-button:hover {
+  color: oklch(var(--er) / 1) !important;
+}
+
+/* Tags 徽章 */
+.ts-wrapper.multi .ts-control > div {
+  background-color: oklch(var(--p) / 0.15) !important;
+  color: oklch(var(--p) / 0.9) !important;
+  border-radius: var(--rounded-badge, 1.9rem) !important;
+  padding: 2px 8px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px;
+}
+.ts-wrapper.multi .ts-control > div .remove {
+  color: oklch(var(--p) / 0.6) !important;
+  transition: color 0.15s;
+}
+.ts-wrapper.multi .ts-control > div .remove:hover {
+  color: oklch(var(--er) / 1) !important;
+}
+
+/* 箭头与 clear_button 位置分离：箭头 right:2px，clear_button 在箭头左侧 right:14px */
+.ts-wrapper.single .ts-control {
+  --ts-pr-caret: 14px;
+}
+
+/* 多选模式高度紧凑化；右侧留出 clear(14px)+箭头(2px) 两个图标的空间 */
+.ts-wrapper.multi .ts-control {
+  min-height: 2rem !important;
+  padding: 0 30px 0 0 !important;
+  gap: 2px;
+}
+
+.ts-wrapper.multi .ts-control > div {
+  padding: 1px 6px !important;
+  font-size: 0.75rem !important;
+}
+
+.ts-wrapper.multi .ts-control > div .remove {
+  font-size: 0.875rem !important;
+}
+
+/*
+   TomSelect final —— wrapper 已通过 JS 换成 .input .input-bordered 类
+   继承单行输入框的完整样式（高度/边框/圆角/背景），.ts-control 只负责内容布局
+   */
+/*
+   wrapper 字号必须未分层直给：wrapper 是 div.input，命中不了
+   .form-wrapper input.input（元素限定），而未分层的 daisyUI .input 1rem
+   是级联获胜值（6.148 前本文件 @layer 里的 .input 0.875rem 从未生效，6.36/6.74
+   同坑）——结果 select 字号变 16px。搜索区 13px 规则特异性更高不受影响
+   */
+.ts-wrapper.input {
+  font-size: 0.875rem;
+}
+
+/*
+   wrapper 竖直居中：.ts-control 的 min-height(2rem=32px) 比 wrapper 内容盒
+   (2rem 外高 - 2x1px 边框 = 30px) 高 2px，普通块流下它会从内容盒顶开始并向下
+   溢出 2px，导致徽章整体下沉 1px（上间距 5.6 / 下间距 3.6 不对称）。
+   让 wrapper 成为竖直 flex 容器并居中，溢出量上下各分 1px，徽章即回到盒子中心；
+   单选文字同样下沉 1px 的问题一并修正。放不下时 min-height 仍是地板值，
+   flex-shrink 不会压扁它，因此该规则对搜索区/表格区（控制件本就等高于内容盒）
+   无影响。
+   */
+.ts-wrapper.input {
+  display: flex !important;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.ts-wrapper .ts-control {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  border: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  min-height: unset !important;
+  height: 100% !important;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 0 !important; /* 左留白由 wrapper 提供，ts-control 不叠加；右预留宽交还 vendor（6.178） */
+  font-size: inherit !important;
+  line-height: inherit !important;
+  border-radius: inherit !important;
+}
+
+.ts-wrapper .ts-control > input {
+  font-size: inherit !important;
+  min-width: 2rem;
+  line-height: inherit !important;
+  /* 左留白 4px：wrapper(8px)+边框(1px)+ts-control(4px)+input(4px)=17px，
+     与 .input 的文字起点（16px padding+1px 边框）对齐 */
+  padding: 0 0 0 4px !important;
+  background: transparent !important;
+}
+
+/* 单选/多选下拉箭头 */
+.ts-wrapper.single .ts-control::after,
+.ts-wrapper.multi .ts-control::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  top: 50%;
+  right: 3px;
+  margin-top: -2px !important;
+  width: 0 !important;
+  height: 0 !important;
+  border: 4px solid transparent !important;
+  border-top-color: oklch(var(--bc) / 0.5) !important;
+  pointer-events: none !important;
+}
+
+.ts-wrapper.single .ts-control {
+  position: relative !important;
+}
+
+/* 单选/多选+清空按钮位置分离：clear 在箭头左侧 right:14px */
+.ts-wrapper.single.plugin-clear_button .ts-control,
+.ts-wrapper.multi.plugin-clear_button .ts-control {
+  --ts-pr-caret: 14px;
+}
+
+/* 多选 clear 按钮与单选同位（plugin 默认只在 single/form-select 上让位箭头） */
+.ts-wrapper.multi.plugin-clear_button .clear-button {
+  right: max(var(--ts-pr-caret), 8px);
+}
+
+/*
+   clear × 图形归一：固定 16×16 flex 居中盒，抵消字形/行高造成的偏移（单选多选一致）。
+   选择器加权（> div.clear-button）：多选的 Tags 徽章规则 `.ts-wrapper.multi .ts-control > div`
+   会命中 clear 按钮这个 div，塞进 margin-top:2px/padding:1px 导致图标偏低发歪，
+   还会染上徽章配色（primary 蓝字蓝底）——这里一并归一为中性灰、透明底
+   */
+.ts-wrapper .ts-control > .clear-button,
+.ts-wrapper.multi .ts-control > div.clear-button {
+  width: 16px !important;
+  height: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  line-height: 1 !important;
+  font-size: 13px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: oklch(var(--bc) / 0.5) !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+}
+
+/* 下拉面板 */
+.ts-wrapper .ts-dropdown,
+.ts-dropdown {
+  border: 1px solid oklch(var(--bc) / 0.2) !important;
+  border-radius: var(--rounded-btn, 0.5rem) !important; /* 6.116 与输入框统一 */
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.06), 0 8px 24px -8px rgb(0 0 0 / 0.18) !important; /* 6.364 与本文件上方最终区/6.348 浮层档一致（此处为后段旧值，必须同步改，否则源顺序覆盖） */
+  overflow: hidden;
+  font-size: 0.875rem !important;
+  z-index: 900;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+}
+.ts-dropdown .active {
+  background-color: oklch(var(--p) / 0.15) !important;
+  color: oklch(var(--bc) / 1) !important; /* 6.141 原为 inherit（=dist #303030），暗色不可读；与上方最终区规则保持一致 */
+}
+
+/* 清空按钮 */
+.ts-wrapper .clear-button {
+  color: oklch(var(--bc) / 0.5) !important;
+}
+.ts-wrapper .clear-button:hover {
+  color: oklch(var(--er) / 1) !important;
+}
+
+/* Tags 徽章 */
+.ts-wrapper.multi .ts-control > div {
+  background-color: oklch(var(--p) / 0.15) !important;
+  color: oklch(var(--p) / 0.9) !important;
+  border-radius: var(--rounded-badge, 1.9rem) !important;
+  padding: 1px 6px !important;
+  font-size: 0.75rem !important;
+  font-weight: 500 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+.ts-wrapper.multi .ts-control > div .remove {
+  color: oklch(var(--p) / 0.6) !important;
+}
+.ts-wrapper.multi .ts-control > div .remove:hover {
+  color: oklch(var(--er) / 1) !important;
+}
+
+/*
+   TomSelect wrapper 的 focus 效果（6.219：通用的 .input/.textarea focus 规则
+   已迁往 builder-core.css，这里只留 ts 专属选择器，防止 wrapper 未挂 .input
+   类的路径漏发光）
+   */
+.ts-wrapper.input:focus-within {
+  outline: none;
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 0 1px oklch(var(--p) / 0.6),
+    0 0 8px oklch(var(--p) / 0.6) !important;
+  border-color: transparent !important;
+}
+
+/* .ts-control 不额外发光，边框/发光由 wrapper 统一 */
+.ts-wrapper.focus .ts-control,
+.ts-wrapper .ts-control:focus,
+.ts-wrapper.single .ts-control:focus {
+  outline: none;
+  box-shadow: none !important;
+  border-color: transparent !important;
+}
+
+/*
+   TomSelect 多选徽章 final——DaisyUI badge 风格
+   圆角胶囊 + 主题色背景 + × 按钮内嵌右端
+   */
+.ts-wrapper.multi .ts-control > div {
+  background: oklch(var(--bc) / 0.06) !important;
+  border: none !important;
+  color: oklch(var(--p) / 0.85) !important;
+  border-radius: 0.25rem !important; /* 6.73 用户要求减小圆角（原 0.375rem） */
+  padding: 1px 4px 1px 4px !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+  margin: 2px 4px 2px 0 !important;
+  transition: background 0.15s;
+}
+
+.ts-wrapper.multi .ts-control > div:hover {
+  background: oklch(var(--p) / 0.18) !important;
+  border-color: oklch(var(--p) / 0.35) !important;
+}
+
+/*
+   × 按钮内嵌右端。hover 只留颜色变化（6.187 用户要求）：
+   背景块（er/0.12）与 scale(1.1) 位移都已移除——后者是「鼠标经过上下移动」的来源；
+   vendor 的 .remove:hover 灰底已被上方 background:none !important 无状态压死
+   */
+.ts-wrapper.multi .ts-control > div .remove {
+  color: oklch(var(--p) / 0.6) !important;
+  font-size: 1rem !important;
+  line-height: 1 !important;
+  padding: 0 4px !important;
+  margin: 0 !important;
+  border: none !important;
+  background: none !important;
+  cursor: pointer;
+  transition: color 0.15s;
+  border-radius: 50% !important;
+  width: 18px !important;
+  height: 18px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.ts-wrapper.multi .ts-control > div .remove:hover {
+  color: oklch(var(--er) / 0.9) !important;
+}
+
+/*
+   6.284 树形下拉选项：tline 参考线（元素与表格树同款，基础样式在
+   builder-core-layout.css）。x-select 解析 option 的 ──├─/└─ 标记后由
+   render.option 输出 <span class="tline">。
+   option 转 flex：让 .tline 的 align-self:stretch 生效、参考线拉满选项行高。
+   vendor .option padding 是 5px 8px（无行分隔边框，内容间隙=10px），故这里
+   越界补法取对称 -5px（表格是 -5/-6 因多 1px border-bottom）：
+   相邻选项的竖线在选项边界处对接。
+   注意 .tline-elbow-last 必须显式跟一条压回 50%——它同时命中
+   .tline-elbow::before，且本文件规则特异性 (0,3,0) 高于 core-layout 的
+   (0,2,0)，不补写会把 └ 的竖线延长到行底。
+   */
+.ts-dropdown .option {
+  display: flex;
+  align-items: center;
+}
+.ts-dropdown .option .tline {
+  align-self: stretch;
+}
+.ts-dropdown .option .tline-guide::before,
+.ts-dropdown .option .tline-elbow::before {
+  top: -5px;
+  bottom: -5px;
+}
+.ts-dropdown .option .tline-elbow-last::before {
+  bottom: 50%;
+}

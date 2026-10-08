@@ -1,0 +1,148 @@
+
+{extend name="$builderLayout"/}
+{block name="style"}
+<script type="text/javascript">
+  // 6.418 暗色主题首绘防白闪：本脚本在 <head> 内、任何绘制发生前同步执行。
+  // layout.html 硬编码 data-theme="blue"，恢复主题的原逻辑在 content 块（<body> 内），
+  // 暖缓存下浏览器可能先以默认 light 主题完成首次绘制（暗色用户见短暂白底），
+  // 再切到 dark。这里提前到 head 设置，框架稍后重复设置同一属性是幂等的。
+  (function() {
+      var t = localStorage.getItem('site_theme');
+      if (t) document.documentElement.setAttribute('data-theme', t);
+  })();
+</script>
+{volist name="css" id="item"}
+<link href="{$item}" rel="stylesheet">
+{/volist}
+<style>
+  /* 6.419 外链主题 CSS 到位前的暗色底预设：主题变量值在外部 builder.css 里，
+     网络慢/首访时首绘可能早于它完成——用内联样式按 dark 主题原值预设画布，
+     builder.css 生效后同值接管无缝衔接；切其它主题时选择器自动失配即自动移除。
+     值 = builder.css [data-theme=dark] 的 b1/bc 原样复制，两处必须同步改 */
+  html[data-theme="dark"] {
+    background-color: oklch(25.3267% 0.015896 252.417568);
+    color: oklch(74.6477% 0.0216 264.435964);
+    color-scheme: dark;
+  }
+</style>
+<style>
+  {$stylesheet|raw}
+
+  /* 6.392 启动加载动画（见 content 块的 boot-loader）：旋转 spinner */
+  @keyframes boot-spin { to { transform: rotate(360deg); } }
+</style>
+{/block}
+
+{block name="content"}
+<script type="text/javascript">
+  // 6.392 启动加载层：本脚本随 HTML 解析立即执行（内联样式不等待外链 CSS），
+  // 遮住尚未加样式的内容，消除 CSS 晚到导致的加载闪烁（分页条上下抖动即此因）。
+  // 放在 content.html 而非 layout.html：layout 可被项目替换，放这里才能随包一致生效。
+  // 主题恢复不在本块（重复）：head 的 style block 里 6.418 脚本已先行设置。
+  (function() {
+      var loader = document.createElement('div');
+      loader.id = 'boot-loader';
+      loader.style.cssText = 'position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:var(--fallback-b1,oklch(var(--b1)/1));';
+      loader.innerHTML = '<div style="width:2rem;height:2rem;border-radius:9999px;border:3px solid oklch(var(--p)/0.2);border-top-color:oklch(var(--p)/1);animation:boot-spin 0.6s linear infinite;"></div>';
+      document.body.appendChild(loader);
+  })();
+</script>
+<div class="card bg-base-100 shadow-sm" id="content-card" style="display:none" x-data="{ open: false }">
+  {notempty name="$title"}
+  <div class="card-body border-b border-base-200 px-4 py-2 flex flex-row items-center justify-between">
+    <div>
+      <h3 class="card-title text-base font-semibold">
+        {$title|raw}
+        {notempty name="$desc"}
+        <span class="text-sm text-base-content/50 font-normal ml-2">- {$desc|raw}</span>
+        {/notempty}
+      </h3>
+    </div>
+  </div>
+  {/notempty}
+  <div class="card-body px-4 py-2">
+    {volist name="rows" id="row"}
+        {:$row->render()}
+    {/volist}
+  </div>
+</div>
+<script type="text/javascript">
+  // 6.423 显隐用 display:none（用户要求，不用 opacity/transition），隐藏内联
+  // 写在 card 标记上，本脚本只负责显示；操作对象是本 card（#content-card）。
+  // 本脚本在解析期执行、先于 script 块里的组件 JS，因此这里注册的 DCL 处理器
+  // 早于 tpextbuilder boot 触发：DCL 时先摘掉 display:none，boot 的
+  // initTableFreeze/initVerticalTabs/initTreeLines 等布局测量能看到真实布局
+  // （量不出 0）；此刻 loader 仍全屏盖着，提前显示对用户不可见。
+  // 摘遮罩与页面级脚本（script 变量）则必须等 boot 跑完（6.392 延迟表格由它
+  // 换入），故用 setTimeout(0) 延后：回调排在本轮 DCL 任务之后，即全部 DCL
+  // 处理器（含 boot）执行完才运行——与原先「底部独立 DCL 处理器」的生效顺序
+  // 一致，仅合并了重复的事件注册。
+  (function() {
+      var card = document.getElementById('content-card');
+      function revealPage() {
+          var loader = document.getElementById('boot-loader');
+          if (loader && loader.parentNode) loader.parentNode.removeChild(loader);
+      }
+      function runAfterBoot() {
+          // 6.392 表格页延迟加载（Table::$delay=true）：首屏只渲染空表格壳，DCL 后
+          // tableScript 自动 formSubmit() AJAX 拉数据整块换入，分页条随之出现——
+          // 若 DCL 即显示，用户会看到下方内容被突然推下的「抖动」。
+          // 故检测到延迟加载表格时，等表格容器被替换（outerHTML 后旧父节点脱连）
+          // 或分页条出现再显示；80ms 轮询、约 2.5s 兜底，防请求失败永远遮罩。
+          var wrapParents = Array.prototype.map.call(
+              document.querySelectorAll('.table-wrap'),
+              function(w) { return w.parentNode; }
+          );
+          var hasDelayedTable = wrapParents.length > 0 && !document.querySelector('.pagination-bar');
+          if (!hasDelayedTable) {
+              revealPage();
+          } else {
+              var revealed = false;
+              var polls = 0;
+              var tryReveal = function() {
+                  if (revealed) { clearInterval(iv); return; }
+                  var swapped = wrapParents.some(function(p) { return !p.isConnected; });
+                  if (swapped || document.querySelector('.pagination-bar') || ++polls > 31) {
+                      revealed = true;
+                      clearInterval(iv);
+                      revealPage();
+                  }
+              };
+              var iv = setInterval(tryReveal, 80);
+          }
+
+          {$script|raw}
+
+          // 监听主题切换消息（iframe 与父页面通信）
+          window.addEventListener('message', function(event) {
+              if (event.data.type === 'change_theme') {
+                  var themeValue = event.data.value || event.data.theme || 'blue';
+                  document.documentElement.setAttribute('data-theme', themeValue);
+                  localStorage.setItem('site_theme', themeValue);
+              }
+          });
+      }
+      document.addEventListener('DOMContentLoaded', function() {
+          if (card) { card.style.display = ''; }
+          setTimeout(runAfterBoot, 0);
+      });
+  })();
+</script>
+<!-- 6.430 直出 JSON 字面量：旧写法把语言 JSON 包进 JS 单引号字符串再 JSON.parse，
+     json_encode 的双引号转义会被 JS 字符串解析吃掉反斜杠，语言值一旦含双引号
+     （如英文校验文案）整个 __blang 就解析失败——对象字面量直出无此问题。
+     注释必须留在 script 标签外：script 内的多行 HTML 注释只有首行被 JS
+     当注释，其余行按代码解析会炸掉整个块（6.430 实测两连坑） -->
+<script type="text/javascript">
+  window.__blang = {$__blang|raw};
+  // 6.169 项目语言（zh-cn/en/...）：JS 库语言选择、registerFlatpickrZh 门控
+  window.__builder_lang = '{$__builder_lang|default="zh"}';
+</script>
+{/block}
+{block name="script"}
+{volist name="js" id="item"}
+  <script type="text/javascript" src="{$item}" charset="utf-8"></script>
+{/volist}
+<!-- 6.423 揭示/页面脚本已并入 content 块 card 脚本的单一 DCL 处理器（setTimeout 延后到 boot 之后） -->
+<div class="hidden" id="script-div"></div>
+{/block}

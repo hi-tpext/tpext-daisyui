@@ -1,0 +1,10 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    {if condition="$readonly"}
+    <div class="field-show">{$value|raw}</div>
+    {else/}
+    <x-editor class="{$class}" name="{$name}" id="{$id}" value="{$value}"
+        cfg="{$cfg|raw}" {$attr|raw}></x-editor>
+    {/if}
+    {include file="$helptempl" /}
+</div>

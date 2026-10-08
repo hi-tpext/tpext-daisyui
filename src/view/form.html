@@ -1,0 +1,179 @@
+<div id="{$id}" class="form-wrapper" x-data="{ submitting: false }">
+    <!-- 6.429 novalidate：浏览器原生气泡（跟随浏览器 UI 语言、各家样式/位置不一）
+        整体让位，改 tpextbuilder.validateForm 自绘提示层（红边框 + 提交按钮上方
+        错误行 + 右上角通知）；约束规则仍由服务端 required/type/min/max 等属性驱动 -->
+    <form action="{$action}" method="{$method|default='POST'}" enctype="application/x-www-form-urlencoded" novalidate
+        class="grid grid-cols-12 gap-x-4 gap-y-2 {$class}" {$attr|raw}>
+
+        {volist name="rows" id="row"}
+        {if condition="$row instanceof tpext\builder\common\Tab"}
+        <div class="col-span-12">
+            {:$row->render()}
+        </div>
+        {elseif condition="$row instanceof tpext\builder\form\step"}
+        <div class="col-span-12">
+            {:$row->render()}
+        </div>
+        {else/}
+        <div class="field-row grid grid-cols-12 gap-x-4 gap-y-1 {$row->getColSizeClass()} {$row->getClass()} row-{$row->getClassName()}-div
+            {$row->getErrorClass()}" {$row->getAttrWithStyle()|raw}>
+            {:$row->render()}
+        </div>
+        {/if}
+        {/volist}
+        <div class="col-span-12 flex justify-center">
+            <div id="help-block" class="text-center min-h-[20px]">
+                <span class="text-error text-xs error-label">&nbsp;</span>
+            </div>
+        </div>
+        <input type="hidden" name="__token__" value="{$__token__}" />
+    </form>
+    <script>
+        if (!window.__forms__) {
+            window.__forms__ = [];
+        }
+
+        window.__forms__['{$id}'] = {
+            ajax: '{$ajax}' == '1',
+            action: '{$action}',
+            formSubmit: function () {
+                tpb.loading('hide');
+                var that = this;
+                var formEl = document.querySelector('#{$id} form');
+
+                // 6.429 客户端校验：约束规则仍是服务端输出的 required/type/min/max
+                // 等原生属性，但提示不再走 reportValidity 的浏览器原生气泡（各浏览器
+                // 语言/样式不一）——form 已 novalidate，改 tpextbuilder.validateForm
+                // 自绘层：无效控件红边框 + 提交按钮上方错误行 + 右上角通知。
+                // tpextbuilder 未加载时兜底回原生（降级路径）
+                if (formEl && window.tpextbuilder && typeof window.tpextbuilder.validateForm === 'function') {
+                    if (!window.tpextbuilder.validateForm(formEl)) {
+                        return false;
+                    }
+                } else if (formEl && typeof formEl.reportValidity === 'function' && !formEl.reportValidity()) {
+                    return false;
+                }
+
+                if (that.ajax) {
+                    tpb.loading('show');
+
+                    var formData = new FormData(formEl);
+
+                    var submitBtn = formEl.querySelector('[type=submit]');
+                    if (submitBtn) { submitBtn.disabled = true; }
+
+                    axios.post(that.action || location.href, formData)
+                        .then(function (response) {
+                            var data = response.data;
+                            tpb.loading('hide');
+                            if (submitBtn) { submitBtn.disabled = false; }
+                            that.handleResponse(data);
+                        })
+                        .catch(function (error) {
+                            tpb.loading('hide');
+                            if (submitBtn) { submitBtn.disabled = false; }
+                            // 6.257 网络错误提示由全局 axios 拦截器统一出口，勿在此重复 notify
+                            console.error(error);
+                        });
+
+                    return false;
+                }
+
+                tpb.loading('show');
+                setTimeout(function () { tpb.loading('hide'); }, 10000);
+                return true;
+            },
+            handleResponse: function (data) {
+                var that = this;
+                var msg = data.msg || data.message || '';
+                var wait = (data.wait * 1000) || 2000;
+
+                if (data.status || data.code) {
+                    // 成功
+                    if (data.layer_close) {
+                        that.closeLayer(msg || "{:__blang('builder_save_succeeded')}", 'success');
+                    } else if (data.layer_close_refresh) {
+                        that.closeLayerRefresh(msg || "{:__blang('builder_save_succeeded')}", 'success');
+                    } else if (data.layer_close_go) {
+                        that.closeLayerGo(msg || "{:__blang('builder_save_succeeded')}", data.layer_close_go, 'success');
+                    } else if (data.url) {
+                        tpb.notify(msg || "{:__blang('builder_save_succeeded')}", 'success');
+                        setTimeout(function () { location.replace(data.url); }, wait);
+                    } else {
+                        tpb.notify(msg || "{:__blang('builder_save_succeeded')}", 'success');
+                    }
+                } else {
+                    // 失败
+                    if (data.layer_close) {
+                        that.closeLayer(msg || "{:__blang('builder_save_failed')}", 'danger');
+                    } else if (data.layer_close_refresh) {
+                        that.closeLayerRefresh(msg || "{:__blang('builder_save_failed')}", 'danger');
+                    } else if (data.layer_close_go) {
+                        that.closeLayerGo(msg || "{:__blang('builder_save_failed')}", data.layer_close_go, 'danger');
+                    } else if (data.url) {
+                        tpb.notify(msg || "{:__blang('builder_save_failed')}", 'danger');
+                        setTimeout(function () { location.replace(data.url); }, wait);
+                    } else {
+                        tpb.notify(msg || "{:__blang('builder_save_failed')}", 'danger');
+                    }
+                }
+
+                // 动态脚本注入
+                if (data.script || (data.data && data.data.script)) {
+                    var script = data.script || data.data.script;
+                    var div = document.getElementById('script-div');
+                    if (div) {
+                        div.innerHTML = script;
+                    } else {
+                        div = document.createElement('div');
+                        div.id = 'script-div';
+                        div.className = 'hidden';
+                        div.innerHTML = script;
+                        document.body.appendChild(div);
+                    }
+                }
+            },
+            closeLayer: function (msg, style) {
+                if (window.parent && window.parent !== window) {
+                    window.parent.tpb.notify(msg, style);
+                    if (window.parent.layer) {
+                        var index = window.parent.layer.getFrameIndex(window.name);
+                        window.parent.layer.close(index);
+                    }
+                } else {
+                    tpb.notify(msg, style);
+                }
+            },
+            closeLayerRefresh: function (msg, style) {
+                if (window.parent && window.parent !== window) {
+                    window.parent.tpb.notify(msg, style);
+                    // 触发搜索刷新
+                    var refreshBtn = window.parent.document.querySelector('.search-refresh');
+                    if (refreshBtn) {
+                        refreshBtn.click();
+                    } else if (window.parent !== window.top) {
+                        setTimeout(function () { window.parent.location.reload(); }, 2000);
+                    }
+                    if (window.parent.layer) {
+                        var index = window.parent.layer.getFrameIndex(window.name);
+                        window.parent.layer.close(index);
+                    }
+                } else {
+                    tpb.notify(msg, style);
+                }
+            },
+            closeLayerGo: function (msg, url, style) {
+                if (window.parent && window.parent !== window) {
+                    window.parent.tpb.notify(msg, style);
+                    if (window.parent.layer) {
+                        window.parent.location.replace(url);
+                        var index = window.parent.layer.getFrameIndex(window.name);
+                        window.parent.layer.close(index);
+                    }
+                } else {
+                    tpb.notify(msg, style);
+                }
+            }
+        };
+    </script>
+</div>

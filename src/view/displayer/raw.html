@@ -1,0 +1,9 @@
+{if condition="$inline"}
+<span id="{$id}" class="the-field field-raw {$class}" {$attr|raw}>{$value|raw}</span>
+{else/}
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <span id="{$id}" class="the-field field-raw {$class}" {$attr|raw}>{$value|raw}</span>
+    {include file="$helptempl" /}
+</div>
+{/if}

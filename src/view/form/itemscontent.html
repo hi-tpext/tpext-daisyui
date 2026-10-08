@@ -1,0 +1,80 @@
+<div class="table-wrapper">
+  <table id="items-{$name}" class="table table-sm form-items {$class}" {$attr|raw}>
+    {notempty name="$headers"}
+    <thead>
+      <tr>
+        {volist name="headers" id="header"}
+        <th class="text-center"{if condition="$header['style']"} style="{$header['style']|raw}"{/if}>
+          {$header['label']|raw}
+        </th>
+        {/volist}
+        {if condition="$canDelete || $canAdd"}
+        <th class="text-center items-action-col">{$actionRowText|raw}</th>
+        {/if}
+      </tr>
+    </thead>
+    {/notempty}
+    <tbody>
+      {volist name="list" id="row"}
+      <tr class="table-row-id" data-id="{$ids[$key]}">
+        {foreach name="row" id="col" key="co"}
+        <td class="{$col.wrapper->getClass()}" {$col.wrapper->getAttrWithStyle()|raw}>
+          {$col.value|raw}
+        </td>
+        {/foreach}
+        {if condition="$canDelete"}
+        <td class="text-center">
+          <input type="hidden" name="{$name}[{$ids[$key]}][__del__]" value="0" />
+          {if condition="$col.__can_delete__"}
+          <button type="button" class="btn btn-xs btn-error action-delete" id="bar-delete-{$key}" data-id="{$ids[$key]}" title="{:__blang('builder_remove')}">
+            <i class="mdi mdi-delete"></i>
+          </button>
+          {else/}
+          <button type="button" class="btn btn-xs btn-error disabled" title="{:__blang('builder_not_allowed')}{:__blang('builder_remove')}"><i class="mdi mdi-delete"></i></button>
+          {/if}
+        </td>
+        {/if}
+      </tr>
+      {/volist}
+      {if condition="$canAdd"}
+      <tr class="items-add-row">
+        {volist name="cols" id="col"}
+        <td class="p-0"><input type="text" class="input input-bordered input-sm w-full hidden" /></td>
+        {/volist}
+        <td class="text-center">
+          <button type="button" id="items-{$name}-add" class="btn btn-xs btn-success" title="{:__blang('builder_new_one_item')}"><i class="mdi mdi-plus-circle-outline"></i></button>
+        </td>
+      </tr>
+      {/if}
+    </tbody>
+  </table>
+  {if condition="$canAdd"}
+  <!-- 模板行移入 <template>：内容惰性、不被升级、不参与渲染。
+       克隆插入 DOM 时 Web Components（x-date/x-select 等）由 connectedCallback 自动初始化，
+       不再需要隐藏 textarea 脚本重放。-no-init-script 后缀仅作 id 克隆重写标记。 -->
+  <template id="items-{$name}-temple">
+    <table class="table table-items {$class}" {$attr|raw}>
+      <tbody>
+        <tr class="table-row-id">
+          {volist name="template" id="col"}
+          <td class="{$col.wrapper->getClass()}" {$col.wrapper->getAttrWithStyle()|raw}>
+            {$col.value|raw}
+          </td>
+          {/volist}
+          <td class="text-center">
+            <input type="hidden" value="-1" />
+            <button type="button" class="btn btn-xs btn-error action-delete" id="bar-{$name}-delete-0" data-id="new-0" title="{:__blang('builder_remove')}">
+              <i class="mdi mdi-delete"></i></button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </template>
+  {/if}
+  {empty name="$list"}
+  <!-- 6.305 mt-2：空态文字与表底留 8px 呼吸间距（此前紧贴） -->
+  <div id="items-{$name}-empty-text" class="items-empty-text mt-2">
+    {$emptyText|raw}
+  </div>
+  {/empty}
+</div>

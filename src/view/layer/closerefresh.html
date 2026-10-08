@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <script>
+        var success = '{$success}' == '1';
+        var msg = '{$msg}';
+
+        if (window.parent && window.parent !== window) {
+            if (window.parent.tpb) {
+                window.parent.tpb.notify(msg, success ? 'success' : 'danger');
+            } else if (window.parent.lightyear) {
+                window.parent.lightyear.notify(msg, success ? 'success' : 'danger');
+            } else if (window.parent.layer) {
+                window.parent.layer.msg(msg);
+            }
+
+            var refreshBtn = window.parent.document.querySelector('.btn-refresh, .search-refresh');
+            if (refreshBtn) {
+                refreshBtn.click();
+            } else if (window.parent !== window.top) {
+                setTimeout(function () { window.parent.location.reload(); }, 2000);
+            }
+
+            if (window.parent.layer && window.parent.layer.close) {
+                var index = window.parent.layer.getFrameIndex(window.name);
+                window.parent.layer.close(index);
+            }
+        } else {
+            document.write(msg);
+            setTimeout(function () { location.replace(location.href); }, 2000);
+        }
+    </script>
+</head>
+<body></body>
+</html>

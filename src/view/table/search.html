@@ -1,0 +1,169 @@
+{notempty name="$tablink"}
+{:$tablink->render()}
+{/notempty}
+{notempty name="addTop"}
+{:$addTop->render()}
+{/notempty}
+<div id="{$id}" class="form-wrapper">
+    <form action="{$action}" method="{$method|default='POST'}" enctype="application/x-www-form-urlencoded"
+        class="grid grid-cols-12 gap-x-4 gap-y-2 mb-2 {$class}" {$attr|raw}>
+        {volist name="rows" id="row"}
+        <div class="field-row grid grid-cols-12 gap-x-4 gap-y-1 {$row->getColSizeClass()} {$row->getClass()} row-{$row->getClassName()}-div
+            {$row->getErrorClass()}" {$row->getAttrWithStyle()|raw}>
+            {:$row->render()}
+        </div>
+        {/volist}
+    </form>
+    <script>
+        if (!window.__forms__) { window.__forms__ = []; }
+
+        window.__forms__['{$id}'] = {
+            ajax: '{$ajax}' == '1',
+            searchFor: '{$searchFor}',
+            export: 0,
+            action: '{$action}',
+            formSubmit: function () {
+                tpb.loading('hide');
+                var that = this;
+                if (!that.export && that.ajax) {
+                    tpb.loading('show');
+
+                    var formEl = document.querySelector('#{$id} form');
+                    // 表单默认 method=GET（Search.php $method='get'），必须按实际 method 发送：
+                    // 后端分页等参数只从 get 读取（Table.php input('get.__page__')），写死 post 会导致翻页永远停在第 1 页
+                    var method = ((formEl && formEl.getAttribute('method')) || 'POST').toUpperCase();
+                    var url = that.action || location.href;
+                    // 6.249 翻页/刷新前记录表格滚动壳（.table-wrap，旧代码拿 .table-wrapper
+                    // 在主表格片段里从不命中=僵尸代码）的双轴位置，片段替换后恢复
+                    var holdPort = document.getElementById('{$searchFor}') ? document.getElementById('{$searchFor}').querySelector('.table-wrap') : null;
+                    var holdTop = holdPort ? holdPort.scrollTop : 0;
+                    var holdLeft = holdPort ? holdPort.scrollLeft : 0;
+
+                    var request;
+                    if (method === 'POST') {
+                        request = axios.post(url, new FormData(formEl));
+                    } else {
+                        var qs = new URLSearchParams();
+                        new FormData(formEl).forEach(function (v, k) { qs.append(k, v); });
+                        url += (url.indexOf('?') >= 0 ? '&' : '?') + qs.toString();
+                        request = axios.get(url);
+                    }
+
+                    request
+                        .then(function (response) {
+                            tpb.loading('hide');
+                            var data = response.data;
+                            var target = document.getElementById(that.searchFor);
+                            if (target) {
+                                target.outerHTML = data;
+                                var fresh = document.getElementById(that.searchFor);
+                                // 【规范】原生 outerHTML 插入的 <script> 不会执行——重建 script 节点
+                                // 使表格片段内组件的初始化脚本生效（原库靠 jQuery replaceWith 隐性执行）
+                                if (fresh) {
+                                    fresh.querySelectorAll('script').forEach(function (old) {
+                                        var s = document.createElement('script');
+                                        s.textContent = old.textContent;
+                                        old.parentNode.replaceChild(s, old);
+                                    });
+                                    // 6.249 恢复滚动位置：放在 script 重建之后——片段脚本里的
+                                    // initTableFreeze 同步设容器 max-height，几何就绪后设置才不被钳制；
+                                    // 新数据更短时浏览器自动钳到最大可滚位置（"尽量保持"）
+                                    var port = fresh.querySelector('.table-wrap');
+                                    if (port) {
+                                        port.scrollTop = holdTop;
+                                        port.scrollLeft = holdLeft;
+                                    }
+                                }
+                                // Alpine 3.x 没有 scan 方法（裸调会抛 TypeError，被下方 catch 误报网络错误）；
+                                // 插入的新 x-data 由 Alpine 的 MutationObserver 自动初始化，无需手动扫描
+                                if (window.Alpine && typeof window.Alpine.scan === 'function') window.Alpine.scan(target);
+                                // 表格刷新后行选中态归零，同步批量按钮禁用态（工具栏在刷新片段之外，需手动重算）
+                                if (window.tpextbuilder && window.tpextbuilder.updateBatchBtnState) window.tpextbuilder.updateBatchBtnState();
+                            }
+                        })
+                        .catch(function () {
+                            tpb.loading('hide');
+                            // 6.257 网络错误提示由 tpb 全局 axios 拦截器统一出口，勿在此重复 notify
+                        });
+
+                    return false;
+                }
+                return true;
+            },
+            exportPost: function (url, file_type, ajax) {
+                // 6.255 两步导出：AJAX 请求后端生成文件（Export.php 的 isAjax 分支把文件
+                // 写入 runtime/export/ 后返回 json{code:1,msg,data:下载地址}），成功后弹
+                // downloadBox，用户点「下载」链接才真正取文件。
+                // 第 3 参 ajax 保留旧签名兼容；当前 AJAX 即唯一主路径。
+                var that = this;
+                that.export = 1;
+                var form = document.querySelector('#{$id} form');
+
+                var values = [];
+                document.querySelectorAll("#{$searchFor} input.table-row-checkbox:checked").forEach(function (e) {
+                    values.push(e.value);
+                });
+
+                if (window.axios && form) {
+                    // export() 只从 GET 袋取参（input('get.__ids__') 等），与 formSubmit GET 分支同款组 query
+                    var qs = new URLSearchParams();
+                    new FormData(form).forEach(function (v, k) { qs.append(k, v); });
+                    qs.set('__file_type__', file_type || '');
+                    qs.set('__ids__', values.join(','));
+                    tpb.loading('show');
+                    axios.get(url + (url.indexOf('?') >= 0 ? '&' : '?') + qs.toString())
+                        .then(function (response) {
+                            tpb.loading('hide');
+                            that.export = 0;
+                            var data = response.data || {};
+                            if (1 == data.code && data.data) {
+                                // data 形如 .../export?path=20260914/标题-Timestamp-001.csv → 取 basename 展示
+                                var path = String(data.data).split(/[?&]path=/)[1] || '';
+                                var name = path.split('#')[0];
+                                try { name = decodeURIComponent(name); } catch (e) {}
+                                name = name.replace(/^.*[\/\\]/, '');
+                                if (window.tpb && window.tpb.downloadBox) {
+                                    window.tpb.downloadBox(data.msg, data.data, name);
+                                } else {
+                                    location.href = data.data; // tpb.js 缺位兜底：直接触发下载
+                                }
+                            } else {
+                                tpb.notify(data.msg || "{:__blang('builder_network_error')}", 'danger');
+                            }
+                        })
+                        .catch(function () {
+                            tpb.loading('hide');
+                            that.export = 0;
+                            // 6.257 通知交给全局 axios 拦截器，勿重复 notify
+                        });
+                    return;
+                }
+
+                // axios/表单缺位兜底：保持旧 form.submit 直下（后端非 AJAX 分支流式吐附件）
+                var __file_type__ = document.createElement("input");
+                __file_type__.type = "hidden";
+                __file_type__.name = '__file_type__';
+                __file_type__.value = file_type || '';
+                form.appendChild(__file_type__);
+
+                var __ids__ = document.createElement("input");
+                __ids__.type = "hidden";
+                __ids__.name = '__ids__';
+                __ids__.value = values.join(',');
+                form.appendChild(__ids__);
+
+                tpb.loading('show');
+                form.action = url;
+                form.submit();
+                setTimeout(function () { tpb.loading('hide'); }, 2000);
+
+                __ids__.remove();
+                __file_type__.remove();
+                this.export = 0;
+            }
+        };
+    </script>
+</div>
+{notempty name="addBottom"}
+{:$addBottom->render()}
+{/notempty}

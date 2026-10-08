@@ -1,0 +1,28 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <div x-data="yearPicker('{$id}', '{$value}')" @click.outside="open = false" class="relative">
+        <input type="hidden" name="{$name}" id="{$id}" value="{$value}" x-ref="carrier" {$attr|raw}>
+        <button type="button" class="input input-bordered w-full flex items-center justify-between text-left picker-trigger"
+                style="height: 2rem; min-height: 2rem;" @click="open = !open">
+            <!-- 6.158/6.164 占位走标准键并接字段文字，与其他组件一致 -->
+            <span x-text="current ? current : '{:__blang('builder_please_select')}{$label}'"
+                  :class="current ? '' : 'text-base-content/40'"></span>
+            <span class="mv-clear" x-show="current" @click.stop="clear()">&times;</span>
+        </button>
+        <div class="absolute z-[999] mt-1 w-full rounded-box border border-base-300 bg-base-100 shadow-lg p-2" x-show="open" x-cloak @click.stop>
+            <div class="flex items-center justify-between px-1 mb-1">
+                <button type="button" class="btn btn-ghost btn-xs" @click="prevDecade">&laquo;</button>
+                <span class="text-sm font-medium" x-text="rangeLabel"></span>
+                <button type="button" class="btn btn-ghost btn-xs" @click="nextDecade">&raquo;</button>
+            </div>
+            <div class="grid grid-cols-4 gap-1">
+                <template x-for="y in years" :key="y">
+                    <button type="button" class="btn btn-ghost btn-sm"
+                            :class="current == y ? 'btn-primary' : ''"
+                            @click="pick(y)" x-text="y"></button>
+                </template>
+            </div>
+        </div>
+    </div>
+    {include file="$helptempl" /}
+</div>

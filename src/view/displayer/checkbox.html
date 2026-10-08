@@ -1,0 +1,25 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}" id="{$id}">
+    <div class="choice-group {$inline} {$blockStyle}">
+    {if condition="$checkallBtn"}
+    <label class="flex items-center gap-2 cursor-pointer {$class}">
+        <input type="checkbox" class="checkbox checkbox-primary checkall" id="checkall-{$id}" {if condition="$checkall" }checked{/if}
+            data-check="check-{$id}">
+        <span>{$checkallBtn|raw}</span>
+    </label>
+    {/if}
+    {volist name="options" id="option"}
+    <label class="flex items-center gap-2 cursor-pointer {$class}" {in name="'-'.$key" value="$disabledOptions"
+        }title="{:__blang('builder_option_was_disabled')}" {/in} {in
+        name="'-'.$key" value="$readonlyOptions" }
+        title="{:__blang('builder_option_was_readonly')}" {/in}>
+        <input type="checkbox" value="{$key}" class="checkbox checkbox-primary check-{$id}" {in name="'-'.$key"
+            value="$checked" }checked{/in} {in name="'-'.$key" value="$disabledOptions" }disabled{/in} {in
+            name="'-'.$key" value="$readonlyOptions" }readonly onclick="return false;" {/in} id="{$id}-{$key}"
+            name="{$name}[]" {$attr|raw}>
+        <span>{$option|raw}</span>
+    </label>
+    {/volist}
+    </div>
+    {include file="$helptempl" /}
+</div>

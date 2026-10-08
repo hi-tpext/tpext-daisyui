@@ -1,0 +1,31 @@
+{include file="$labeltempl" /}
+{if condition="$canUpload"}
+<div class="{$size[1]} upload-field">
+    <x-upload class="{$class}" name="{$name}" id="{$id}" value="{$value}"
+        placeholder="{$placeholder}" cfg="{$cfg|raw}" {$attr|raw}></x-upload>
+    {include file="$helptempl" /}
+</div>
+{else/}
+{/* 不能上传（表格列 / 搜索区 / 只读 / 查看）：只做静态展示，
+    不输出 input、picker_、uploadConfigs、上传按钮等任何上传相关元素 */}
+<div class="{$size[1]} upload-field upload-field-readonly">
+    <div class="upload-readonly-list">
+        {volist name="fileItems" id="item"}
+        {if condition="$item['isImage']"}
+        <a href="{$item['url']}" target="_blank" class="upload-readonly-item" title="{$item['name']}"
+            style="width:{$thumbWidth}px;height:{$thumbHeight}px">
+            <img src="{$item['thumb']}" alt="{$item['name']}" loading="lazy" />
+            {/* 鼠标经过出现遮罩+预览按钮；遮罩 pointer-events:none，点击穿透到 <a>，
+                由 tpext-uploader.js 委托打开 layer.photos 灯箱 */}
+            <span class="upload-readonly-view"><i class="mdi mdi-eye"></i></span>
+        </a>
+        {else/}
+        <a href="{$item['url']}" target="_blank" class="upload-readonly-file" title="{$item['name']}">
+            <i class="mdi mdi-file-outline"></i><span>{$item['name']}</span>
+        </a>
+        {/if}
+        {/volist}
+    </div>
+    {include file="$helptempl" /}
+</div>
+{/if}

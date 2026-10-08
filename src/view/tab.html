@@ -1,0 +1,36 @@
+{notempty name="$labels"}
+{if condition="$vertical"}
+{/* 垂直模式: 标签头全部在前、面板全部在后两段输出。
+    交错 DOM (daisyUI 相邻选择器显隐) 下 float 面板的顶部被 CSS 浮动规则强制压到
+    DOM 中最后一个标签头之下 (激活第 2+ 个标签时面板整体下移), 重排后无此约束;
+    显隐不再依赖相邻选择器, 由 tpextbuilder.js initVerticalTabs 切换 .pane-active */}
+<div id="{$id}" role="tablist" class="tabs tabs-bordered tabs-vertical {$class}" {$attr|raw}>
+    {volist name="labels" id="label"}
+    <input type="radio" name="tabs-{$id}" class="tab" data-val="{$key}" data-pane="tab-{$id}-pane-{$key}"
+        {if condition="$label.active"}checked{/if} aria-label="{$label.content|raw}" />
+    {/volist}
+    {volist name="labels" id="label"}
+    <div class="tab-content{if condition="$label.active"} pane-active{/if}" role="tabpanel" id="tab-{$id}-pane-{$key}">
+        <div class="grid grid-cols-12 gap-x-4 gap-y-2">
+            {:$rows[$key]['content']->render()}
+        </div>
+    </div>
+    {/volist}
+</div>
+{else}
+<div id="{$id}" role="tablist" class="tabs tabs-bordered {$class}" {$attr|raw}>
+    {volist name="labels" id="label"}
+    <input type="radio" name="tabs-{$id}" data-prefix="#tab-{$id}" class="tab" data-val="{$key}"
+        {if condition="$label.active"}checked{/if} aria-label="{$label.content|raw}" />
+    <div class="tab-content" role="tabpanel">
+        {/* 面板内必须是 12 列 grid：left()/right() 等行的 col-span-* 只在 grid 父级生效
+            （旧库 bootstrap col-* 用 float+百分比宽度，block 父级也能并排）。
+            不直接改 .tab-content 的 display——daisyUI 靠它切换面板显隐 */}
+        <div class="grid grid-cols-12 gap-x-4 gap-y-2">
+            {:$rows[$key]['content']->render()}
+        </div>
+    </div>
+    {/volist}
+</div>
+{/if}
+{/notempty}

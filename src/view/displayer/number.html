@@ -1,0 +1,7 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <x-number class="num-spinner {$class}" name="{$name}" id="{$id}" value="{$value}"
+        placeholder="{$placeholder}" min="{$jsOptions.min}" max="{$jsOptions.max}" step="{$jsOptions.step}"
+        cfg="{$cfg|raw}" {$attr|raw}></x-number>
+    {include file="$helptempl" /}
+</div>

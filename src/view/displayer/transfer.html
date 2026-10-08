@@ -1,0 +1,57 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <div class="transfer-box" x-data="transferBox('{$id}', {$options|json_encode}, '{$dataSelected}', {$disabledOptions|json_encode})">
+        <input type="hidden" name="{$name}" id="{$id}" value="{$dataSelected}" x-ref="carrier" {$attr|raw}>
+        <!-- 6.153 名字原型：只负责携带被 items 克隆行重写后的最终 name 供 x-for 读取；
+             disabled 故自身不参与提交 -->
+        <input type="hidden" name="{$name}[]" disabled x-ref="nameProto">
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] gap-2 items-stretch">
+            <div class="rounded-box border border-base-300 bg-base-100 overflow-hidden flex flex-col h-56 min-h-56 max-h-56">
+                <div class="px-3 py-1 text-xs font-medium text-base-content/70 border-b border-base-200">{:__blang('builder_transfer_available')}</div>
+                {if $showFilter}
+                <div class="px-2 py-1.5 border-b border-base-200">
+                    <input type="text" class="input input-bordered input-sm w-full" placeholder="{$searchPlaceholder}" x-model="qLeft">
+                </div>
+                {/if}
+                <ul class="flex-1 overflow-y-auto text-sm divide-y divide-base-200">
+                    <template x-for="o in leftList" :key="o.value">
+                        <li><button type="button" class="w-full text-left px-3 py-1 hover:bg-base-200" @click="pick(o.value)" x-text="o.name"></button></li>
+                    </template>
+                    <li x-show="!leftList.length" class="px-3 py-3 text-base-content/40">{:__blang('builder_transfer_no_available')}</li>
+                </ul>
+            </div>
+            <div class="flex md:flex-col justify-center gap-1.5 px-1.5">
+                <button type="button" class="btn btn-xs" @click="moveAll()" title="{:__blang('builder_transfer_move_all')}">&raquo;</button>
+                <button type="button" class="btn btn-xs" @click="removeAll()" title="{:__blang('builder_transfer_remove_all')}">&laquo;</button>
+            </div>
+            <div class="rounded-box border border-base-300 bg-base-100 overflow-hidden flex flex-col h-56 min-h-56 max-h-56">
+                <div class="px-3 py-1 text-xs font-medium text-base-content/70 border-b border-base-200">{:__blang('builder_transfer_selected')}</div>
+                {if $showFilter}
+                <div class="px-2 py-1.5 border-b border-base-200">
+                    <input type="text" class="input input-bordered input-sm w-full" placeholder="{$searchPlaceholder}" x-model="qRight">
+                </div>
+                {/if}
+                <ul class="flex-1 overflow-y-auto text-sm divide-y divide-base-200">
+                    <template x-for="o in rightList" :key="o.value">
+                        <li>
+                            <button type="button" class="w-full text-left px-3 py-1 hover:bg-base-200 flex items-center justify-between" @click="remove(o.value)">
+                                <span x-text="o.name"></span>
+                                <span class="transfer-item-x" x-show="!isLocked(o.value)">×</span>
+                            </button>
+                        </li>
+                    </template>
+                    <li x-show="!rightList.length" class="px-3 py-3 text-base-content/40">{:__blang('builder_transfer_no_selection')}</li>
+                </ul>
+            </div>
+        </div>
+        <div class="text-xs text-base-content/40 mt-1">{:__blang('builder_selected_count')} <span x-text="selected.length"></span></div>
+        <!-- 已选值提交域：保持 name[] 数组契约（与旧库 <select multiple name="x[]"> 一致）。
+             6.153 名字不再写死在 x-for 里：x-for 生成的 input 位于 <template> 内容中，
+             items 克隆行的 name 重写够不到，行键 [__new__] 不会被替换 → 值落到幽灵行键。
+             改由下方 disabled 的「名字原型」hidden 携带最终 name，x-for 用 :name 读取 -->
+        <template x-for="v in selected" :key="v">
+            <input type="hidden" :name="arrayName" :value="v">
+        </template>
+    </div>
+    {include file="$helptempl" /}
+</div>

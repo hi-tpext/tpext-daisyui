@@ -1,0 +1,7 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]} items-div">
+    <div class="{$class} items-content" {$attr|raw}>
+        {:$items_content->render()}
+    </div>
+    {include file="$helptempl" /}
+</div>

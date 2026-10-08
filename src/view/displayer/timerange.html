@@ -1,0 +1,5 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <x-timerange class="{$class}" name="{$name}" id="{$id}" value="{$value}" placeholder="{:__blang('builder_please_select')}{$label}" data-separator="{$separator}" cfg="{$cfg|raw}" {$attr|raw}></x-timerange>
+    {include file="$helptempl" /}
+</div>

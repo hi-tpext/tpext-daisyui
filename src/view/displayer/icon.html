@@ -1,0 +1,27 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <div x-data="iconPicker('{$id}', '{$value}')" @click.outside="open = false" class="icon-picker-wrap">
+        <input type="hidden" name="{$name}" id="{$id}" value="{$value}" x-ref="carrier" {$attr|raw}>
+        {/** 6.291 编码输入框获取焦点（点击/Tab 进入）即弹出选择面板，交互对齐日期/颜色/下拉组件；
+            收起路径不变：点外部(@click.outside)、选中图标、再点图标按钮 */}
+        <input type="text" id="{$id}-code" class="input input-bordered w-full icon-code-input" :value="current"
+            placeholder="{:__blang('builder_icon_code_placeholder')}"
+            @focus="open = true"
+            @input="applyCode($event.target.value)" @change="applyCode($event.target.value, true, $event.target)">
+        <button type="button" class="icon-picker-btn" :title="current || '{:__blang('builder_select_icon')}'" @click="open = !open">
+            <i class="mdi" :class="current || 'mdi-emoticon'"></i>
+        </button>
+        <div class="icon-picker-panel rounded-box border border-base-300 bg-base-100 p-2 w-80 shadow-lg" x-show="open" x-cloak>
+            <input type="text" class="input input-bordered input-sm w-full mb-2" placeholder="{:__blang('builder_icon_search')}" x-model="q">
+            <div class="grid grid-cols-8 gap-1 max-h-56 overflow-y-auto overflow-x-hidden">
+                <template x-for="ic in filtered" :key="ic">
+                    <button type="button" class="btn btn-ghost btn-square btn-sm" :class="current === ic ? 'btn-primary' : ''" :title="ic" @click="pick(ic)">
+                        <i class="mdi text-lg" :class="ic"></i>
+                    </button>
+                </template>
+            </div>
+            <div class="text-xs text-base-content/40 mt-1" x-show="!filtered.length">{:__blang('builder_icon_no_results')}</div>
+        </div>
+    </div>
+    {include file="$helptempl" /}
+</div>

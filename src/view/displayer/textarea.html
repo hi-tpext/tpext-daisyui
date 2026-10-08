@@ -1,0 +1,6 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <x-textarea class="block w-full {$class}" placeholder="{$placeholder}"
+        value="{$value}" name="{$name}" id="{$id}" {$attr|raw} rows="{$rows|default=3}"></x-textarea>
+    {include file="$helptempl" /}
+</div>

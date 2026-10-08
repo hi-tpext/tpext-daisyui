@@ -1,0 +1,15 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    {if condition="$readonly || $isInTable"}
+    <div class="flex items-center gap-2">
+        <div class="input input-bordered rs-readonly flex-1 flex items-center">{:htmlspecialchars((string)$rsReadout, ENT_QUOTES, 'UTF-8')}</div>
+        {if condition="$readonly"}
+        <input type="hidden" name="{$name}" id="{$id}" class="ignore"
+            value="{:htmlspecialchars((string)$rsInitValue, ENT_QUOTES, 'UTF-8')}" {$attr|raw}>
+        {/if}
+    </div>
+    {else /}
+    <x-slider class="tpb-rangeslider flex items-center gap-2 {$class}" name="{$name}" id="{$id}" cfg="{$cfg|raw}" {$attr|raw}></x-slider>
+    {/if}
+    {include file="$helptempl" /}
+</div>

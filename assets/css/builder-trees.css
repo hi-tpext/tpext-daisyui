@@ -1,0 +1,627 @@
+/* Tree / SelectTree 样式——缩进线、hover、间距、图标 */
+
+/* 树容器 */
+.tree-checkbox-list,
+.treeselect-wrap {
+  font-size: 0.875rem;
+  padding: 4px 0;
+}
+
+/* 树节点行：缩进参考线 */
+.tree-checkbox-list li {
+  position: relative;
+  padding-left: 0;
+}
+
+.tree-checkbox-list li::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: oklch(var(--bc) / 0.1);
+}
+
+.tree-checkbox-list li:last-child::before {
+  bottom: 50%;
+}
+
+/* 节点行 hover */
+.tree-checkbox-list button:hover,
+.tree-checkbox-list label:hover {
+  background: oklch(var(--bc) / 0.06);
+  border-radius: 0.375rem;
+}
+
+/*
+   treeselectjs 集成 —— 边框直接设在 .treeselect-input 上（原生设计），
+   不搞外层套壳。变量桥接统一到 DaisyUI 主题。
+   */
+
+/* 变量桥接：把 treeselectjs 硬编码颜色换成 DaisyUI 主题色
+   选择器用 .treeselect-wrap — PHP 模板加的类名，一定在根容器上 */
+.treeselect-wrap {
+  --treeselectjs-bg: var(--fallback-b1, oklch(var(--b1)/1));
+  --treeselectjs-border-color: var(--fallback-bc, oklch(var(--bc)/0.2));
+  --treeselectjs-border-focus: var(--fallback-p, oklch(var(--p)/1));
+  --treeselectjs-checkbox-bg: var(--fallback-b1, oklch(var(--b1)/1));
+  --treeselectjs-checkbox-border-color: oklch(var(--bc)/0.3);
+  --treeselectjs-checkbox-checked-bg: var(--fallback-p, oklch(var(--p)/1));
+  --treeselectjs-checkbox-checked-icon: var(--fallback-pc, oklch(var(--pc)/1));
+  --treeselectjs-icon: oklch(var(--bc)/0.4);
+  --treeselectjs-icon-hover: var(--fallback-p, oklch(var(--p)/1));
+  --treeselectjs-item-focus-bg: oklch(var(--bc)/0.06);
+  --treeselectjs-item-selected-bg: oklch(var(--p)/0.1);
+  --treeselectjs-item-counter: oklch(var(--bc)/0.5);
+  --treeselectjs-item-disabled-text: oklch(var(--bc)/0.3);
+  --treeselectjs-tag-bg: oklch(var(--bc)/0.06);
+  --treeselectjs-tag-bg-hover: oklch(var(--p)/0.18);
+  --treeselectjs-tag-remove-hover: var(--fallback-er, oklch(var(--er)/1));
+  font-size: 0.875rem;
+}
+
+/* ---------- .treeselect-input — 真实 border，不玩透明+shadow ---------- */
+.treeselect-wrap .treeselect-input {
+  border: 1px solid var(--fallback-bc, oklch(var(--bc) / 0.2));
+  border-radius: var(--rounded-btn, 0.5rem) !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1));
+  height: 2rem !important;
+  min-height: 2rem;
+  max-height: 2rem;
+  padding: 0 2.5rem 0 0.5rem !important;
+  box-sizing: border-box;
+  box-shadow: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s !important;
+  align-items: center;
+  overflow: hidden;
+}
+
+.treeselect-wrap .treeselect-input:hover {
+  border-color: oklch(var(--bc) / 0.4) !important;
+}
+
+/* focus — DaisyUI input 风格: border-color 变主题色 + 外发光 */
+.treeselect-wrap .treeselect-input--focused,
+.treeselect-wrap:focus-within > .treeselect-input {
+  outline: none;
+  border-color: var(--fallback-p, oklch(var(--p) / 1)) !important;
+  box-shadow: 0 0 0 3px oklch(var(--p) / 0.2) !important;
+}
+
+/* placeholder */
+.treeselect-wrap .treeselect-input__edit::placeholder {
+  color: oklch(var(--bc) / 0.4);
+}
+
+/* 搜索框 input 透明背景 */
+.treeselect-wrap .treeselect-input__edit {
+  background: transparent !important;
+  min-width: 2rem;
+  font-size: inherit !important;
+}
+
+/* ---------- 下拉箭头 — 隐藏 SVG，改用与 TomSelect caret 完全相同的 border 三角 ---------- */
+.treeselect-wrap .treeselect-input__arrow svg {
+  display: none !important;
+}
+.treeselect-wrap .treeselect-input__arrow {
+  width: 12px !important;
+  height: 20px !important;
+  position: relative !important;
+  flex-shrink: 0;
+  /* ts 的 caret 锚在 ts-control 上，被 wrapper 的 padding-right:8px 内推，
+     视觉内缩 12px；这里用 margin 复刻同样的可见内缩量 */
+  margin-right: 9px;
+}
+/*
+   与 .ts-wrapper.single .ts-control::after 同款几何：
+   盒右缘在距输入框外缘 3px 处（operators right:2px + 边框 1px），::before right:0
+   → 三角 span 3-11px，top:50%+margin-top:-2px 视觉垂直居中
+   */
+.treeselect-wrap .treeselect-input__arrow::before {
+  content: "";
+  position: absolute !important;
+  top: 50% !important;
+  right: 0;
+  margin-top: -2px !important;
+  width: 0 !important;
+  height: 0 !important;
+  border: 4px solid transparent !important;
+  border-top-color: oklch(var(--bc) / 0.5) !important;
+}
+
+/* ---------- 清除图标 — 没值永远隐藏，有值时 hover/focus/opened 才显示 ---------- */
+/* 默认隐藏；绝对定位在箭头左侧（× 中心 22px，与 TomSelect clear 的 16px 盒中心一致） */
+.treeselect-wrap .treeselect-input__clear {
+  display: none !important;
+  width: 16px !important;
+  height: 16px !important;
+  position: absolute !important;
+  top: 50% !important;
+  right: 20px !important; /* × 中心内缩与 select clear 一致 */
+  transform: translateY(-50%);
+  margin: 0;
+  align-items: center !important;
+  justify-content: center;
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+/* 有值时（没有 --value-not-selected 类），hover / focus / opened 才显示 */
+.treeselect-wrap
+  .treeselect-input:not(.treeselect-input--value-not-selected):hover
+  .treeselect-input__clear,
+.treeselect-wrap
+  .treeselect-input--focused:not(.treeselect-input--value-not-selected)
+  .treeselect-input__clear,
+.treeselect-wrap
+  .treeselect-input--opened:not(.treeselect-input--value-not-selected)
+  .treeselect-input__clear {
+  display: flex !important;
+}
+/* 隐藏 SVG，× 用与 TomSelect clear 相同的文字字形绘制 */
+.treeselect-wrap .treeselect-input__clear svg {
+  display: none !important;
+}
+.treeselect-wrap .treeselect-input__clear::before,
+.treeselect-wrap .treeselect-input__clear::after {
+  content: none !important;
+}
+.treeselect-wrap .treeselect-input__clear::before {
+  content: "×" !important;
+  color: oklch(var(--bc) / 0.5);
+}
+.treeselect-wrap .treeselect-input__clear:hover::before {
+  color: var(--fallback-er, oklch(var(--er) / 1)) !important;
+}
+
+/* ---------- 下拉面板 — 跟 .ts-dropdown 完全对齐 ---------- */
+/* .ts-dropdown: border:1px solid, box-shadow；圆角见下方 6.116 规则 */
+.treeselect-list {
+  border: 1px solid oklch(var(--bc) / 0.1) !important;
+  border-radius: 0 !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
+  margin-top: 4px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  z-index: 900 !important;
+  font-size: 0.875rem !important;
+}
+
+/* 6.116 面板圆角与输入框统一：弹出列表 = --rounded-btn(2px)，与 .treeselect-input 一致；
+   内联静态列表(.treeselect-list--static)保持直角。 */
+.treeselect-list:not(.treeselect-list--static) {
+  border-radius: var(--rounded-btn, 0.5rem) !important;
+}
+
+/* 静态列表（Tree 模式）不做绝对定位 */
+.treeselect-list--static {
+  box-shadow: none;
+  margin-top: 0 !important;
+  max-height: 100%;
+  overflow-y: auto;
+}
+
+/* ---------- 列表行 ---------- */
+.treeselect-list__item {
+  height: 1.75rem !important;
+  line-height: 1.75rem !important;
+  padding: 0 6px !important;
+  border-radius: 0.25rem;
+  margin: 1px 4px;
+  transition: background-color 0.15s;
+}
+
+.treeselect-list__item:hover {
+  background: oklch(var(--bc) / 0.06) !important;
+}
+
+/*
+   ---------- 层级缩进（6.208）----------
+   vendor JS 给每行内联 paddingLeft = level*20(+20)，但一直被上面
+   padding:0 6px !important 压成 6px——下拉树实际无层级观感（6.116 起的隐性回归）。
+   按 jstree 新密度 12px/级 显式恢复：[level] 属性由 treeselectjs 设置，
+   (0,2,0) 胜行规则 (0,1,0)，!important 压 vendor 内联；level 0 保持 6px 基准
+   */
+.treeselect-list__item[level='1'] { padding-left: 18px !important; }
+.treeselect-list__item[level='2'] { padding-left: 30px !important; }
+.treeselect-list__item[level='3'] { padding-left: 42px !important; }
+.treeselect-list__item[level='4'] { padding-left: 54px !important; }
+.treeselect-list__item[level='5'] { padding-left: 66px !important; }
+
+.treeselect-list__item--focused {
+  background: oklch(var(--bc) / 0.08) !important;
+}
+
+/* ---------- 展开箭头 ---------- */
+.treeselect-list__item-icon {
+  width: 16px !important;
+  min-width: 16px;
+  height: 16px !important;
+}
+
+/* ---------- checkbox ---------- */
+.treeselect-list__item-checkbox-container {
+  width: 16px !important;
+  min-width: 16px;
+  height: 16px !important;
+  border-radius: 3px;
+  border-width: 1.5px;
+}
+
+/* ---------- 已选中态 ---------- */
+.treeselect-list__item--checked {
+  background: oklch(var(--p) / 0.12) !important;
+  border-left: 2px solid var(--fallback-p, oklch(var(--p) / 1));
+  border-radius: 0 0.25rem 0.25rem 0 !important;
+}
+
+.treeselect-list__item--partial-checked {
+  background: oklch(var(--p) / 0.06) !important;
+  border-left: 2px dashed oklch(var(--p) / 0.5);
+}
+
+/* ---------- 文字 ---------- */
+.treeselect-list__item-label {
+  font-size: 0.8125rem !important;
+  color: var(--fallback-bc, oklch(var(--bc) / 1)) !important;
+  padding-left: 6px !important;
+}
+
+/* ---------- 分组计数 ---------- */
+.treeselect-list__item-label-counter {
+  color: oklch(var(--bc) / 0.4) !important;
+  font-size: 0.6875rem !important;
+  background: oklch(var(--bc) / 0.08) !important;
+  padding: 0 5px !important;
+  border-radius: 999px !important;
+  margin-left: 4px;
+}
+
+/*
+   ---------- Tag（多选已选标签）：与 TomSelect multi 徽章 final 版逐项一致（6.72：
+   数值必须照抄 1356 行 .ts-wrapper.multi .ts-control > div 的 final 值，两边同步改）
+   6.203 选择器三连类名升 (0,4,0)：core-layout 的 `.field-row > div:nth-child(2) div`
+   （0,2,2 + !important，且该文件加载在本文件之后）把 line-height:1.6 压成 1.25，
+   行盒 20.8→16.25px，tag 整体比 TomSelect 徽章矮 ~3px（用户截图指出高度不齐）。
+   同 321 行 cross 的三连类名手法；:hover 规则也要跟上否则输给本规则 ----------
+   */
+.treeselect-wrap .treeselect-input__tags-element.treeselect-input__tags-element.treeselect-input__tags-element {
+  background: oklch(var(--bc) / 0.06) !important;
+  border: none !important;
+  color: oklch(var(--p) / 0.85) !important;
+  border-radius: 0.25rem !important; /* 与 ts 徽章同步减小（6.73） */
+  padding: 1px 4px !important;
+  font-size: 0.8125rem !important;
+  font-weight: 500 !important;
+  line-height: 1.6 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 2px !important;
+}
+
+.treeselect-wrap .treeselect-input__tags-element.treeselect-input__tags-element.treeselect-input__tags-element:hover {
+  background: oklch(var(--p) / 0.18) !important;
+}
+
+/*
+   6.203 文字节段 span 也被 core-layout `.field-row > div:nth-child(2) span`（0,2,2）
+   压成 1.25——flex 容器的 line-height 不撑高度，tag 高度由子项决定，
+   span 16.25px + cross 18px 只能撑出 20px。span 同升 (0,4,0) 回到 20.8px，
+   tag = 20.8 + 上下 padding 1px = 22.8px，与 TomSelect .item 完全一致
+   */
+.treeselect-wrap .treeselect-input__tags-name.treeselect-input__tags-name.treeselect-input__tags-name {
+  line-height: 1.6 !important;
+}
+
+/*
+   tag 删除图标：不用引擎默认 SVG（形状与 TomSelect 的文字 × 有差异），隐藏后用
+   ::before 画 "×"，盒子与 hover 效果逐项照抄 TomSelect .remove（1382 行，两边同步改）
+   */
+.treeselect-wrap .treeselect-input__tags-cross svg {
+  display: none !important;
+}
+.treeselect-wrap .treeselect-input__tags-cross {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin: 0;
+  padding: 0 !important;
+  border: none !important;
+  background: none !important;
+  border-radius: 50% !important;
+  font-size: 1rem !important;
+  line-height: 1 !important;
+  cursor: pointer !important;
+  transition:
+    color 0.15s,
+    transform 0.15s !important;
+}
+.treeselect-wrap .treeselect-input__tags-cross::before {
+  content: "×" !important;
+  color: oklch(var(--p) / 0.6) !important;
+}
+/* line-height 要压过 6.49 的行距泄漏规则 .field-row..:nth-child(2) span 的
+   1.25 !important——那条实为 (0,2,2)，三连类名 (0,4,0) 才稳 */
+.treeselect-wrap .treeselect-input__tags-cross.treeselect-input__tags-cross.treeselect-input__tags-cross {
+  line-height: 1 !important;
+}
+.treeselect-wrap .treeselect-input__tags-cross:hover {
+  background: oklch(var(--er) / 0.12) !important;
+  transform: scale(1.1) !important;
+}
+.treeselect-wrap .treeselect-input__tags-cross:hover::before {
+  color: oklch(var(--er) / 0.9) !important;
+}
+
+/* ---------- 空状态 ---------- */
+.treeselect-list__empty {
+  height: 2.25rem !important;
+  padding-left: 10px !important;
+  color: oklch(var(--bc) / 0.4) !important;
+  font-size: 0.8125rem !important;
+}
+
+/* ---------- 滚动条美化 ---------- */
+.treeselect-list {
+  scrollbar-width: thin;
+  scrollbar-color: oklch(var(--bc) / 0.2) transparent;
+}
+.treeselect-list::-webkit-scrollbar {
+  width: 6px;
+}
+.treeselect-list::-webkit-scrollbar-thumb {
+  background: oklch(var(--bc) / 0.2);
+  border-radius: 3px;
+}
+.treeselect-list::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--bc) / 0.35);
+}
+
+/*
+   Color 颜色选择器 — 内嵌色块 (完全照搬日期组件 .date-icon-btn 套路)
+   DOM: <div class="color-input-wrap">         ← position:relative (靠 input 撑高)
+   <div class="color-swatch">          ← Pickr trigger, absolute, 固定 32×32
+   <button class="pcr-button">        ← Pickr 创建, absolute inset:0 填满
+   <input class="color-input">          ← padding-left:40px 给色块让路
+   和日期组件完全对称 (只是方向反过来):
+   日期: .date-input-wrap > .date-icon-btn(右, 绝对定位) + .date-input(padding-right)
+   颜色: .color-input-wrap > .color-swatch(右, 绝对定位) + .color-input(padding-right)
+   */
+
+.color-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.color-input {
+  padding-left: 0.75rem !important; /* 12px 对齐其他组件 */
+  padding-right: 2rem !important; /* 32px = 4px 边距 + 24px 色块 + 4px 间距 */
+  width: 100%;
+}
+
+/* 注意: Pickr JS 会把 trigger div 原有 class 替换成 .pickr
+   所以选择器必须用 .color-input-wrap > .pickr, 不能用 .color-swatch! */
+.color-input-wrap > .pickr {
+  position: absolute !important;
+  right: 4px !important; /* 距右边框 4px */
+  top: 50%;
+  transform: translateY(-50%) !important;
+  width: 1.5rem !important; /* 24×24 — 缩小的色块（原 32×32 满高） */
+  height: 1.5rem !important;
+  display: block !important;
+  box-sizing: border-box;
+  border-radius: var(--rounded-btn, 0.25rem) !important;
+  border: none;
+  cursor: pointer !important;
+  overflow: hidden;
+  z-index: 1;
+}
+
+/* .pcr-button 钉满 trigger —— 让 Pickr 自己的背景/色块正常工作 */
+.color-input-wrap > .pickr > .pcr-button {
+  position: absolute !important;
+  inset: 0;
+  height: auto !important;
+  width: auto !important;
+  padding: 0 !important;
+  margin: 0;
+  border-radius: inherit !important;
+  display: block !important;
+  cursor: pointer !important;
+  /* 注意: 不设 background/background-image —— 让 Pickr monolith 自己处理 */
+}
+
+/* clear 状态的跨叉线也要撑满整块区域, background-size 设成 100% */
+.color-input-wrap > .pickr > .pcr-button.clear {
+  background-size: 100% !important; /* 斜叉线填满整块, 和已选色块宽度一致 */
+}
+
+/* ::after 色块 —— 本身就是 absolute 100%, 不需要额外改 */
+
+/* ::before 透明棋盘格 —— clear 状态需要, 有颜色时被 ::after 覆盖 */
+
+/* -------- 表格内: 色块 20×20 -------- */
+.table .color-input {
+  padding-left: 1.4375rem !important; /* 23px = 20 + 3 */
+}
+.table .color-input-wrap > .pickr {
+  width: 1.25rem !important; /* 20px */
+  height: 1.25rem !important;
+}
+
+/* -------- 搜索区: 色块 22×22 -------- */
+.search-form .color-input {
+  padding-left: 1.5625rem !important; /* 25px = 22 + 3 */
+}
+.search-form .color-input-wrap > .pickr {
+  width: 1.375rem !important; /* 22px */
+  height: 1.375rem !important;
+}
+
+.pcr-app {
+  z-index: 10000;
+  /* 6.116 面板圆角与输入框/色块统一：原 vendor 为 .1em，改用 --rounded-btn(2px) */
+  border-radius: var(--rounded-btn, 0.5rem) !important;
+}
+
+/*
+   jstree 外观——6.194 起回归官方 default 主题骨架：点状辅助线、展开箭头、
+   24px 行高等几何全部由 vendor style.min.css 提供（Tree 页已加载）。
+   官方主题自带 tie_selection 胶水：checkbox 插件给容器加
+   .jstree-checkbox-selection，vendor 据此把 .jstree-clicked>.jstree-checkbox
+   渲染成选中雪碧图，无需我方映射。
+   6.197 icons:false 去掉文件/文件夹图标。
+   6.198 主题化：官方的灰阶勾选框与 #beebff 选中色与本主题不符——
+   勾选框改 daisyUI 原生 checkbox 同款（主题色实底+白勾），选中/悬停
+   行背景改主题色淡底。文件族手写 css 在 vendor 之后加载，同优先级即赢。
+   */
+
+/*
+   ---- 层级缩进：官方 24px/级 压到 12px/级（6.208，用户反馈左右缩进太宽） ----
+   vendor 规则 .jstree-default .jstree-node{margin-left:24px} 是 (0,2,0) 且在
+   本文件之后加载，必须 (0,3,0) 权重即胜；
+   根级 margin:0 由 vendor 的 >.jstree-container-ul>.jstree-node 规则（同 0,3,0、
+   后加载）保住；辅助线画在 .jstree-node 盒自身背景上，随盒平移不错位
+   */
+.jstree-default .jstree-container-ul .jstree-node {
+  margin-left: 12px;
+}
+
+/*
+   ---- 勾选框：去雪碧图，改主题化方框（几何仍居 24px 行内） ----
+   6.199：选择器必须 (0,3,0)——本页 vendor style.min.css 加载在本文件之后，
+   其 .jstree-icon:empty（:empty 计类权重 0,2,0）把 checkbox 上一切同权重的
+   非 !important 声明（margin、vertical-align…）按源序整条压掉。
+   (0,3,0) 一劳永逸绕开同权重竞争
+   */
+.jstree-default .jstree-anchor > .jstree-checkbox {
+  background-image: none !important;
+  position: relative;
+  box-sizing: border-box;
+  width: 1rem !important;
+  height: 1rem !important;
+  /* margin-top 4px=(24-16)/2：top 对齐下把 16px 框中心精确推到 24px 行中心，
+     与文字/点线/展开箭头同轴（vertical-align:middle 依赖字体 x-height，不稳） */
+  margin: 4px 4px 0 0;
+  border: 1.5px solid oklch(var(--bc) / 0.35);
+  /* 6.204：2px 与原生 checkbox 圆角对齐（实测 Checkbox11 原生框 2px，此值原 0.25rem=4px 偏圆） */
+  border-radius: 2px;
+  /*
+   注意：不能写 var(--fallback-b1, …)——本构建里该变量是「定义了但为空」，
+   展开成空声明会让整条背景失效（6.198 踩坑）；--b1 实测存在，直接用
+   */
+  background-color: oklch(var(--b1) / 1);
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+.jstree-default .jstree-checkbox::after {
+  content: "";
+  display: none;
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  width: 5px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+/* 选中（tie_selection 下 clicked 命中；tie_selection=false 时 checked 命中） */
+.jstree-default.jstree-checkbox-selection .jstree-clicked > .jstree-checkbox,
+.jstree-default .jstree-checked > .jstree-checkbox {
+  background-color: oklch(var(--p) / 0.9) !important;
+  border-color: oklch(var(--p) / 0.9) !important;
+}
+.jstree-default.jstree-checkbox-selection .jstree-clicked > .jstree-checkbox::after,
+.jstree-default .jstree-checked > .jstree-checkbox::after {
+  display: block;
+}
+/* 半选（级联父节点）——主色淡底 + 白色横杠 */
+.jstree-default .jstree-anchor > .jstree-undetermined {
+  background-color: oklch(var(--p) / 0.35) !important;
+  border-color: oklch(var(--p) / 0.5) !important;
+}
+.jstree-default .jstree-anchor > .jstree-undetermined::before {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 2px;
+  background: #fff;
+  transform: translate(-50%, -50%);
+}
+
+/*
+   ---- 选中/悬停行背景：官方 #beebff/#e7f4f9 → 主题色淡底 ----
+   6.202 拆分作用域：多选树选中行不要背景（勾选框本身就是状态，用户反馈），
+   单选树保留 p/0.25 底色（无勾选框，高亮即选中态）。
+   两规则均 (0,3,0) 但容器互斥（:not 计权重）不冲突；
+   多选的 hovered 规则须写在 clicked 透明之后（同权重后者赢），
+   让勾选行悬停仍有 bc/0.08 反馈；单选 clicked (0,3,0) > hovered (0,2,0)，
+   悬停选中节点不被 hover 冲淡
+   */
+.jstree-default .jstree-hovered {
+  background: oklch(var(--bc) / 0.08) !important;
+  box-shadow: none !important;
+}
+.jstree-default.jstree-checkbox-selection .jstree-clicked {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+.jstree-default.jstree-checkbox-selection .jstree-hovered {
+  background: oklch(var(--bc) / 0.08) !important;
+  box-shadow: none !important;
+}
+.jstree-default:not(.jstree-checkbox-selection) .jstree-clicked {
+  /* 6.201 用户反馈 0.12 太淡选中感弱升到 0.25；6.204 再加深到 0.35 */
+  background: oklch(var(--p) / 0.35) !important;
+  box-shadow: none !important;
+}
+/* 文字色跟主题（暗色主题下官方的黑色文字会不可读） */
+.jstree-default .jstree-anchor {
+  color: oklch(var(--bc) / 0.85);
+}
+
+/*
+   ---- 垂直对齐：把 anchor 行高拉回官方 24px ----
+   6.199：core-layout 的 field-row 文字节奏规则（line-height:1.25 !important，
+   命中字段行内所有后代）会漏进 jstree anchor——文字框被压成 17.5px 顶在
+   24px 行框上部，与画在行中心的点线错位 ~4px（文字浮在虚线上方）。
+   带容器前缀 (0,3,0)+!important 压过那条 (0,2,0)+!important；
+   再补一条无前缀规则兜底非 field-row 场景（trees 在 vendor 后加载即赢）
+   */
+.jstree-default .jstree-anchor {
+  line-height: 1.5rem;
+}
+.field-row .jstree-default .jstree-anchor {
+  line-height: 1.5rem !important;
+}
+
+/*
+   ---------- 单选 Tree — 不显示选择框 ----------
+   6.191：单选（multiple=false）语义 = 点节点即选中，checkbox 无意义。
+   JS 侧（builder-elements.js x-tree）已改为单选不加载 checkbox 插件；
+   这里兜底隐藏（含旧脚本/缓存场景渲染出的残留框）。
+   注意：jstree 初始化后 .jstree-default 与 .tree-single 在同一个容器元素上，
+   不能写成后代选择器 .tree-single .jstree-default，否则永远匹配不到
+   */
+.jstree-wrap.tree-single .jstree-checkbox {
+  display: none !important;
+}
+
+/*
+   列表页左侧树 展开/隐藏的布局规则已在 builder-core-layout.css——
+   左侧树是 widget（src/tree/Tree.php）不是 displayer，注册不了 cssFamily，
+   且 a.show-left 的全局隐藏规则必须每页生效（table.html 无条件输出该锚点）。
+   6.206 的选中行底色规则同样因此放在 core-layout（列表页不加载本文件）
+   */

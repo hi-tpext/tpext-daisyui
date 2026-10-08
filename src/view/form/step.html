@@ -1,0 +1,23 @@
+{notempty name="$steps"}
+<div id="{$id}" class="{$class}" data-wizard="{$id}" {$attr|raw}>
+    <ul class="steps steps-horizontal w-full">
+        {volist name="steps" id="step"}
+        <li class="step {if condition="$step.active"}step-primary{/if}" data-val="{$key}">{$step.label}</li>
+        {/volist}
+    </ul>
+    <div class="step-content mt-6">
+        {volist name="steps" id="step"}
+        <div class="step-pane hidden" data-pane="{$key}">{$step.content|raw}</div>
+        {/volist}
+    </div>
+    {notempty name="$readonly"}
+    <div class="flex justify-end gap-2 mt-4">
+        <button class="btn btn-ghost" data-wizard="prev" type="button">{:__blang('builder_step_prev')}</button>
+        <button class="btn btn-primary" data-wizard="next" type="button">{:__blang('builder_step_next')}</button>
+        {if condition="!$readonly"}
+        <button class="btn btn-primary hidden" data-wizard="finish" type="submit">{:__blang('builder_step_finish')}</button>
+        {/if}
+    </div>
+    {/notempty}
+</div>
+{/notempty}

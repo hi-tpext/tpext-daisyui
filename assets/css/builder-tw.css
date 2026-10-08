@@ -1,0 +1,4 @@
+/* Tailwind 专用入口 —— 只包含 @tailwind 指令 */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

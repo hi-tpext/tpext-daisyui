@@ -1,0 +1,10 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}">
+    <div class="text-suffix-wrap flex w-full items-stretch">
+        {if $befor}<span class="text-prefix">{$befor|raw}</span>{/if}
+        <x-text class="flex-1 {$class}" placeholder="{$placeholder}"
+            value="{$value}" name="{$name}" id="{$id}" {$attr|raw}></x-text>
+        {if $after}<span class="text-suffix">{$after|raw}</span>{/if}
+    </div>
+    {include file="$helptempl" /}
+</div>

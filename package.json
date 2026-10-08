@@ -1,0 +1,21 @@
+{
+  "name": "tpext-daisyui",
+  "version": "1.0.0",
+  "description": "",
+  "main": "postcss.config.js",
+  "scripts": {
+    "build": "tailwindcss -i assets/css/builder-tw.css -o assets/css/builder.css --minify",
+    "watch": "tailwindcss -i assets/css/builder-tw.css -o assets/css/builder.css --watch",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "autoprefixer": "^10.5.4",
+    "daisyui": "^4.12.24",
+    "postcss": "^8.5.28",
+    "tailwindcss": "^3.4.19"
+  }
+}

@@ -1,0 +1,1790 @@
+/*
+   全局手写族样式（不经 Tailwind 编译直接发布；构建入口是 builder-tw.css → assets/css/builder.css，
+   见 package.json / TASK_LIST 第七节）。与 daisyUI/layui/preflight 竞争的规则一律不写进 @layer。
+   */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+   主题文字色兜底（未分层，且本文件在 layui.css 之后加载）
+   layui.css 里写死了 body{color:rgba(0,0,0,.85)}，会盖掉 DaisyUI 主题的
+   base-content，导致夜间主题下「黑字落在深色底」不可读。
+   这里用未分层的 body 规则覆盖，让正文颜色跟随当前主题的 --bc。
+   */
+body {
+  color: oklch(var(--bc) / 1);
+}
+
+/*
+   6.339 主题切换器色板（layout.html）：色值单一来源 = tailwind.config.js
+   主题定义。span 上动态挂 data-theme="t[0]"，daisyUI 的主题块是属性选择器
+   （[data-theme=blue]{--p:…}），作用于任意宿主元素，故小色块自身即可解析
+   对应主题变量。上底 primary、下底 base-100：dark 主题（蓝/近黑）与
+   */
+.theme-swatch {
+  background: linear-gradient(to bottom, oklch(var(--p)) 0 50%, oklch(var(--b1)) 50% 100%);
+}
+
+/* 全局自定义样式（DaisyUI 主题色变量兜底 + tpb toast 样式） */
+
+/*
+   6.148 删除原 @layer components 死代码块（.input/.select/.textarea 的
+   32px/0.875rem 组 + .checkbox/.radio 1rem 组）：本文件直接上线不经编译，
+   @layer 成为原生级联层，被 builder.css（daisyUI）与 layui.css 未分层规则
+   整体压制——该块自 6.78/6.79/6.68 起实际已全部失效，32px 契约由下方
+   未分层的 .input 高度组、.form-wrapper input.input 字号组、textarea.textarea
+   与 .radio:not(.tab)/.checkbox:not(.tab) 各自承担（见 6.147 遗留说明）。
+   涉及与 daisyUI/layui/preflight 竞争的规则一律不要写进 @layer。
+   */
+
+/*
+   tpb toast 组件样式（6.147 移出 @layer：layui.css 未分层的通配重置
+   div{margin:0;padding:0} 会压过 @layer 内的 .tpb-toast padding——
+   级联规定未分层规则必胜分层规则，通知被挤成 18px 的瘪条。
+   与上方 body{color} 同理，涉及与 layui 竞争的规则不能放进 @layer）
+   */
+.tpb-toast {
+  padding: 0.5rem 1rem;
+  border-radius: var(--rounded-box, 0.25rem); /* 6.388 与卡片/表格等容器圆角一致 */
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--fallback-bc, oklch(var(--bc) / 1));
+  /* 6.411 中性通知玻璃底（令牌见 builder-core-layout.css :root）；success/error
+     语义色保持实底——彩色半透明叠加下层内容会伤可读性 */
+  background-color: var(--glass-float-bg, var(--fallback-b1, oklch(var(--b1) / 1)));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 14px)) saturate(var(--glass-sat, 1.4));
+  backdrop-filter: blur(var(--glass-blur, 14px)) saturate(var(--glass-sat, 1.4));
+  opacity: 1;
+  transition-property: all;
+  transition-duration: 200ms;
+  min-width: 160px;
+  max-width: 320px;
+  word-break: break-word;
+  white-space: normal; /* 容器 .toast 有 white-space:nowrap，长消息会被 max-width 横向裁断 */
+}
+
+.tpb-toast.toast-success {
+  /* 6.416 用户指定：成功通知淡绿底+深绿字（用户给值，Bootstrap alert-success 配色），
+     不再跟主题 --su；荧光绿方案（#39ff14）已按用户值替换 */
+  background-color: #dff0d8;
+  color: #3c763d;
+}
+
+.tpb-toast.toast-error,
+.tpb-toast.toast-danger {
+  background-color: var(--fallback-er, oklch(var(--er) / 1));
+  color: var(--fallback-erc, oklch(var(--erc) / 1));
+}
+
+.tpb-toast.toast-warning {
+  background-color: var(--fallback-wa, oklch(var(--wa) / 1));
+  color: var(--fallback-wac, oklch(var(--wac) / 1));
+}
+
+.tpb-toast.toast-info {
+  background-color: var(--fallback-in, oklch(var(--in) / 1));
+  color: var(--fallback-inc, oklch(var(--inc) / 1));
+}
+
+/*
+   表格行状态配色（6.240 用户指定 + 6.241 修正 + 6.335 夜间适配）
+   偶数行斑马纹 = 主题 b2（原写死 #f6f6f6，夜间主题下会画成白底黑字，
+   6.335 改用 oklch(var(--b2)) 让浅色≈原淡灰、夜间自动转深）；
+   鼠标经过 = primary 15%（浅主题色）；
+   行选中（勾选行，tableScript 加 tr.active）= primary 28%（深一档主题色，
+   6.241 修正——6.240 互换给成灰色不对）；选中+hover = primary 40%。
+   daisyUI 规则在 builder.css 里未分层，必须 !important 压制；
+   !important 同权重靠源顺序取胜——zebra 规则要写在 hover 规则之前，
+   否则偶数行 hover 无法盖住斑马纹底色。
+   注意：原版这里写 @apply !bg-primary/20——builder-input.css 不经 Tailwind
+   编译直接上线，@apply 在浏览器里非法、整条规则被静默丢弃。
+   */
+.table-zebra tbody tr:nth-child(2n) {
+  /* 6.362 斑马纹减淡：b2 实色(0.93)与表头同灰、观感偏重，改 b2/0.5 叠白约 0.96；
+     冻结列镜像值见 builder-core-layout.css color-mix 规则，两处必须同步 */
+  background-color: oklch(var(--b2) / 0.5);
+}
+
+/* 鼠标经过 = primary 色调（原选中的颜色） */
+.table tbody tr:hover,
+.table tbody tr.hover:hover,
+.table-zebra tbody tr:nth-child(2n):hover,
+.table-zebra.table-hover tbody tr:nth-child(2n):hover {
+  background-color: oklch(var(--p) / 0.15) !important;
+}
+
+/*
+   行选中（勾选行，Table.php tableScript 加 tr.active）= 更深的主题色
+   （6.241 用户修正：6.240 互换后给成了灰色不对——hover 浅主题 0.15、
+   选中深一档 0.28、选中+hover 再深 0.4）
+   */
+.table tr.active,
+.table tr.active:nth-child(even),
+.table-zebra tr.active,
+.table-zebra tr.active:nth-child(even) {
+  background-color: oklch(var(--p) / 0.28) !important;
+}
+
+/* 选中行 hover 时更深一级 */
+.table tr.active.hover:hover,
+.table tr.active.hover:nth-child(even):hover {
+  background-color: oklch(var(--p) / 0.4) !important;
+}
+
+/*
+   table-bordered — 列间分割线（竖线）
+   必须未分层：写在 @layer components 里会被 Tailwind preflight 未分层的
+   * { border-width: 0 } 压制（未分层胜分层，与选择器优先级无关）。
+   颜色用 b3 半透明：透明度随底色混合——白色奇数行上偏淡（约 L91.6），
+   b2=93% 的斑马纹偶数行上约 L88.8，保持可辨（同色不透明值与斑马纹太接近看不清）。
+   */
+.table-bordered th,
+.table-bordered td {
+  border-right: 1px solid oklch(var(--b3) / 0.6);
+}
+
+/* 最后一列不画竖线 */
+.table-bordered th:last-child,
+.table-bordered td:last-child {
+  border-right: 0;
+}
+
+/*
+   表格行最小高度 42px
+   table-sm 单行约 36px（上下 padding 8px + line-height 20px），
+   给 th/td 设 height 撑到 42px。table-cell 的 height 表现为「最小高」，
+   多行内容 / 内嵌组件（按钮组、textarea 等）会自动撑开，不受影响。
+   */
+.table :where(th, td) {
+  height: 42px;
+}
+
+/* 空表格/空 items 占位图居中：Tailwind preflight 把 img 设为 block，
+   text-center 对它失效，须用 auto 边距居中 */
+.items-empty-text {
+  text-align: center; /* items 空态是裸 span，容器无 text-center 类 */
+}
+
+.items-empty-text img {
+  display: block;
+  margin: 0 auto;
+}
+
+/*
+   radio/checkbox 的 blockStyle —— 方形按钮块样式（业务 ->blockStyle() 调用）
+   blockStyle 是视觉样式（右下角选中角标），与 inline（排列方向）是两回事：
+   inline=true(默认) 横排、false 竖排，可与 blockStyle 自由组合。
+   按旧版样子：普通按钮外观，选中时主题色边框 + 右下角主题色三角白勾角标
+   */
+.checkbox-block > label > input,
+.radio-block > label > input {
+  display: none;
+}
+
+.checkbox-block > label > span,
+.radio-block > label > span {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 6.268 收窄：30px→24px（与操作列 btn-xs 一档），用户嫌方块块太高 */
+  min-height: 1.5rem;
+  border: 1px solid oklch(var(--bc) / 0.25);
+  color: oklch(var(--bc) / 0.8);
+  min-width: 4rem;
+  text-align: center;
+  padding: 0.125rem 0.75rem;
+  border-radius: max(var(--rounded-btn, 0.375rem), 4px);
+  font-size: 0.8125rem;
+  background-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+  user-select: none;
+  overflow: hidden; /* 选中角标三角随圆角裁切，不外溢 */
+}
+
+/* hover：边框加深 */
+.checkbox-block > label:hover > span,
+.radio-block > label:hover > span {
+  border-color: oklch(var(--bc) / 0.45);
+}
+
+/*
+   选中：主题色边框 + 右下角三角白勾角标。
+   旧版实现是 checked 时给 span 挂背景图 ico_checkon.svg（右下角三角+粗白勾），
+   SVG 写死颜色无法跟随主题，故用 CSS 重绘同形：三角用 clip-path（颜色走 --p），
+   白勾用旋转边框——不用 data-URI 背景图（带空格的 data-URI 在部分环境显示异常）
+   */
+.checkbox-block > label > input:checked + span,
+.radio-block > label > input:checked + span {
+  border-color: oklch(var(--p) / 0.6);
+}
+
+/* 三角（::before 在下层）：右下角 14px（6.268 随 24px 块同步收窄），颜色跟随主题 */
+.checkbox-block > label > input:checked + span::before,
+.radio-block > label > input:checked + span::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  background-color: oklch(var(--p) / 1);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+/* 白勾（::after 在上层，压在三角之上）：旋转边框 L 形，2px 笔画，
+   位置经几何核算勾体全部落在三角斜边内、不落白底 */
+.checkbox-block > label > input:checked + span::after,
+.radio-block > label > input:checked + span::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  bottom: 3px;
+  width: 4px;
+  height: 7px;
+  border: solid #fff;
+  border-width: 0 1.5px 1.5px 0;
+  transform: rotate(42deg);
+}
+
+.checkbox-block > label > input:disabled + span,
+.radio-block > label > input:disabled + span {
+  opacity: 0.7;
+}
+
+/*
+   单选/多选组外层高度与其他控件统一（6.270）—— 32px 契约
+   —— 用户：inline 或 blockStyle 都应保持外层 div 与普通表单控件（input 2rem）一致。
+   choice-group 是 checkbox.html/radio.html 的选项组容器标记类（模板 6.270 加入）。
+   仅限主表单行（.form-wrapper .field-row），表格/items 单元格里的同款组不撑高。
+   flex 行默认 stretch：label 拉到 32px、自身 items-center 使选项垂直居中，
+   与相邻 32px 输入框对齐；竖排（flex-col）组多行时高度自然增长不受影响。
+   */
+.form-wrapper .field-row .choice-group {
+  min-height: 2rem;
+}
+
+/*
+   6.337 设计债（Batch B）：checkbox/radio 禁用/只读选项降级样式
+   —— 原为模板内联 style="color:#ccc;cursor:not-allowed"（4 处复制，
+   #ccc 非语义色，夜间主题下几乎不降级）。改由本规则按主题推导。
+   —— 相邻选择器保证所有浏览器下文字降级；整 label 的 not-allowed 光标
+   需要 :has（有 @supports 先例，不支持仅光标无效果，不破视觉）。
+   */
+.choice-group input:disabled + span,
+.choice-group input[readonly] + span {
+  color: oklch(var(--bc) / 0.4);
+}
+
+@supports selector(:has(*)) {
+  .choice-group label:has(> input:disabled),
+  .choice-group label:has(> input[readonly]) {
+    color: oklch(var(--bc) / 0.4);
+    cursor: not-allowed;
+  }
+}
+
+/*
+   组件字体统一（14px）—— daisyUI 在 builder.css 里未分层的 .input { font-size: 1rem }
+   是级联获胜值（未分层胜过分层，与出现顺序无关；6.148 已删掉本文件里失效的
+   @layer 0.875rem 死块），曾导致 单行输入框 / TomSelect（wrapper 也被 JS 挂 .input
+   类，.ts-control inherit 继承）/ 日期全是 16px，而 select/textarea/label/treeselect/
+   checkbox 是 14px，组件间字体不一致。
+   这里用未分层 + 更高优先级选择器拉回 14px；搜索表单的 13px 有 .search-form 前缀 + !important，不受影响
+   */
+.form-wrapper input.input, .form-wrapper button.input {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  padding-left: 0.75rem; /* 12px — 组件左侧留白统一（daisyUI 默认 16px 偏大） */
+  /* 6.68: button.input 覆盖 month/year 的触发按钮（Alpine 面板型），否则它们命中
+     daisyUI 未分层 .input 的 1rem，文字比其他组件大一号 */
+}
+
+/* 原生 select 同理：width:auto 时固有宽度=最长选项文本，在 items 等窄栅格列里
+   会把当前列撑开（未走 TomSelect 的模板行 select 尤其明显） */
+.form-wrapper select.select,
+.form-wrapper select.input {
+  width: 100%;
+  min-width: 0;
+}
+
+/*
+   页面默认字体颜色（6.229 用户指定 #4d5259）：body 级覆盖 daisyUI 主题
+   base-content 的继承值，仅影响未自设颜色的继承文字；按钮/徽章/主色文字、
+   text-error 等组件自设色不受影响。放本文件（始终加载、未分层）压过
+   builder.css 的主题 color 即可，无需 !important
+   */
+body {
+  color: #4d5259;
+}
+
+/*
+   6.367 暗色主题 body 级修正：上面 #4d5259 是硬编码深灰，纯继承文字的
+   元素（分页 summary、树节点、未自设色的散文本）在 dark 主题深底上不可读。
+   6.350 只给 .the-field 打了补丁，这里在源头放行——dark 下交还给 daisyUI
+   主题的 --bc（与 builder.css 被本文件压掉的原始行为一致）。
+   特异性 (0,1,1) 压过 body (0,0,1)；自设色的组件（按钮族/语义色/标签）
+   本就不吃继承，不受影响。构建仅含 blue/gray/green/orange/purple/dark 六
+   主题，dark 是唯一深色系，无需按主题枚举。
+   */
+[data-theme='dark'] body {
+  color: oklch(var(--bc));
+}
+
+/*
+   通用组件视觉规则必须放本文件（始终加载）——6.219：.toggle 圆角与
+   .input/.textarea 聚焦发光原先错放在 builder-tomselect.css（按需加载，
+   只有含 select 族组件的页面才挂），导致不同表格页之间开关圆角 6px/2px、
+   聚焦边框「发光/默认」不一致
+   */
+
+/*
+   toggle 圆角：本库主题 --rounded-badge=.125rem（≈2px），跟随主题会近直角、观感太方；
+   而胶囊(1.9rem)又太圆。这里取 Tailwind rounded-md（0.375rem=6px）作「轻微圆角」，
+   既不方也不胶囊。见 TASK_LIST 6.110
+   */
+.toggle {
+  border-radius: 0.375rem;
+}
+
+/*
+   表格单元格内开关水平居中（6.220）：td 虽有 text-center，但开关外层 div 是块级、
+   内层 label 是铺满单元格宽度的 flex 容器，text-align 管不到 flex 子项 → 开关贴左。
+   让 label 的 flex 子项居中即可；选择器限定在 td.text-center 内，表单页（无 td）不受影响，
+   items 克隆行同样带 text-center 一并生效
+   */
+td.text-center [x-data^='switchBtn'] > label.flex {
+  justify-content: center;
+}
+
+/*
+   Input/Textarea focus 效果——去掉 outline，改为内阴影 + 主题色外发光
+   （ts-wrapper 专属选择器留在 builder-tomselect.css）
+   1px 实心扩散环必须先于模糊层：纯模糊（0 0 8px 无 spread）在近直角转角处的
+   光强只有边缘中点约一半，四角会出现缺口；实心环随 border-radius 连续走位补齐
+   */
+.input:focus,
+.input:focus-visible,
+.input:focus-within,
+.textarea:focus,
+.textarea:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 0 1px oklch(var(--p) / 0.6),
+    0 0 8px oklch(var(--p) / 0.6) !important;
+  border-color: transparent;
+}
+
+/*
+   6.427 maxlength 计数——x-text/x-textarea 组件内置（builder-elements.js），
+   「N/M」悬浮在控件右缘内、用到上限 ~80% 才出现（builder-char-show），
+   绝对定位不占布局高度（6.426 的下方计数行打破 32px 控件节奏被否）。
+   出现时给控件 padding-right 让位防文字压字；超限（预填超长——原生
+   maxlength 不拦初始值）控件边框/焦点光环与计数转 error 色，焦点光环
+   按 364 行 focus 同构改配色（实心环先于模糊层的次序保持）。
+   */
+x-text,
+x-textarea {
+  display: block;
+  position: relative;
+}
+
+.builder-char-count {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  font-size: 0.75rem;
+  line-height: 1;
+  color: oklch(var(--bc) / 0.45);
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
+x-textarea .builder-char-count {
+  top: auto;
+  transform: none;
+  bottom: 6px;
+}
+
+.builder-char-count.builder-char-show {
+  display: block;
+}
+
+.builder-char-count.builder-char-over {
+  color: oklch(var(--er) / 0.9);
+}
+
+.input.char-counted,
+.textarea.char-counted {
+  padding-right: 4rem;
+}
+
+.input.builder-char-over,
+.textarea.builder-char-over {
+  border-color: oklch(var(--er) / 0.8);
+}
+
+.input.builder-char-over:focus,
+.input.builder-char-over:focus-visible,
+.textarea.builder-char-over:focus,
+.textarea.builder-char-over:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 0 1px oklch(var(--er) / 0.6),
+    0 0 8px oklch(var(--er) / 0.6) !important;
+  border-color: transparent;
+}
+
+/*
+   6.429 表单校验错误层——tpextbuilder.js validateForm 遍历（form.html 的
+   reportValidity 闸门已替换），取代浏览器原生气泡（跟随浏览器 UI 语言、
+   各家样式不一、且只在控件旁一闪即逝）。三件套：
+   ① 无效控件红边框 + focus 红光环（焦点光环按 6.427 同构：实心环先于模糊层）；
+   ② .builder-form-error 错误行插在提交按钮行上方（JS 定位，全宽红字）；
+   ③ 右上角 tpb.notify('danger') 通知（toast-top toast-end 容器，样式
+     .tpb-toast 已有）。红边框在控件修正后由委托 input/change 监听即时摘除。
+   required 属性照旧由服务端输出（Builder.php 约束层不变），这里只是换提示
+   出口，不引入任何校验库。
+   */
+.input.builder-invalid,
+.textarea.builder-invalid,
+.select.builder-invalid {
+  border-color: oklch(var(--er) / 0.8);
+}
+
+.input.builder-invalid:focus,
+.input.builder-invalid:focus-visible,
+.textarea.builder-invalid:focus,
+.textarea.builder-invalid:focus-visible,
+.select.builder-invalid:focus,
+.select.builder-invalid:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 1px 1px rgba(0, 0, 0, 0.075),
+    0 0 0 1px oklch(var(--er) / 0.6),
+    0 0 8px oklch(var(--er) / 0.6) !important;
+  border-color: transparent;
+}
+
+/* TomSelect：宿主 select display:none 藏在 .ts-wrapper 里，红边画在 ts-control */
+.ts-wrapper:has(> select.builder-invalid) > .ts-control {
+  border-color: oklch(var(--er) / 0.8);
+}
+
+/* x-editor（EasyMDE/UEditor 等）：内部 textarea/editor 隐藏在宿主里，
+   宿主挂 builder-invalid 时给编辑器轮廓圈红（CodeMirror/wrapper 各家边框
+   机制不同，outline 圈整个编辑器块最通用且不破内部布局） */
+x-editor:has(> .builder-invalid) {
+  outline: 1px solid oklch(var(--er) / 0.8);
+  outline-offset: 1px;
+  border-radius: var(--rounded-btn);
+}
+
+.builder-form-error {
+  color: oklch(var(--er) / 0.95);
+  font-size: 0.875rem;
+  line-height: 1.4;
+  text-align: center;
+  padding: 2px 0;
+}
+
+.builder-form-error > .builder-form-error-text {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: var(--rounded-btn);
+  background: oklch(var(--er) / 0.08);
+}
+
+/*
+   6.347 光影 + focus 试点（以 operationlog 表格页为驱动样本）
+   现代简洁方向下补齐两档「缺失项」：
+   1) 主内容卡静止高度 —— daisyUI corporate 的 shadow-sm 几乎不可见，
+   页面在白底 base-200/50 上缺少悬浮感。给 .card 一档克制的双层阴影。
+   取色用纯黑半透明而非 oklch(--bc)，避免夜间主题浅文字色画成「发光」；
+   与 .tpb-toast（同为 rgb(0 0 0 / α)）的光影语言一致。
+   2) 键盘 focus 环 —— daisyUI 已给 btn/checkbox/radio/toggle 提供 :focus-visible
+   描边（按变体色），但 select / 分页 / 表格排序链接等原生控件无任何聚焦态。
+   统一用 :focus-visible（仅键盘触发，不打扰鼠标点击）补 primary 扩散环。
+   本文件在 builder.css(daisyUI) 之后加载，同特异度即取胜，无需 !important。
+   */
+
+/* 主内容卡：一档克制的静止高度（贴合底部 1px 硬阴影 + 6/16px 柔扩散） */
+main .card.bg-base-100 {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.05),
+    0 6px 16px -6px rgb(0 0 0 / 0.12);
+}
+
+/*
+   统一键盘聚焦环：仅补齐 daisyUI 未覆盖的控件（select / 分页 / 表格排序链接）。
+   btn / checkbox / radio / toggle 的 :focus-visible 由 daisyUI 自带（且按变体色
+   outline-color），此处不重复定义以免用固定 primary 盖掉各自的语义色。
+   */
+.select:focus-visible,
+.pagination-bar a:focus-visible,
+.pagination-bar button:focus-visible,
+.table th a:focus-visible {
+  outline: 2px solid oklch(var(--p) / 0.55);
+  outline-offset: 2px;
+}
+
+/*
+   6.349 表单面光影：控件「静止凹槽」
+   只有聚焦时才跳出一圈主题发光——从「平」到「亮」缺少中间态，字段读起来
+   不像可填写的凹槽。补一档极浅内影（inset，纯黑 4.5%），既给出「可输入」
+   的凹陷质感、与 6.347 卡片阴影呼应，又让 focus 发光过渡更顺。
+   .ts-wrapper.input（TomSelect）自带 .input 类 → 一并生效，无需单独命中；
+   上方 .input:focus 发光块带 !important，静止内影不会干扰聚焦态。
+   */
+.input,
+.textarea {
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.045);
+}
+
+/*
+   6.350 displayer 面：只读值（.the-field）颜色主题自适应
+   仅靠 body 的硬编码 #4d5259（6.229 用户指定的浅色默认文字色）继承取色。
+   夜间主题下深灰落深底（实测 value rgb(77,82,89) on card oklch(.253)）≈ 不可读，
+   而 label 用 oklch(--bc/…) 能自适应——只有值成了暗角。这里补显式着色：
+   浅色保持用户指定的 #4d5259（视觉零变化），仅 [data-theme=dark] 切浅灰。
+   刻意放 builder-core.css：本文件先于 builder-core-layout.css 加载，
+   故 .the-field.success/.danger/.warning… 语义色变体（在后者、同/更高特异度）恒胜，
+   不受本基础着色影响；表格 .table .the-field 亦同取此色（夜间同样受益）。
+   */
+.the-field {
+  color: #4d5259;
+}
+
+[data-theme='dark'] .the-field {
+  color: oklch(var(--bc) / 0.88);
+}
+
+/*
+   6.352 关掉控件动效（勾选「上下」跳动 + 按压缩放）——改为纯静态
+   用户反馈：表格内勾选 checkbox 时「上下抖动」，整体希望静态、少动效。
+   根源在 daisyUI 三个主题令牌（tailwind.config.js modernStructure 定义）：
+   - --animation-input: 0.2s → .checkbox:checked 的 checkmark 关键帧
+   （@keyframes checkmark 把 background-position-y 5px→-2px→0，即勾选时
+   对勾的竖向「上下」弹动；.radio/.toggle/.input 等过渡同源）
+   - --animation-btn: 0.25s → 按钮 focus/active 过渡
+   - --btn-focus-scale: 0.975 → .btn:active 的 scale 按压跳动
+   在 :root/[data-theme] 覆写归零即可从令牌层一次性关掉全部消费方，
+   无需 npm 重建。本文件晚于 builder.css 加载，自定义属性同级后者胜出；
+   动画时长归零后 checkmark 立即停在 100%（background-position-y:0，静止态），
+   故勾选无位移、无灰闪。保留 tpb-toast 淡入等功能性反馈（非装饰动效）。
+   */
+:root,
+[data-theme] {
+  --animation-input: 0s;
+  --animation-btn: 0s;
+  --btn-focus-scale: 1;
+}
+
+/*
+   6.412 彻底取消按钮按压/回弹效果（用户：表格操作按钮点击后会向右移一些）
+   .btn 基础挂着 animation:button-pop（@keyframes 含 40% 帧 scale(1.02)），
+   daisyUI 的 .btn:active:hover/:focus 还有 transform:scale(var(--btn-focus-scale))。
+   6.352 的令牌归零只是把时长压到 0：Firefox 松开 :active 时动画对象会重建
+   回放，仍可能闪一下缩放位移感（缩小时左缘右移，观感即「向右移了一点」）。
+   这里直接在动画与 transform 声明上拆除——transform !important 同时压过
+   daisyUI 的 .\!btn 变体（同为 !important、本文件后加载取胜）。
+   */
+.btn {
+  animation: none;
+}
+.btn:active,
+.btn:active:focus,
+.btn:active:hover {
+  animation: none;
+  transform: none !important;
+}
+
+/* Show::cut() 截断标记——点击在截断文本与全文间切换（initShowMore）。
+   类名 shwo-more 保留原库拼写，用户自定义脚本/CSS 可能引用 */
+.shwo-more {
+  cursor: pointer;
+  color: oklch(var(--p) / 0.85);
+  padding-left: 2px;
+  user-select: none;
+}
+
+/* Alpine 初始化前的闪烁遮罩（6.219 自 builder-tomselect.css 迁入：全页面通用） */
+[x-cloak] {
+  display: none !important;
+}
+
+/*
+   text 模板 $befor 前缀 / $after 后缀（6.309 统一到「输入框内嵌图标按钮」规范族，
+   32px 块两套规格叠加——图标偏深偏内、after() 裸图标只有 14px、hover 死区三套毛病）
+   常态：24×24 贴左/右 8px 垂直居中、图标 18px、bc/0.4；文字型前/后缀同位 14px 灰
+   绝对定位不占布局；:has 检测到前/后缀才给输入框对应侧留内边距，防文字压到浮层
+   */
+.text-suffix-wrap {
+  position: relative;
+}
+
+/*
+   :has() 需要 Firefox 121+；为把底线对齐 daisyUI 4（oklch = FF 113），全部 :has 规则统一包
+   @supports selector(:has(*)) 降级——FF≤120 仅失去这批对齐微调，与 daisyUI 自身策略一致
+   */
+@supports selector(:has(*)) {
+  .text-suffix-wrap:has(> .text-suffix) > input.input,
+  .text-suffix-wrap:has(> .text-suffix) > x-text > input.input {
+    padding-right: 2.25rem;
+  }
+
+  .text-suffix-wrap:has(> .text-prefix) > input.input,
+  .text-suffix-wrap:has(> .text-prefix) > x-text > input.input {
+    padding-left: 2.25rem;
+  }
+}
+
+.text-prefix,
+.text-suffix {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1;
+  color: oklch(var(--bc) / 0.4);
+  pointer-events: none;
+  /* 6.427 x-text 宿主 position:relative 后成为定位元素，DOM 在其前的前缀浮层
+     会被宿主（内含不透明 input）盖住——浮层抬到同层之上 */
+  z-index: 1;
+}
+
+.text-prefix {
+  left: 0.5rem;
+}
+
+.text-suffix {
+  right: 0.5rem;
+}
+
+.text-prefix .mdi,
+.text-suffix .mdi {
+  font-size: 1.125rem; /* 18px — 与 .date-icon-btn 一致 */
+}
+
+/*
+   旧库 input-group-addon 包装层（业务手写 HTML 兼容）在浮层内按 display:contents
+   中和：32×32 盒子/自带配色/死 hover 全部让位给统一的 .text-prefix/.text-suffix，
+   afterSymbol('%')、after('%')、手写 addon 三种写法观感从此一致
+   */
+.text-prefix .input-group-addon,
+.text-suffix .input-group-addon {
+  display: contents;
+}
+
+/* 搜索区缩小（与 date-icon-btn 族同档：20×20 贴边 6px、图标 16px） */
+.search-form .text-prefix,
+.search-form .text-suffix {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  font-size: 0.8125rem;
+}
+
+.search-form .text-prefix {
+  left: 0.375rem;
+}
+
+.search-form .text-suffix {
+  right: 0.375rem;
+}
+
+.search-form .text-prefix .mdi,
+.search-form .text-suffix .mdi {
+  font-size: 1rem;
+}
+
+/* 表格 / items 内缩小（18×18 贴边 6px、图标 15px） */
+.table .text-prefix,
+.table .text-suffix {
+  min-width: 1.125rem;
+  height: 1.125rem;
+  font-size: 0.8125rem;
+}
+
+.table .text-prefix {
+  left: 0.375rem;
+}
+
+.table .text-suffix {
+  right: 0.375rem;
+}
+
+.table .text-prefix .mdi,
+.table .text-suffix .mdi {
+  font-size: 0.9375rem;
+}
+
+/*
+   输入框在栅格中流式收缩——input 有 size=20 属性给的固有宽度(≈192px)，
+   栅格项默认 min-width:auto 不收缩，缩窗后输入框会溢出栅格列、压到相邻组件（6.40）。
+   width:100% + min-width:0 让它跟随格子宽度；date-range 单元格/transfer 搜索框
+   本就是 100%，flex 容器内 flex-1 项不受影响，均不回归
+   */
+.form-wrapper input.input {
+  width: 100%;
+  min-width: 0;
+}
+
+/*
+   textarea 高度交还 rows 属性——daisyUI 未分层的 .textarea{min-height:3rem;
+   line-height:2; padding:0.5rem 1rem} 是级联获胜值（历史上有 @layer 里的
+   height:2rem 同时命中 textarea：CSS height 会覆盖 rows 属性，被压成固定
+   2rem 再被 min-height:3rem 抬到 48px，rows=3 完全失效，看起来很矮；6.148
+   已删该死块）。这里未分层覆盖：高度跟随 rows、行距 22px、内边距收到与输入框同档
+   */
+textarea.textarea {
+  height: auto;
+  min-height: 0;
+  line-height: 1.375rem; /* 22px */
+  padding: 0.375rem 0.75rem; /* 6px 12px — 左留白与 .input 一致 */
+}
+
+/*
+   嵌套 Fields 容器（fields.html 的 .fields-content）必须是 12 列 grid：
+   left()/right()/middle() 产出的行带 col-span-*，而 Tailwind col-span 只在 grid
+   父级生效——旧库 bootstrap col-* 用 float+百分比宽度，block 父级也能并排，
+   换 Tailwind 后 left/right 左右结构曾失效（各行全宽堆叠）
+   */
+.fields-content {
+  display: grid !important;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 0.5rem 1rem; /* 行距 8px 同表单行距、列距 16px */
+}
+
+/* 兜底：个别无 col-span 类的子元素占满整行，避免被自动放置进单一轨道 */
+.fields-content > :not([class*="col-span-"]) {
+  grid-column: 1 / -1;
+}
+
+/*
+   单字段行的横向 gap 会撑破窄列（宽度超出/不受控）：
+   .fields-content 的直接子项是“单字段行” .field-row，它自身也是 grid-cols-12 + gap-x-4。
+   12 条轨道之间有 11 条横向间隙（11 × 16px = 176px），这 176px 构成该内层栅格的
+   min-content；一旦该字段行窄于 176px（如 left()/right() 内 col-span-4 只有 126px），
+   栅格被强行撑到 176px，字段内容溢出到相邻列（表现为 市场价/成本价/库存 等字段互相重叠）。
+   单字段行内 label 与输入框都是 col-span-12（上下排列），横向 gap 本无意义 → 置 0，
+   内层栅格 min-content 归 0，字段可随列宽收缩；行距仍由 gap-y-1/row-gap 控制。
+   */
+.fields-content > .field-row {
+  column-gap: 0;
+}
+
+/*
+   6.408 when 包裹层例外：makeWhenWrapper 的 fields() 包裹也带 fields-content 类，
+   但 when 里的字段是横排（label+控件双列），列距清零会让轨道变宽（102.5 vs 87.8px）、
+   整行右移 13px 与普通行错位（testwhen 页实测）。恢复标准 16px——when 包裹层恒为
+   col-span-12 整宽，不存在上面窄列撑破的场景
+   */
+.when-wrapper > .field-row {
+  column-gap: 1rem;
+}
+
+/*
+   同排字段高度不一（如有的带 ⓘ 帮助文案、有的没有）时，grid 会把矮行拉伸到等高；
+   align-content 默认 normal（grid 下等同 stretch）把多余高度均分进各 auto 行——
+   label 行被撑高，输入框被推离 label（实测市场价比销售价的内容顶距多 ~17px）。
+   置 start 让行保持自然高度，输入框始终紧贴上面的 label。
+   */
+.field-row {
+  align-content: start;
+}
+
+/*
+   标签页 —— 靠拢原版 bootstrap nav-tabs 风格：非激活页透明无边框只有文字（hover 才出浅边框），
+   激活页白底+边框、下边框融进内容线；内容区不带边框盒。
+   布局保持 flex（daisyUI 默认 .tabs 是 grid、面板 span 9999 列，面板内容最小宽度会
+   参与 9999 条轨道分摊把标签头挤成换行）；显隐仍由 daisyUI 的 .tab-content
+   display:none/block 控制，不要动它的 display
+   */
+.tabs {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  column-gap: 2px;
+  row-gap: 0;
+  position: relative;
+  z-index: 1; /* 标签头压在内容区顶边之上 */
+}
+
+/*
+   标签头（radio / 链接）：非激活 = 透明底、无边框、灰字（原版 nav-tabs>li>a）。
+   6.321：a.tab（Search::tabLink 的标签）与表单 radio 页签共用同一套凹凸形样式
+   */
+.tabs > input.tab,
+.tabs > a.tab {
+  appearance: none;
+  -webkit-appearance: none;
+  height: auto;
+  min-height: 0;
+  margin: 0 2px -1px 0;
+  padding: 0.3125rem 0.875rem;
+  font-size: 0.8125rem;
+  line-height: 1.42857143;
+  color: oklch(var(--bc) / 0.6);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px 4px 0 0;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+/* hover：完全无边框，只有文字加深（残留的浅边框痕迹用户不要） */
+.tabs > input.tab:hover,
+.tabs > a.tab:hover {
+  color: oklch(var(--bc) / 0.85);
+  border-color: transparent;
+}
+
+/*
+   垂直标签头 hover 免重绘（用户环境反馈"鼠标进出标签时相邻标签文字抖动"）：
+   hover 必须是计算样式零变化——这里把颜色钉回静止态，下面 checked:hover 再钉回
+   激活色（同优先级靠源序取胜）。零属性变化 → 零重绘 → 任何浏览器/缩放比例下
+   都不存在重绘光栅类抖动
+   */
+.tabs.tabs-vertical > input.tab:hover {
+  color: oklch(var(--bc) / 0.6);
+}
+
+/*
+   激活标签头：白底 + 边框、下边框白色遮断内容区顶线（原版 li.active>a）。
+   padding 与非激活完全一致、不加粗——尺寸不变只变颜色，切换时文字不上下移动。
+   6.321 a.tab 变体：daisyUI 激活规则 `.tab:is(.tab-active):not(...)...` 特异性
+   (0,4,0) 且把 border-color 统一设成内容线色（四边框盒子观感），须用重复类
+   (0,4,1) 压过才能拿到「下边框融入背景」的凹凸形
+   */
+.tabs > input.tab:checked,
+.tabs > input.tab:checked:hover,
+.tabs > a.tab.tab-active,
+.tabs > a.tab.tab-active.tab-active,
+.tabs > a.tab.tab-active.tab-active:hover {
+  margin-bottom: -1px;
+  color: oklch(var(--bc) / 0.9);
+  background: var(--fallback-b1, oklch(var(--b1) / 1));
+  border-color: oklch(var(--bc) / 0.2);
+  border-bottom-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  z-index: 2;
+}
+
+/*
+   6.324 tabLink 标签行专属：表单页签下面是带边框的内容盒（激活页下缘与它相连），
+   搜索标签下面没有内容盒——容器自画一条底线供激活页白色下缘遮断（凹凸形闭合），
+   并与下方搜索表单留出间距
+   */
+.tabs.tabs-tablink {
+  border-bottom: 1px solid oklch(var(--bc) / 0.2);
+  margin-bottom: 0.5rem;
+}
+
+/* 内容区：带边框盒子（与激活页连体，激活页白底下边框在对应位置遮断顶线形成"开口"） */
+.tabs > .tab-content {
+  flex: 1 0 100%;
+  max-width: 100%;
+  min-width: 0;
+  /* 面板排到最后：DOM 里 input 与 pane 交错，flex 换行时 100% 宽的面板会把
+     后面的标签头全部挤到内容区下方另起一行 */
+  order: 10;
+  background: var(--fallback-b1, oklch(var(--b1) / 1));
+  border: 1px solid oklch(var(--bc) / 0.2);
+  /* 6.363 圆角归一：6px → 4px，与标签头(4px 4px 0 0)、--rounded-box 体系一致 */
+  border-radius: 0 0.25rem 0.25rem 0.25rem;
+  padding: 0.75rem 1.5rem !important; /* 上下 12px 保持、左右 24px */
+}
+
+/*
+   面板内容 12 列 grid 的兜底：Row/Form/Step 这类整块组件的根 div 不带 col-span
+   （Row 的跨度由其 Column 子项携带、form-wrapper 从不分跨），自动放置会把它
+   分进单一轨道（整宽的 1/12），其内部 12 列轨道随即被列间隙吃光坍缩为 0——
+   嵌套表单压扁、动作按钮溢出轨道互相叠压。无 col-span 的子项占满整行，
+   带 col-span-* 的字段列保持原跨度（与 .fields-content 的兜底规则同款）
+   */
+.tabs .tab-content > .grid > :not([class*="col-span-"]) {
+  grid-column: 1 / -1;
+}
+
+/*
+   垂直标签页 —— $builder->tab()->vertical() 输出 .tabs-vertical。
+   DOM 与水平模式不同（tab.html 按 $vertical 分支）：标签头全部在前、面板全部在后两段。
+   交错 DOM 下纯 CSS 无解：float 面板的顶被浮动规则强制压到 DOM 中最后一个标签头之下
+   （激活第 2+ 个标签时面板整体下移）；grid span N 行会把面板高度分摊进各行撑开标签间距；
+   BFC 旁置会把 DOM 在其后的标签头挤到面板下方。重排 DOM 后 BFC 旁置的挤位对象消失：
+   标签列 float left 竖排，面板 BFC 块盒（overflow:hidden）旁置——不与 float 重叠、
+   左缘自动骑在标签列 margin-box 右缘（-1px 骑线）、顶部天然与容器顶（第一个标签头）对齐、
+   高度正常撑开容器。
+   显隐：daisyUI 相邻选择器 (input:checked+.tab-content) 因重排失效，改由
+   tpextbuilder.js initVerticalTabs 切换 .pane-active 类；初始激活态由模板直接输出类
+   */
+.tabs.tabs-vertical {
+  display: flow-root !important; /* BFC 包住 float 列, 代替 clearfix */
+}
+
+/*
+   标签头竖排成左列：7rem 固定宽、右缘 -1px 骑在内容区左线上（激活时白边遮线成开口）。
+   line-height 取整（1.25rem=20px）保证高度/堆叠位置全为整数像素（几何稳定）。
+   注意：曾把"hover 时文字抖动"归因于非整数行高的 paint 取整——已证伪，真根因是
+   水平 checked:hover 的 margin 泄漏（见下方 checked 规则处的注释）
+   */
+.tabs.tabs-vertical > input.tab {
+  float: left;
+  clear: left;
+  box-sizing: border-box;
+  width: 180px; /* 6.404 7rem→180px（用户：按钮太窄）；6.402 曾先落 4rem 保底、6.403 后随用户提到 64px 不够 */
+  min-width: 180px; /* 保底：项目层覆写变窄时不低于 180px */
+  margin: 0 -1px 2px 0;
+  padding-top: 5px;
+  padding-bottom: 5px;
+  line-height: 1.25rem;
+  border-radius: 4px 0 0 4px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/*
+   激活标签头：右边框白色遮断内容区左线（水平模式"下边框开口"的镜像）。
+   面板 BFC 左缘 = 标签列 margin-box 右缘（135），标签 border-box 画到 136，
+   白边天然与面板左线重叠 1px，靠 z-index 盖线，无需再加宽
+   */
+.tabs.tabs-vertical > input.tab:checked,
+.tabs.tabs-vertical > input.tab:checked:hover {
+  /*
+   margin 必须显式钉回竖排值：水平 checked:hover 的 margin-bottom:-1px（水平模式
+   "下边框开口"用）特异性 (0,4,1) 高于垂直 base 的 (0,3,1)，hover 激活标签头时
+   它与其下所有标签瞬间上移 3px、移开弹回——即"鼠标进出第一个，第二个抖动"。
+   本规则源序在水平规则之后，同 (0,4,1)/(0,5,1) 下稳赢
+   */
+  margin: 0 -1px 2px 0;
+  border-color: oklch(var(--bc) / 0.2);
+  border-right-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  border-bottom-color: oklch(var(--bc) / 0.2);
+  color: oklch(var(--bc) / 0.9); /* checked:hover 钉回激活色（在上面 hover 钉色规则之后，同优先级源序取胜） */
+}
+
+/* 内容区：BFC 旁置（重排后 DOM 中没有位于面板之后的标签头，不再有挤位问题） */
+.tabs.tabs-vertical > .tab-content {
+  overflow: hidden; /* 建立 BFC：不与 float 标签列重叠，边界自动落在 float 右侧 */
+  flex: none;
+  order: 0;
+  width: auto !important;
+  max-width: none !important;
+  min-width: 0;
+  /*
+   6.400 初值 200px（内容少时面板不至太扁，与树容器同基准）；
+   initVerticalTabs 按左侧按钮列实测高写入 --vtabs-pane-min-h，保证右侧面板盒不矮于按钮列
+   */
+  min-height: var(--vtabs-pane-min-h, 200px) !important;
+  margin-top: 0 !important; /* daisyUI 默认 -1px 是水平模式对位用，垂直模式顶对齐要清零 */
+  border-radius: 0 0.25rem 0.25rem 0.25rem !important; /* 6.363 圆角归一 6px→4px */
+}
+
+/*
+   显隐：重排后 daisyUI 相邻选择器 (input.tab:checked+.tab-content, 特异性 0,3,1)
+   会命中 checked 标签头相邻的错误面板（重排后任何 radio 相邻的都是第一个面板），
+   必须 !important 压制；pane-active 用同强度 !important 恢复显示
+   */
+.tabs.tabs-vertical > .tab-content {
+  display: none !important;
+}
+
+.tabs.tabs-vertical > .tab-content.pane-active {
+  display: block !important;
+}
+
+/*
+   items 表格保持默认 table-layout:auto——与主数据表一致（主数据表也是 auto），
+   字段上的 width / min-width 写上去即可生效（th 由 ItemsContent 同步 style）。
+   注意：auto 表格布局下浏览器**忽略** th/td 的 max-width，所以“限宽”要用 width，
+   这才是 归档6.90 改回 auto 后仍能控制列宽的正解。详见 TASK_LIST 6.106
+   */
+.form-wrapper table.form-items {
+  width: 100%;
+  /*
+   取消斑马纹后行间只剩 daisyUI 极淡底线（b3 实色 L93），观感"没有边框"。
+   恢复旧版 table-bordered 的完整网格 + 外框，仅作用于 items，不动主数据表
+   */
+  border: 1px solid oklch(var(--b3) / 0.6);
+}
+
+.form-wrapper table.form-items th,
+.form-wrapper table.form-items td {
+  border: 1px solid oklch(var(--b3) / 0.6);
+}
+
+/* 6.338 items 操作列最小宽度（原 itemscontent.html th 内联 style="min-width:50px" 迁入） */
+.form-wrapper table.form-items th.items-action-col {
+  min-width: 50px;
+}
+
+/*
+   归档6.90 的替代解法（table 与 items 统一适用，不再用 table-layout:fixed）：
+   TomSelect 的下拉面板绝对定位于 .ts-wrapper（position:relative），宽度 100% 跟随 select 本体，
+   既不参与列宽计算，打开/关闭也就不会改变列宽；长选项在面板内换行，不会把面板撑宽。
+   于是“列宽”交给字段自己的 width/min-width 控制，而不是把所有列锁成等宽。
+   —— 详见 TASK_LIST 6.106
+   6.107 追加：面板强制限宽。items 里宽列（如 `min-width:70%` 的“属性值”列，实测 446px）
+   上面板 1:1 跟随列宽，会出现“几百像素的面板只放两三个短选项”的空旷观感，
+   实际用不了那么宽。故给面板一个硬上限 16rem：
+   - 窄列（≤16rem）：面板 = 列宽，与原来一致；
+   - 宽列（>16rem）：封顶 16rem，超长选项交给下面 .option 换行收纳。
+   （上限集中在这一处，需要调整只改这里即可；两处都生效于 table 与 items）
+   */
+.table .ts-wrapper .ts-dropdown {
+  width: 100%;
+  min-width: 0;
+  max-width: min(100%, 16rem);
+}
+
+.table .ts-dropdown .option {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/*
+   6.108 items 表格“点击/切换下拉会改变列宽”的根因修复（6.107 只收窄了面板，未触及根因）：
+   现象：price_list 中没有任何 width 的列，切换下拉值会带动整组列重新分配宽度
+   （实测三态 th 宽度 94/118 → 95/109 → 93/129；th 上无 width，列宽=内容）。
+   根因：items 表是 table-layout:auto，列宽由单元格**内容**决定；TomSelect 控件
+   `.ts-control` 里显示的“当前选中值/占位符”就是内容。选中值长短一变，该列及整组
+   空间分配就跟着变。原生 select 的固有宽度取“最长选项”（不随选择变化），所以旧库
+   不会这样；TomSelect 显示的是选中值，才会"点一下下拉换个值列宽就变"。
+   修法：把控件内容从列宽计算里摘除——contain:inline-size 让 .ts-wrapper 的
+   min/max-content 不再由内容决定，再给一个稳定的 min-width 作为它对列宽的贡献。
+   于是列宽只由“其它列 + 该稳定宽度”决定，切换下拉值不再改变列宽；显式
+   width/min-width 仍照常生效（依旧是 auto 布局）。
+   同一现象也会出现在原生 select 上（模板行/新增行里尚未被 TomSelect 接管的 select）：
+   它的固有宽度=最长选项文本，同样参与列宽计算（6.46 的 `width:100%` 只约束自身渲染宽度，
+   管不到固有宽度贡献）。但实测 Chrome 对表单控件（<select>）**不认** contain 的尺寸隔离
+   （计算值已是 inline-size，仍按最长选项把列撑到 158px），故对原生 select 只保留一个稳定的
+   min-width；真正的解法是让新增行也走 TomSelect 初始化——见 6.109（Items.php 的
+   `.size()`→`.length`），初始化后即变成 .ts-wrapper，contain 才会生效。
+   */
+.form-wrapper table.form-items .ts-wrapper,
+.form-wrapper table.form-items select.select,
+.form-wrapper table.form-items select.input,
+.form-wrapper table.form-items .treeselect-wrap {
+  contain: inline-size;
+  min-width: 6rem;
+}
+/*
+   6.144 SelectTree（treeselectjs）加入同一修复：items 里添加行后 x-selecttree
+   初始化，其 .treeselect-input 的固有宽度参与 auto 布局列宽分配，整组列重排
+   （实测 selectTree 列 142→185，其余列连带变化）。面板本身 absolute 不参与，
+   勾选值也不改列宽（输入框固定 2rem 高 overflow:hidden），唯一变化源就是
+   初始固有宽度——contain:inline-size 摘除即可。宿主 x-selecttree 实测
+   computed display 已为 block（contain 对 inline 元素不生效），无需额外处理。
+   */
+
+/*
+   兼容兜底：原库 PHP 可能引用的旧 BS3 class，给个不那么丑的默认样式
+   只在极少见的边缘路径触发，不影响 DaisyUI 主样式
+   注意：本文件不经 Tailwind 编译直接上线，禁止写 @apply（浏览器不认识，
+   整条规则会被静默丢弃）——一律写等价的普通 CSS + daisyUI 主题变量
+   */
+.panel {
+  border-radius: 0.75rem;
+  background-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  border: 1px solid var(--fallback-b2, oklch(var(--b2) / 1));
+}
+.panel-default {
+  border-radius: 0.75rem;
+  background-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  border: 1px solid var(--fallback-b2, oklch(var(--b2) / 1));
+}
+.panel-heading {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--fallback-b2, oklch(var(--b2) / 1));
+  font-weight: 600;
+}
+.panel-title {
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+.panel-body {
+  padding: 1rem;
+}
+
+.form-group {
+  margin-bottom: 0.75rem;
+}
+.control-label {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 500;
+}
+.help-block {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: oklch(var(--bc) / 0.6);
+  margin-top: 0.25rem;
+}
+.has-error .form-control {
+  border-color: var(--fallback-er, oklch(var(--er) / 1));
+  border-width: 2px;
+}
+.field-required {
+  color: var(--fallback-er, oklch(var(--er) / 1));
+}
+
+/* 旧 Bootstrap 3 风格按钮已替换为 DaisyUI 原生 .btn class，以下保留给非底部按钮的地方兜底 */
+
+/*
+   BS3 按钮颜色类 → DaisyUI 语义色兼容（btn-danger）
+   —— 旧库 Actionbar::btnDelete() / MultipleToolbar::btnDelete() 默认传 'btn-danger'，
+   Items 的 JS 也会动态切换 btn-danger；DaisyUI 没有 .btn-danger 这个类，
+   → --btn-color 为空 → .btn 退回 var(--b2)，表现为灰底黑字。
+   这里把 btn-danger 映射到 DaisyUI 的 error 语义色（solid / hover / active）。
+   */
+.btn-danger {
+  --btn-color: var(--er);
+  color: var(--fallback-erc, oklch(var(--erc) / 1));
+  outline-color: var(--fallback-er, oklch(var(--er) / 1));
+}
+.btn-danger:hover,
+.btn-danger.btn-active {
+  background-color: oklch(var(--er) / 1);
+  border-color: oklch(var(--er) / 1);
+}
+
+/* color-mix 需要 Safari 16.2+；包 @supports 降级到原色（daisyUI 对 .btn:hover 的同款策略），
+   使浏览器底线对齐 daisyUI 4 的 oklch 基线（Safari 15.4） */
+@supports (color: color-mix(in oklab, black, black)) {
+  .btn-danger:hover,
+  .btn-danger.btn-active {
+    background-color: color-mix(in oklab, oklch(var(--er) / 1) 90%, #000);
+    border-color: color-mix(in oklab, oklch(var(--er) / 1) 90%, #000);
+  }
+}
+
+/*
+   6.398 撤销 6.397 的 .btn.btn-secondary 深灰底+白字覆盖（用户反馈「还是
+   以前的灰色好看」）：恢复 daisyUI 默认渲染——浅灰底 #e4e7ea（主题 --s）+
+   深灰字 #4d5259（主题 --sc）。白字与浅灰底不可读，二者只能取其一；
+   若将来再要白字，背景必须同步换深色
+   */
+
+.col-md-12 {
+  grid-column: span 12 / span 12;
+}
+.col-lg-12 {
+  grid-column: span 12 / span 12;
+}
+.col-sm-12 {
+  grid-column: span 12 / span 12;
+}
+.col-xs-12 {
+  grid-column: span 12 / span 12;
+}
+
+/* 组件左侧/右侧图标 addon —— 和 .date-icon-btn 同款风格 */
+.input-group-addon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem; /* 32px, 和 input 等高 */
+  height: 2rem; /* 32px */
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: none;
+  color: oklch(var(--bc) / 0.5);
+  border-radius: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.input-group-addon:hover {
+  color: oklch(var(--bc) / 0.8);
+  background-color: oklch(var(--b2) / 1);
+}
+
+.input-group-addon .mdi {
+  font-size: 1.125rem; /* 18px — 和 .date-icon-btn 一致 */
+  line-height: 1;
+}
+
+/* map 组件 —— 图标在 input 里面右侧（6.64 从左侧恢复），
+   图标按钮样式见下方「输入框内嵌图标按钮统一规范」 */
+.map-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* 文字左缘与其他组件对齐（12px），右侧留给图标（36px，与日期/密码一致） */
+.map-input-wrap .map-input {
+  padding-left: 0.75rem; /* 12px — 对齐其他组件 */
+  padding-right: 2.25rem; /* 36px — 给右侧图标 + 间距 */
+  width: 100%;
+}
+
+/* 搜索区缩小 */
+.search-form .map-input-wrap .map-input {
+  padding-left: 0.625rem !important;
+  padding-right: 2rem !important;
+}
+
+/* 表格内缩小 */
+.table .map-input {
+  padding-left: 0.5rem !important;
+  padding-right: 1.75rem !important;
+}
+
+/*
+   输入框内嵌图标按钮统一规范 — 日期时间 .date-icon-btn / 地图 .map-icon-btn /
+   密码 .pwd-eye-btn（6.138：三套定义并存且互有矛盾——日期图标被后位 !important
+   压成 16px、密码按钮 28px/right:3px 自成一派，此处收敛为一份规范）
+   常态：24×24 贴右 8px、图标 18px、bc/0.4；hover：bc/0.8 + b2 底
+   搜索区（28px 控件）：20×20 贴右 6px、图标 16px；表格/items：18×18 贴右 6px、图标 15px
+   */
+.date-icon-btn,
+.map-icon-btn,
+.pwd-eye-btn,
+.icon-picker-btn {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: oklch(var(--bc) / 0.4);
+  border-radius: 0.25rem;
+  transition:
+    color 0.15s,
+    background-color 0.15s;
+  padding: 0;
+  z-index: 1;
+}
+
+.date-icon-btn:hover,
+.map-icon-btn:hover,
+.pwd-eye-btn:hover,
+.icon-picker-btn:hover {
+  color: oklch(var(--bc) / 0.8);
+  background-color: oklch(var(--b2) / 1);
+}
+
+.date-icon-btn .mdi,
+.map-icon-btn .mdi,
+.pwd-eye-btn .mdi,
+.icon-picker-btn .mdi {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1;
+}
+
+/* 搜索区缩小 */
+.search-form .date-icon-btn,
+.search-form .map-icon-btn,
+.search-form .pwd-eye-btn,
+.search-form .icon-picker-btn {
+  right: 0.375rem;
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+}
+
+.search-form .date-icon-btn .mdi,
+.search-form .map-icon-btn .mdi,
+.search-form .pwd-eye-btn .mdi,
+.search-form .icon-picker-btn .mdi {
+  font-size: 1rem !important;
+}
+
+/* 表格 / items 内缩小 */
+.table .date-icon-btn,
+.table .map-icon-btn,
+.table .pwd-eye-btn,
+.table .icon-picker-btn {
+  right: 0.375rem;
+  width: 1.125rem !important;
+  height: 1.125rem !important;
+}
+
+.table .date-icon-btn .mdi,
+.table .map-icon-btn .mdi,
+.table .pwd-eye-btn .mdi,
+.table .icon-picker-btn .mdi {
+  font-size: 0.9375rem !important;
+}
+
+/* jquery-validate 错误提示的挂载点兜底样式 */
+#help-block {
+  min-height: 20px;
+  text-align: center;
+}
+#help-block .error-label {
+  color: var(--fallback-er, oklch(var(--er) / 1));
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+
+/* 图表 / iframe 容器 — 确保富文本和地图不会溢出卡片 */
+.tpb-editor-wrapper {
+  /* 6.363 圆角归一：12px → 4px，与 --rounded-box 体系一致 */
+  border-radius: 0.25rem;
+  border: 1px solid var(--fallback-b3, oklch(var(--b3) / 1));
+  overflow: hidden;
+}
+.tpb-editor-wrapper iframe,
+.tpb-editor-wrapper textarea {
+  width: 100%;
+}
+
+/*
+   分页 — DaisyUI .join 把所有子元素连成无间距连续按钮，
+   强制覆盖为独立圆角按钮样式
+   */
+nav.join ul.pagination,
+nav.join ul.pagination.pagination-sm {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+nav.join ul.pagination > li {
+  border: none;
+  background: transparent;
+  padding: 0;
+  height: auto;
+}
+
+nav.join ul.pagination > li > a,
+nav.join ul.pagination > li > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 6.264 24px→20px：与无分页形态（min-height 20px）靠拢 */
+  height: 1.25rem;
+  min-height: 1.25rem;
+  min-width: 1.25rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1;
+  text-decoration: none;
+  text-align: center;
+  color: oklch(var(--bc) / 1);
+  background-color: oklch(var(--b1) / 1);
+  border-width: 1px;
+  border-style: solid;
+  border-color: rgb(209, 213, 219);
+  /* 6.251 分页页码按钮圆角统一：原写死 0.375rem(6px)，与 6.247 定稿的
+     表壳/按钮/输入框基准 --rounded-btn(2px) 不协调，改随主题变量联动 */
+  border-radius: var(--rounded-btn, 0.125rem);
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+
+nav.join ul.pagination > li > a:hover,
+nav.join ul.pagination > li > span:hover {
+  background-color: oklch(var(--b2) / 1);
+  border-color: rgb(209, 213, 219);
+}
+
+nav.join ul.pagination > li.active > a,
+nav.join ul.pagination > li.active > span {
+  color: var(--fallback-pc, oklch(var(--pc) / 1));
+  background-color: var(--fallback-p, oklch(var(--p) / 1));
+  border-width: 1px;
+  border-style: solid;
+  border-color: var(--fallback-p, oklch(var(--p) / 1));
+  cursor: default;
+}
+
+nav.join ul.pagination > li.disabled > a,
+nav.join ul.pagination > li.disabled > span {
+  color: var(--fallback-bc, oklch(var(--bc) / 0.3));
+  background-color: transparent;
+  border-width: 1px;
+  border-style: solid;
+  border-color: transparent;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+nav.join > .pagination-summary {
+  border-radius: initial;
+}
+
+nav.join {
+  gap: 0.5rem;
+}
+
+/* 分页栏三栏布局：左 summary | 中 ul.pagination | 右 pagesize */
+.pagination-bar {
+  position: relative;
+  /*
+   6.246 分页大小菜单向上弹出会盖过表格区：显式抬到 sticky 表头(z3)/冻结格(z2)之上；
+   6.258 随工具条一并抬到 5（表格 z 族最大值是角落冻结格 z4，同值时 DOM 后来者赢）
+   */
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 0.5rem;
+  /* 6.264 单页无分页时 nav/ul 全部缺席、summary 是绝对定位不撑高，bar 塌成 0；
+     定 min-height 与有分页形态（20px）统一，两种态观感一致 */
+  min-height: 1.25rem;
+  /* 6.364 与表格间距 8px(mt-2)→12px，对齐本批搜索/工具栏/表格 12px 节奏；
+     未分层规则压 @layer 工具类 */
+  margin-top: 0.75rem;
+}
+
+/* 6.264 pagesize 下拉（daisyUI btn-xs 默认 24px）同步压到 20px，
+   否则 bar 被它撑回 24，与页码按钮/无分页态不一致 */
+.pagination-bar .btn-xs {
+  height: 1.25rem;
+  min-height: 1.25rem;
+}
+
+/*
+   6.248 表格工具条同款：右上角 列控制/导出/批量 下拉面板向下展开会压进表格区，
+   工具条壳（table.html .table-toolbar）抬到 sticky 表头(z3)之上；工具条本体在
+   表格上方不与之重叠，抬高无副作用。
+   6.258 z4 不够：表头冻结+列冻结同时启用时角落格是 .table-freeze-head thead
+   .freeze-col-left/right{z-index:4}，同为 z4 时表格在 DOM 后→「Operation」角格
+   把导出面板右半截盖掉（shopgoods 实测 elementFromPoint 命中 TH.freeze-col-right）。
+   弹窗容器必须严格大于表格 z 族最大值(4)→ 取 5；分页条(6.246 上弹)同理抬 5
+   */
+.table-toolbar {
+  position: relative;
+  z-index: 5;
+}
+
+/* 6.246 dropup 时按钮上的箭头 svg 翻转朝上 */
+.dropdown.dropdown-top > .dropdown-toggle svg {
+  transform: rotate(180deg);
+}
+
+.pagination-bar .pagination-summary {
+  position: absolute;
+  left: 0;
+  /* 6.263 绝对定位不吃 grid 的 align-items:center，缺 top 会落在行盒顶部=文字不垂直居中 */
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  color: oklch(var(--bc) / 0.5);
+  white-space: nowrap;
+}
+
+.pagination-bar nav.join {
+  grid-column: 2;
+  justify-self: center;
+}
+
+.pagination-bar .pagesize-dropdown {
+  grid-column: 3;
+  justify-self: end;
+}
+
+/*
+   数据行操作列 — td.row-__action__ 内是 toolbar.html 输出的
+   .flex > .action-rows > .action-row* 结构（6.238 行数组渲染）
+   */
+td.row-__action__ > .flex {
+  justify-content: center;
+}
+
+/*
+   行整体在列内水平居中；行 flex-wrap:nowrap + width:max-content ——
+   无 br() 不换行，且 td 的 min/max-content 都等于最宽行，
+   浏览器据此精确测出「最宽一行（文字+图标）」作为列宽，无需 JS 测量
+   */
+td.row-__action__ .action-rows {
+  align-items: center;
+}
+td.row-__action__ .action-row {
+  flex-wrap: nowrap;
+  width: max-content;
+}
+
+/*
+   6.245 操作列钉死：width:1px 提示 + 上面行 nowrap(max-content) → 列实际宽
+   恒等于最宽行内容（min-content 夹住），表格有余量时自动布局不再把
+   富余宽度摊给本列（实测：不设时 246.1→361.7 被撑，设后保持 246.1），
+   富余全部让给其他自适应列。th 在 table.html 已同步加 row-__action__ 类
+   */
+.table th.row-__action__,
+.table td.row-__action__ {
+  width: 1px;
+}
+
+/*
+   6.247 表格容器圆角统一：daisyUI rounded-box(--rounded-box，默认 1rem) 远大于
+   按钮/输入框跟随的 --rounded-btn(.125rem/2px)，观感不协调；双类选择器压过
+   编译产物里的 .rounded-box 单类规则，值走主题变量保持联动
+   */
+.table-wrap.rounded-box {
+  border-radius: var(--rounded-btn, 0.125rem);
+}
+
+/*
+   6.250 选择框列固定宽度（6.252 收窄）：原模板 w-12=48px 用户反馈太宽，
+   改由本规则单点控制 width+min-width（两态恒定，见 6.250 两态结论）。
+   2rem=32px：勾选框 min-content≈29px，32 留 1-2px 呼吸且贴紧凑基准
+   */
+.table th.table-checkbox,
+.table td.table-checkbox {
+  width: 2rem;
+  min-width: 2rem;
+}
+
+/*
+   6.371 选择框列复选框垂直居中：input 默认 baseline 对齐，被行内文字
+   strut 拉偏——普通行看不出来，单元格内容多把行撑高（实测 71px）时
+   上 24/下 31 明显偏上，表头 42px 行同样偏 5px。vertical-align:middle
+   把勾选框中线对到单元格中线，高行/表头实测均收敛到 ±1px。
+   选择器含 input[type] 属性，特异性高于 daisyUI .checkbox 组件规则，
+   不会反压其尺寸/外观
+   */
+.table .table-checkbox input[type='checkbox'] {
+  vertical-align: middle;
+}
+
+/*
+   6.249 翻页恢复的 scrollTop 会被浏览器 scroll anchoring 事后矫正（DOM 整块
+   替换 + 冻结 refit 微改行高时锚点重算，实测 120 在恢复 141ms 后被改回 1）。
+   本容器的滚动位置由程序控制（快照/恢复），关掉原生锚定避免打架
+   */
+.table-wrap {
+  overflow-anchor: none;
+}
+
+/*
+   批量操作按钮禁用态（6.155，替代 6.154 的 btn-disabled 方案）— daisyUI
+   的 .btn.btn-disabled 会把按钮统一刷成中性灰（neutral 底 + 0.2 透明度），
+   原本不同颜色的批量按钮全成一片灰。改用专用类 batch-disabled：只降整体
+   不透明度（保留各自色相，比原色浅一档）；恢复 pointer-events 以给出
+   not-allowed 光标（真拦截靠 postChecked/openChecked/postActionsChecked
+   的 JS 点击守卫）；:hover 用静止原色覆盖 daisyUI 的悬停加深，让禁用态
+   外观完全静止、只有光标变化。
+   */
+.batch-action-btn.batch-disabled {
+  opacity: 0.5;
+  pointer-events: auto;
+  cursor: not-allowed;
+}
+
+.batch-action-btn.batch-disabled:hover {
+  background-color: oklch(var(--btn-color, var(--b2)) / 1);
+  border-color: oklch(var(--btn-color, var(--b2)) / 1);
+}
+
+/* 控件高度统一：select(TomSelect) 与 input 同高，icon 选择器触发按钮同高 */
+.ts-wrapper.select,
+.ts-wrapper.multi.select {
+  min-height: 3rem;
+  height: 3rem;
+}
+
+.ts-wrapper.select .ts-control,
+.ts-wrapper.multi.select .ts-control {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  /*
+   覆盖 TomSelect 默认的 padding: 6px 8px 3px 和 line-height: 18px。
+   6.178 P1：不写 padding-right——vendor `.ts-control:not(.rtl)` 用 max() 以
+   !important 预留 clear-button/caret 宽度，本文件移到最后加载后我方 !important
+   会反赢压掉预留（×/箭头压内容），右留白交还 vendor
+   */
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-left: 4px !important;
+  line-height: inherit !important;
+  align-items: center !important;
+  overflow: hidden;
+}
+
+/*
+   表单控件统一紧凑高度（36px）
+   DaisyUI 默认 3rem (48px) 对后台系统偏高，统一压缩到 2.25rem
+   textarea 不使用 .input 类所以不受影响
+   */
+.input {
+  height: 2.25rem !important;
+  min-height: 2.25rem;
+}
+
+.ts-wrapper.select,
+.ts-wrapper.multi.select {
+  min-height: 2.25rem !important;
+  height: 2.25rem !important;
+  padding: 0 !important;
+  border: 1px solid var(--fallback-bc, oklch(var(--bc) / 0.2));
+  border-radius: var(--rounded-btn, 0.5rem) !important;
+  background: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+}
+
+.ts-wrapper.select .ts-control,
+.ts-wrapper.multi.select .ts-control {
+  height: 100% !important;
+  min-height: 0 !important;
+  max-height: 100% !important;
+  padding-top: 0;
+  padding-bottom: 0;
+  align-items: center;
+  overflow: hidden;
+  margin: 0 !important;
+}
+
+/* 表单控件统一 sm 尺寸（2rem = 32px） */
+.input,
+.ts-wrapper.select,
+.ts-wrapper.multi.select {
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem !important;
+}
+
+.ts-wrapper.select .ts-control,
+.ts-wrapper.multi.select .ts-control {
+  height: 2rem !important;
+  min-height: 2rem !important;
+  max-height: 2rem !important;
+  line-height: 2rem !important;
+}
+
+/*
+   Tags（.input-tags）主要用在表单/items：放开固定高度上限，标签多了自动换行增高，
+   只保底 2rem；否则会被上面 .input 的 height/max-height:2rem 裁掉后面的标签。
+   选择器带 .multi 是为了压过 1309 行 `.ts-wrapper.multi .ts-control{min-height:2rem}`
+   */
+.input-tags,
+.ts-wrapper.input-tags {
+  height: auto !important;
+  max-height: none !important;
+}
+
+/*
+   单行时与普通输入框等高：wrapper 外高 2rem，扣除 2px 边框后 ts-control = 2rem-2px；
+   内部自适应 input 的 line-height 同步收 2px，否则它会把单行撑到 2rem→wrapper 变 2rem+2px
+   */
+.ts-wrapper.input-tags.multi .ts-control {
+  height: auto !important;
+  max-height: none !important;
+  min-height: calc(2rem - 2px) !important;
+}
+
+.ts-wrapper.input-tags.multi .ts-control > input {
+  line-height: calc(2rem - 2px) !important;
+}
+
+.ts-wrapper .ts-control > .item,
+.ts-wrapper .ts-control > input {
+  line-height: 2rem !important;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/*
+   Web Components 宿主元素（builder-elements.js 定义的 x-* 元素）
+   未知元素默认 display:inline，必须显式块化才能充当原来的控件包裹层；
+   组件自身 class（.date-input-wrap 等）由下方既有规则继续生效。
+   架构约束（WEBCOMPONENTS_PLAN.md §9 修订）：宿主位于 field-row 包裹 div
+   内部，不触碰 .field-row > div:nth-child(2) 族边界选择器。
+   */
+x-date,
+x-daterange,
+x-select,
+x-number,
+x-color,
+x-slider,
+x-transfer,
+x-icon,
+x-map,
+x-tree,
+x-selecttree,
+x-upload,
+x-editor {
+  display: block;
+  width: 100%;
+}
+
+/* 1. 单个 date/datetime/time/month/year 输入框 */
+.date-input-wrap {
+  position: relative;
+  width: 100%;
+}
+
+/* 图标在右侧（6.63 恢复）：左内边距与其他组件一致（12px 对齐），右侧留给图标 */
+.date-input-wrap .date-input {
+  padding-left: 0.75rem;
+  padding-right: 2.25rem;
+  width: 100%;
+}
+
+/* 图标按钮样式：见上方「输入框内嵌图标按钮统一规范」（6.138 收敛三套重复定义） */
+
+/*
+   2. 日期范围/时间范围 — 双输入框 + "—" 分隔。
+   .date-range-row / .date-range-sep 样式已移至 builder-flatpickr.css（6.179 P2 拆分），
+   此处保留 .date-range-cell（flex:1）及其他未被 flatpickr 覆盖的规则。
+   */
+
+.date-range-cell {
+  flex: 1;
+}
+
+.date-range-sep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.375rem;
+  color: oklch(var(--bc) / 0.3);
+  font-size: 0.875rem;
+  user-select: none;
+}
+
+/*
+   6.387 通知按类型加图标：flex 行内前置 ::before（✓ 成功 / ✕ 失败 / ! 警告 / i 信息），
+   颜色随类型文字色；不用 mdi 字体避免子集缺字。长消息在文字项内正常折行
+   */
+.tpb-toast {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tpb-toast::before {
+  flex: none;
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.tpb-toast.toast-success::before { content: '✓'; }
+.tpb-toast.toast-error::before,
+.tpb-toast.toast-danger::before { content: '✕'; }
+.tpb-toast.toast-warning::before { content: '!'; }
+.tpb-toast.toast-info::before { content: 'i'; }

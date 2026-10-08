@@ -1,0 +1,14 @@
+{notempty name="$elms"}
+<div class="flex flex-wrap items-center gap-2 {$class}" {$attr|raw}>
+    <!-- 6.238 按钮按行数组渲染：br() 显式分行，每行一个 div.action-row（Toolbar::rowsHtml）；
+         左组包在 .action-rows 纵向堆叠，不再用折行元素，行内不自动折行 -->
+    <div class="action-rows">{$rows|raw}</div>
+    {notempty name="$elmsRight"}
+    <div class="ml-auto flex flex-wrap items-center gap-2">
+        {volist name="elmsRight" id="elm"}
+        {:$elm->render()}
+        {/volist}
+    </div>
+    {/notempty}
+</div>
+{/notempty}

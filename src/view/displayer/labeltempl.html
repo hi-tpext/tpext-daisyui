@@ -1,0 +1,8 @@
+{if condition="$showLabel"}
+<label class="{$size[0]} {$labelClass} flex items-center justify-end gap-1 text-sm font-medium mb-1 lg:mb-0 lg:pt-2" {$labelAttr|raw} for="{$id}">
+    {if condition="$required"}
+    <strong title="{:__blang('builder_this_field_is_required')}" class="text-error">*</strong>
+    {/if}
+    <span>{$label|raw}</span>
+</label>
+{/if}

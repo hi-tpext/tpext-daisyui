@@ -1,0 +1,9 @@
+{if condition="$useLayer" }
+<a class="btn {$class} btn-{$name}" id="{$id}" href="javascript:;" data-url="{$href}" onclick="layerOpen(this);return false;" {$attr|raw}>
+        {if condition="$icon"}<i class="mdi {$icon}"></i>{/if}{$label|raw}
+</a>
+{else/}
+<a class="btn {$class} btn-{$name}" id="{$id}" href="{$href}" {$attr|raw}>
+        {if condition="$icon"}<i class="mdi {$icon}"></i>{/if}{$label|raw}
+</a>
+{/if}

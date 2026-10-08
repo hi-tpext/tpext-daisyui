@@ -1,0 +1,29 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}" id="{$id}">
+    {if condition="$readonly or $isInTable"}
+    <div class="the-field inline-flex items-center gap-1 {$class}" {$attr|raw}>
+        {volist name="stars" id="star"}
+        {if condition="$star['type'] eq 'full'"}
+        <span class="mask {$shape} {$color} inline-block w-5 h-5"></span>
+        {elseif condition="$star['type'] eq 'half'" /}
+        <span class="relative inline-block w-5 h-5">
+            <span class="mask {$shape} {$emptyColor} block w-5 h-5"></span>
+            <span class="mask {$shape} {$color} block absolute top-0 left-0 w-5 h-5 rating-half-clip"></span>
+        </span>
+        {else/}
+        <span class="mask {$shape} {$emptyColor} inline-block w-5 h-5"></span>
+        {/if}
+        {/volist}
+    </div>
+    {else/}
+    <div class="rating {$half ? 'rating-half' : ''} {$class}">
+        {if condition="$clearable"}
+        <input type="radio" name="{$name}" value="0" class="rating-hidden" title="{:__blang('builder_rating_clear')}" {$clearChecked} {$disabled ? 'disabled' : ''} {$attr|raw}>
+        {/if}
+        {volist name="options" id="opt"}
+        <input type="radio" name="{$name}" value="{$opt['value']}" class="mask {$shape} {$color} {$opt['halfClass']}" id="{$id}-{$opt['value']}" {$opt['checked']} {$disabled ? 'disabled' : ''} {$attr|raw}>
+        {/volist}
+    </div>
+    {/if}
+    {include file="$helptempl" /}
+</div>

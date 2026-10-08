@@ -1,0 +1,41 @@
+{
+    "name": "ichynul/tpext-daisyui",
+    "description": "tpext-builder UI library with Tailwind CSS + DaisyUI + Alpine.js (standalone replacement)",
+    "type": "library",
+    "keywords": [
+        "thinkphp",
+        "tpext",
+        "daisyui",
+        "tailwind",
+        "alpine"
+    ],
+    "license": "Apache-2.0",
+    "authors": [
+        {
+            "name": "ichynul",
+            "email": "ichynul@outlook.com"
+        }
+    ],
+    "require": {
+        "intervention/image": "^2.7.1|^3.11.0"
+    },
+    "provide": {
+        "tpext/builder": "^3.0",
+        "ichynul/tpextbuilder": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "tpext\\builder\\": "src/"
+        },
+        "files": [
+            "src/helper.php"
+        ]
+    },
+    "extra": {
+        "think": {
+            "services": [
+                "tpext\\builder\\common\\Service"
+            ]
+        }
+    }
+}

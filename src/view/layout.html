@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="{$__builder_lang|default="zh"}" data-theme="blue">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>{$admin_page_position|default='后台'} - {$admin_page_title|default=''}</title>
+  <link rel="icon" href="{$admin_favicon|default=''}" type="image/ico">
+  <meta name="description" content="{$admin_page_description|default=''}">
+  {block name="style"}
+  <!--stylesheets-->
+  {/block}
+</head>
+
+<body class="bg-base-200/50 min-h-screen">
+  <!--页面主要内容-->
+  <main class="p-1 md:p-2">
+    {block name="content"}{/block}
+  </main>
+  <!--End 页面主要内容-->
+  <script>
+    window.__token__ = "{$__token__|default=''}";
+    // 6.392 启动加载层/隐藏与恢复已迁移至 content.html（layout 可被替换，
+    // 相关逻辑放这里会因 layout 不同而丢失或重复）
+    document.addEventListener('DOMContentLoaded', function () {
+      // 不要手动 Alpine.start()：vendors/alpine.min.js 是 CDN 自动启动构建
+      // （脚本加载即 queueMicrotask 启动），重复调用会触发
+      // "Alpine has already been initialized" 警告并重复初始化组件
+
+      // 主题选择器：从 localStorage 恢复上次选择
+      var saved = localStorage.getItem('site_theme');
+      if (saved) document.documentElement.setAttribute('data-theme', saved);
+    });
+  </script>
+  <!-- 主题切换器（右下角浮动按钮） -->
+  <div x-data="{ open: false, theme: localStorage.getItem('site_theme') || 'blue' }"
+       class="fixed bottom-4 right-4 z-[9999]">
+        <button type="button" class="btn btn-circle btn-sm shadow-lg" @click="open = !open" title="{:__blang('builder_theme_switch')}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2m-6 12H7m8-10h2a2 2 0 012 2v2m-2 0h-2m2 0v2m0-2v-2m-8 4h.01M16 13h.01" /></svg>
+        </button>
+        <div class="absolute bottom-12 right-0 rounded-box border border-base-300 bg-base-100 shadow-xl p-2 w-44" x-show="open" x-cloak @click.outside="open = false">
+            <div class="text-xs text-base-content/50 px-2 py-1">{:__blang('builder_theme_select')}</div>
+            <template x-for="t in [['blue','{:__blang('builder_theme_blue')}'],['gray','{:__blang('builder_theme_gray')}'],['green','{:__blang('builder_theme_green')}'],['orange','{:__blang('builder_theme_orange')}'],['purple','{:__blang('builder_theme_purple')}'],['dark','{:__blang('builder_theme_dark')}']]"
+                      :key="t[0]">
+                <button type="button" class="w-full text-left px-2 py-1.5 rounded text-sm hover:bg-base-200 flex items-center gap-2"
+                        :class="theme === t[0] ? 'bg-primary/10 font-medium' : ''"
+                        @click="theme = t[0]; document.documentElement.setAttribute('data-theme', t[0]); localStorage.setItem('site_theme', t[0]); open = false">
+                    <!-- 6.339 色板色值单一来源：span 自身挂 data-theme 解析对应主题变量，
+                         配色见 builder-core.css .theme-swatch（原内联 hex 映射表删除） -->
+                    <span class="w-3 h-3 rounded-full inline-block border border-base-300 theme-swatch" :data-theme="t[0]"></span>
+                    <span x-text="t[1]"></span>
+                    <span class="text-primary ml-auto" x-show="theme === t[0]">✓</span>
+                </button>
+            </template>
+        </div>
+  </div>
+  {block name="script"}
+  <!--scripts-->
+  {/block}
+</body>
+
+</html>

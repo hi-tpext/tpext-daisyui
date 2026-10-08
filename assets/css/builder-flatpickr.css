@@ -1,0 +1,659 @@
+/*
+   日期/时间组件 — 内嵌图标按钮
+   用自定义 CSS class 避免 Tailwind JIT 对模板内原子类漏编译
+   */
+
+/* ========================================================================
+   DateRange / TimeRange 布局样式
+   ======================================================================== */
+.date-range-row {
+  display: flex !important;
+  align-items: center;
+  gap: 0;
+  width: 100% !important;
+}
+
+.date-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.date-range-cell .input {
+  width: 100%;
+  /* 图标在右：左内边距对齐其他组件，右侧留给图标 */
+  padding-left: 0.75rem;
+  padding-right: 2rem;
+}
+
+/* 与单日期互相矛盾——6.138 删除，统一走「输入框内嵌图标按钮统一规范」 */
+
+.date-range-sep {
+  flex-shrink: 0;
+  color: oklch(var(--bc) / 0.3) !important;
+  font-size: 0.875rem;
+  padding: 0 2px;
+}
+
+/* noCalendar 模式下隐藏日期导航（只保留时间选择器） */
+.flatpickr-calendar.noCalendar .flatpickr-months,
+.flatpickr-calendar.noCalendar .flatpickr-weekdays,
+.flatpickr-calendar.noCalendar .flatpickr-days,
+.flatpickr-calendar.noCalendar .flatpickr-rContainer {
+  display: none !important;
+}
+
+/*
+   6.123 仅时间选择器(noCalendar)的标题栏禁用交互；日视图必须保留标题栏交互——
+   年份是个 input.numInput.cur-year，之前全局 pointer-events:none 把它的指针事件
+   也置成 none，导致「年份点不动、打不了字」，此即「年份不能快速切换」的根因。
+   注：noCalendar 下 .flatpickr-months 已被上面规则整体 display:none，此条实为兜底。
+   */
+.flatpickr-calendar.noCalendar .flatpickr-current-month {
+  pointer-events: none;
+}
+
+/* 6.116 flatpickr 面板圆角与日期输入框统一：vendor 默认 5px，改用 --rounded-btn(2px)。
+   注意：不加 overflow:hidden，避免裁掉 .flatpickr-arrow 小三角。 */
+.flatpickr-calendar {
+  border-radius: var(--rounded-btn, 0.5rem);
+}
+
+/*
+   6.123 flatpickr 面板接入 daisyUI 主题
+   vendor 皮肤是硬编码的蓝(#569ff7)/白底/灰字，不跟随 13 套主题切换，
+   在深色或非默认主题下与组件明显脱节（用户反馈「样式有点丑」）。
+   统一改用主题变量：--b1 底 / --bc 字 / --p 主色 / --pc 主色前景。
+   注意：commonCss 中 builder-input.css 排在 flatpickr.min.css **之前**，
+   同优先级会被 vendor 覆盖，故颜色类属性一律加 !important（沿用 6.116 做法）。
+   */
+.flatpickr-calendar {
+  background: var(--fallback-b1, oklch(var(--b1) / 1));
+  color: oklch(var(--bc) / 1) !important;
+  border: 1px solid oklch(var(--bc) / 0.12);
+  box-shadow: 0 4px 16px oklch(var(--bc) / 0.15) !important;
+}
+
+/* 指向输入框的小三角：外框描边色，内填面板底色 */
+.flatpickr-calendar.arrowTop::after,
+.flatpickr-calendar.arrowBottom::after {
+  border-bottom-color: var(--fallback-b1, oklch(var(--b1) / 1)) !important;
+  border-top-color: var(--fallback-b1, oklch(var(--b1) / 1));
+}
+.flatpickr-calendar.arrowTop::before,
+.flatpickr-calendar.arrowBottom::before {
+  border-bottom-color: oklch(var(--bc) / 0.12) !important;
+  border-top-color: oklch(var(--bc) / 0.12) !important;
+}
+.flatpickr-calendar.arrowLeft::after,
+.flatpickr-calendar.arrowRight::after {
+  border-left-color: var(--fallback-b1, oklch(var(--b1) / 1));
+  border-right-color: var(--fallback-b1, oklch(var(--b1) / 1));
+}
+
+/*
+   月份 + 年份标题：颜色统一 bc 实色。6.159 字重统一为 500——月份下拉 vendor
+   默认 300 与年份 600（6.123）粗细悬殊，观感像两种元素（用户反馈不统一）；
+   年份的交互暗示仍由 hover 底 + pointer 光标 + 上下箭头承担
+   */
+.flatpickr-current-month,
+.flatpickr-current-month .cur-month {
+  color: oklch(var(--bc) / 1);
+}
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+  font-weight: 500 !important; /* vendor 同名规则（300）在后加载，加 !important 兜底 */
+}
+.flatpickr-current-month .numInputWrapper .cur-year {
+  color: oklch(var(--bc) / 1) !important;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--rounded-btn, 0.25rem);
+}
+.flatpickr-current-month .numInputWrapper:hover .cur-year,
+.flatpickr-current-month .numInputWrapper .cur-year:focus {
+  background: oklch(var(--bc) / 0.1);
+}
+/* 年份上下箭头的小三角 */
+.flatpickr-current-month .numInputWrapper span.arrowUp::after {
+  border-bottom-color: oklch(var(--bc) / 0.5);
+}
+.flatpickr-current-month .numInputWrapper span.arrowDown::after {
+  border-top-color: oklch(var(--bc) / 0.5);
+}
+
+/* 上/下月导航箭头（svg 用 fill，不是 color） */
+.flatpickr-prev-month,
+.flatpickr-next-month {
+  color: oklch(var(--bc) / 0.5) !important;
+  fill: oklch(var(--bc) / 0.5);
+}
+.flatpickr-prev-month:hover,
+.flatpickr-next-month:hover,
+.flatpickr-prev-month:hover svg,
+.flatpickr-next-month:hover svg {
+  color: oklch(var(--bc) / 1) !important;
+  fill: oklch(var(--bc) / 1);
+}
+
+/* 星期表头 */
+span.flatpickr-weekday {
+  color: oklch(var(--bc) / 0.5) !important;
+}
+
+/* 日期格 */
+.flatpickr-day {
+  color: oklch(var(--bc) / 0.9) !important;
+}
+.flatpickr-day:hover,
+.flatpickr-day:focus,
+.flatpickr-day.prevMonthDay:hover,
+.flatpickr-day.nextMonthDay:hover {
+  background: oklch(var(--bc) / 0.1);
+  border-color: transparent;
+}
+.flatpickr-day.today {
+  border-color: oklch(var(--p) / 1) !important;
+}
+.flatpickr-day.today:hover,
+.flatpickr-day.today:focus {
+  background: oklch(var(--p) / 1);
+  border-color: oklch(var(--p) / 1) !important;
+  color: oklch(var(--pc) / 1) !important;
+}
+.flatpickr-day.selected,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange,
+.flatpickr-day.selected:focus,
+.flatpickr-day.startRange:focus,
+.flatpickr-day.endRange:focus,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange:hover,
+.flatpickr-day.endRange:hover {
+  background: oklch(var(--p) / 1) !important;
+  border-color: oklch(var(--p) / 1) !important;
+  color: oklch(var(--pc) / 1) !important;
+}
+/*
+   区间中间段（日期范围 / 时间范围）。6.177：格间缝隙原本由 vendor 的 ±5px
+   box-shadow 条填补（307.875px 布局格间确有空隙），6.176 收窄 280px 后格子
+   max-width:none 恰好铺满、彼此相接，阴影条反而透过相邻格的半透明底色叠成
+   第二层（0.18+0.18≈0.36），格间出现深色竖带（用户反馈「日期之间有阴影」）
+   ——阴影整体去掉。6.186：边框同理不能染半透明主题色——相邻格边框叠出
+   0.36 深线，每格看起来带一圈边框（用户反馈「范围内的点位不要边框」）；
+   回归 vendor 的 1px 透明边框（line-height 28px 按 30px border-box 扣边框
+   的算法不变），相邻格底色直接相连成整条色带
+   */
+.flatpickr-day.inRange {
+  background: oklch(var(--p) / 0.18) !important;
+  border-color: transparent !important;
+  color: oklch(var(--bc) / 0.9);
+  box-shadow: none !important;
+}
+.flatpickr-day.startRange.inRange,
+.flatpickr-day.endRange.inRange {
+  box-shadow: none !important;
+}
+/* vendor 同行相邻起止端（单日区间）的 -10px 连接阴影：6.176 后端点已直接
+   相接无需连接，且其硬编码 #569ff7 不随主题，一并去掉 */
+.flatpickr-day.selected.startRange + .endRange:not(:nth-child(7n+1)),
+.flatpickr-day.startRange.startRange + .endRange:not(:nth-child(7n+1)),
+.flatpickr-day.endRange.startRange + .endRange:not(:nth-child(7n+1)) {
+  box-shadow: none !important;
+}
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+  color: oklch(var(--bc) / 0.3) !important;
+}
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+  color: oklch(var(--bc) / 0.2) !important;
+  background: transparent !important;
+  border-color: transparent !important;
+}
+
+/*
+   6.176 日历日期紧凑化 + 选中态方形微圆角（用户反馈：日期再紧凑些；选中
+   圆形改方形带些圆角）。vendor 日格 39px 高/正圆(radius:150px)/每格
+   margin-top:1px、容器 307.875px；收为 30px 高（与 6.170 时间行同档）、
+   0.8125rem 字（与月/年面板 6.174/6.124 同级）、容器 280px、星标头 24px。
+   选中/hover/today 圆角随 base 变方形微圆角 var(--rounded-btn)（主题解析
+   2px，fallback 写字面值沿 6.173 教训）。本文件在 vendor css 之前加载，
+   竞争属性一律 !important（沿 6.123 约定）。注意：base 的 !important 圆角
+   会顺带压掉 vendor 的区间端点半圆规则——start/end/同日双端/inRange 必须
+   在此整组重定义，否则出现「选中方形+区间端点半圆」混搭。
+   */
+.flatpickr-calendar {
+  width: 280px !important;
+}
+
+/*
+   6.317 关闭弹出淡入动画：animation 期间面板被提升为合成层，头部文字由合成器
+   栅格化，font-weight:500（系统无现成字面）在合成路径被合成加粗（黑体感、略宽），
+   动画结束回主线程栅格化又变回正常——display:none 每次打开都重演（用户：每次
+   弹出月份-年份文字由黑体变普通并伴随位移，FF 明显 Chromium 轻）。移除后面板
+   首帧即最终栅格化，无过渡态
+   */
+.flatpickr-calendar.animate.open {
+  animation: none;
+}
+
+.dayContainer {
+  width: 280px !important;
+  min-width: 280px;
+  max-width: 280px !important;
+  /* 6.326 日格左右留边 6px：格网原为 280 满宽，选中色块直贴面板边缘；
+     border-box 内缩后 7 格按 14.2857% 自动收窄（268/7≈38.3px），色块离边 */
+  padding: 0 6px;
+}
+
+/*
+   vendor 307.875px）——flatpickr 构建面板时 display:none 不可测量，Firefox 首次
+   打开才首次布局，days 网格宽度不定会让头部「月份-年份」居中基准在打开瞬间
+   重排位移；三层恒等 280 后任何引擎/任何缓存代际的 CSS 都收敛到同一几何
+   */
+.flatpickr-days {
+  width: 280px !important;
+  min-width: 280px;
+  max-width: 280px !important;
+}
+
+.flatpickr-weekdays {
+  height: 24px !important;
+  /* 6.326 与 dayContainer 的左右留边同步，保证星期标签与日格列对齐 */
+  padding: 0 6px;
+}
+
+span.flatpickr-weekday {
+  line-height: 24px;
+  font-size: 0.75rem;
+}
+
+.flatpickr-day {
+  height: 30px !important;
+  line-height: 28px !important; /* 30px 为 border-box，扣除上下各 1px 透明边框后按 28px 居中 */
+  max-width: none !important;
+  margin-top: 0 !important;
+  font-size: 0.8125rem;
+  border-radius: var(--rounded-btn, 0.125rem);
+}
+
+/* 区间端点：vendor 半圆（50px 0 0 50px）改方形微圆角，外侧圆角、内侧直角拼接区间带 */
+.flatpickr-day.startRange,
+.flatpickr-day.selected.startRange,
+.flatpickr-day.startRange.startRange {
+  border-radius: var(--rounded-btn, 0.125rem) 0 0 var(--rounded-btn, 0.125rem) !important;
+}
+
+.flatpickr-day.endRange,
+.flatpickr-day.selected.endRange,
+.flatpickr-day.startRange.endRange {
+  border-radius: 0 var(--rounded-btn, 0.125rem) var(--rounded-btn, 0.125rem) 0 !important;
+}
+
+/* 同日既是起点又是终点（单日区间） */
+.flatpickr-day.selected.startRange.endRange,
+.flatpickr-day.startRange.startRange.endRange,
+.flatpickr-day.endRange.startRange.endRange {
+  border-radius: var(--rounded-btn, 0.125rem) !important;
+}
+
+.flatpickr-day.inRange {
+  border-radius: 0 !important;
+}
+
+/* 时间选择区（datetime / time） */
+.flatpickr-time,
+.flatpickr-calendar.hasTime .flatpickr-time {
+  border-top-color: oklch(var(--bc) / 0.12) !important;
+}
+.flatpickr-time input,
+.flatpickr-time .flatpickr-time-separator,
+.flatpickr-time .flatpickr-am-pm {
+  color: oklch(var(--bc) / 1) !important;
+}
+.flatpickr-time input:hover,
+.flatpickr-time input:focus,
+.flatpickr-time .flatpickr-am-pm:hover,
+.flatpickr-time .flatpickr-am-pm:focus {
+  background: oklch(var(--bc) / 0.08) !important;
+}
+.flatpickr-time .numInputWrapper span.arrowUp::after {
+  border-bottom-color: oklch(var(--bc) / 0.5) !important;
+}
+.flatpickr-time .numInputWrapper span.arrowDown::after {
+  border-top-color: oklch(var(--bc) / 0.5) !important;
+}
+
+/*
+   6.170 时间选择行紧凑化（用户反馈：美化时间面板、减少高度）
+   vendor 现状：行高 40px（line-height/max-height/numInputWrapper height 三处
+   连环 40px，input 用 inherit 继承）、时/分隔符 font-weight:bold、日历容器
+   固定 307.875px 宽——仅时间面板三个两位数字撑出大片留白。
+   统一压到 30px（与 32px 输入框同档）、字重 500（6.159 标题同款）；
+   悬停底色补圆角；等宽数位防滚动跳字。
+   6.123 注：本文件在 flatpickr.min.css 之前加载，竞争属性须 !important。
+   */
+.flatpickr-time {
+  line-height: 30px !important;
+  max-height: 30px;
+}
+.flatpickr-time .numInputWrapper {
+  height: 30px;
+}
+.flatpickr-time input {
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--rounded-btn, 0.25rem);
+}
+.flatpickr-time input.flatpickr-hour,
+.flatpickr-time .flatpickr-time-separator {
+  font-weight: 500 !important; /* vendor bold 在后加载，!important 兜底 */
+}
+.flatpickr-time .flatpickr-time-separator,
+.flatpickr-time .flatpickr-am-pm {
+  color: oklch(var(--bc) / 0.4) !important;
+}
+/* 仅时间（noCalendar）面板不再沿用日期日历的 307px 定宽，按内容收窄 */
+.flatpickr-calendar.noCalendar {
+  width: auto !important;
+}
+.flatpickr-calendar.noCalendar .flatpickr-time {
+  width: 10.5rem;
+}
+
+/*
+   6.171 数字输入框去原生痕迹（时/分/秒/年，用户反馈：原生 number input
+   丑、不协调、各浏览器显示不一）
+   type 已由 builder-elements.js slimNumInputs() 在实例化后换成
+   text+inputmode=numeric（flatpickr 事件处理不依赖 number 类型），CSS 侧
+   再补两处观感统一：
+   ① flatpickr 聚焦时 select() 全选文本，默认蓝色选区与主题脱节 → 换主题色淡染；
+   ② 上下步进小按钮去掉 vendor 的 1px 描边盒子（rgba 黑悬停底），改圆角 +
+   主题色悬停，与 6.123/6.170 的面板语言一致。
+   */
+.flatpickr-calendar input.numInput::selection {
+  background: oklch(var(--p) / 0.25);
+}
+.flatpickr-time .numInputWrapper span,
+.flatpickr-current-month .numInputWrapper span {
+  border: none;
+  border-radius: 2px;
+  transition: background 0.15s;
+}
+.flatpickr-time .numInputWrapper span:hover,
+.flatpickr-current-month .numInputWrapper span:hover {
+  background: oklch(var(--bc) / 0.1) !important;
+}
+.flatpickr-time .numInputWrapper span:active,
+.flatpickr-current-month .numInputWrapper span:active {
+  background: oklch(var(--bc) / 0.16) !important;
+}
+
+/*
+   6.124 flatpickr 年份面板（插件 window.__fpYearPanel，见 tpextbuilder.js）
+   点日历标题里的「年」→ 展开 12 年网格 + 前后十年翻页，与 Month/Year 组件的
+   decade 面板同款；.fp-year-* 是本库自有 class（vendor 无同名规则），无需 !important。
+   */
+.flatpickr-calendar .numInputWrapper .cur-year.fp-year-trigger {
+  cursor: pointer;
+}
+
+.flatpickr-calendar .fp-year-panel {
+  display: none;
+  padding: 0.25rem 0.5rem 0.5rem;
+}
+
+/*
+   6.161 年份面板打开时连头部一起隐藏（年份输入框+日历的 ‹› 月份切换箭头），
+   面板即整个组件——否则面板自带的 «» 十年翻页与 ‹› 月份切换同屏让人迷惑
+   （用户反馈）。收起途径：点选年、点日历内其他区域（时间行）、关闭日历。
+   */
+.flatpickr-calendar.fp-year-open .flatpickr-months {
+  display: none !important;
+}
+
+/* 面板打开时用年份网格替换日历主体（6.329 时间行一并隐藏——面板即整个组件，
+   时间行悬在年网格下面没意义），高度自动收放 */
+.flatpickr-calendar.fp-year-open .flatpickr-innerContainer {
+  display: none !important;
+}
+
+.flatpickr-calendar.fp-year-open .flatpickr-time {
+  display: none !important;
+}
+
+.flatpickr-calendar.fp-year-open .fp-year-panel {
+  display: block;
+}
+
+.fp-year-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
+}
+
+.fp-year-range {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: oklch(var(--bc) / 1);
+}
+
+.fp-year-nav {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0 0.375rem;
+  line-height: 1;
+  font-size: 0.875rem;
+  color: oklch(var(--bc) / 0.5);
+  border-radius: var(--rounded-btn, 0.25rem);
+}
+
+.fp-year-nav:hover {
+  color: oklch(var(--bc) / 1);
+  background: oklch(var(--bc) / 0.1);
+}
+
+.fp-year-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+}
+
+.fp-year-cell {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0.375rem 0;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: oklch(var(--bc) / 0.9);
+  border-radius: var(--rounded-btn, 0.25rem);
+}
+
+.fp-year-cell:hover {
+  background: oklch(var(--bc) / 0.1);
+}
+
+.fp-year-cell.is-current {
+  background: oklch(var(--p) / 1);
+  color: oklch(var(--pc) / 1);
+  font-weight: 600;
+}
+
+/*
+   6.165 月份下拉回退为原生 <select>：6.160 的自绘面板（__fpMonthPanel）与
+   原生弹层冲突，点击闪烁无法选月，用户要求回退。这里只美化收起态——hover
+   底色 + 圆角，与「年」触发器观感一致；弹层由浏览器绘制不受控。
+   vendor 同名规则（border-radius:0 / hover rgba 黑）在 flatpickr.min.css
+   里后加载，选择器必须比它高一级（加 .flatpickr-current-month）才能压过。
+   */
+.flatpickr-calendar .flatpickr-current-month .flatpickr-monthDropdown-months {
+  border-radius: var(--rounded-btn, 0.25rem);
+  transition: background-color 0.15s ease;
+}
+
+.flatpickr-calendar .flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+  background: oklch(var(--bc) / 0.1);
+}
+
+/*
+   6.174 月份面板（插件 window.__fpMonthPanel，见 tpextbuilder.js）
+   原生月份 <select> 弹层由浏览器自绘不可控，且 appearance:base-select 仅
+   Chromium 135+ 支持（6.168/6.172 方案在用户 Firefox 上完全无效，6.174 反馈），
+   已随本版整体移除。改为纯 JS 自绘 12 月网格面板：mousedown preventDefault
+   选月走 select change 事件复用 flatpickr 内部 changeMonth 路径。
+   .fp-month-* 为本库自有 class（vendor 无同名规则），无需 !important。
+   */
+.flatpickr-calendar .flatpickr-monthDropdown-months.fp-month-trigger {
+  cursor: pointer;
+}
+
+.flatpickr-calendar .fp-month-panel {
+  display: none;
+  padding: 0.25rem 0.5rem 0.5rem;
+}
+
+/*
+   6.175 面板打开时整个组件替换为月网格（同 6.161 年份面板策略：连月份/年份
+   标题与 ‹› 切月箭头一起隐藏，面板即整个组件——否则头部与面板同屏让人迷惑；
+   时间行保留，纯日期组件本就没有。收起途径：选月、点时间行等日历内其他区域、
+   关闭日历（触发器已随标题隐藏，无法再点）
+   */
+.flatpickr-calendar.fp-month-open .flatpickr-months {
+  display: none !important;
+}
+
+.flatpickr-calendar.fp-month-open .flatpickr-innerContainer {
+  display: none !important;
+}
+
+.flatpickr-calendar.fp-month-open .flatpickr-time {
+  display: none !important;
+}
+
+.flatpickr-calendar.fp-month-open .fp-month-panel {
+  display: block;
+}
+
+/* 与年份面板互斥（双向兜底）：6.175 后头部随面板隐藏，经界面已无法同开两个
+   面板，此二条仅防御状态残留 */
+.flatpickr-calendar.fp-month-open .fp-year-panel {
+  display: none !important;
+}
+
+.flatpickr-calendar.fp-year-open .fp-month-panel {
+  display: none !important;
+}
+
+.flatpickr-calendar .fp-month-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.25rem;
+}
+
+.flatpickr-calendar .fp-month-cell {
+  cursor: pointer;
+  padding: 0.375rem 0;
+  font-size: 0.8125rem;
+  text-align: center;
+  color: oklch(var(--bc) / 0.9);
+  border-radius: var(--rounded-btn, 0.25rem);
+}
+
+.flatpickr-calendar .fp-month-cell:hover {
+  background: oklch(var(--bc) / 0.1);
+}
+
+.flatpickr-calendar .fp-month-cell.is-current {
+  background: oklch(var(--p) / 1);
+  color: oklch(var(--pc) / 1);
+  font-weight: 600;
+}
+
+/* 隐藏 TomSelect/flatpickr 给隐藏 input 注入的类导致的可见残留 */
+.timeange.flatpickr-input,
+input[type="hidden"].flatpickr-input,
+input[type="hidden"].active {
+  display: none !important;
+  position: absolute !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden;
+}
+
+/*
+   * 6.308 日期范围快捷预设（x-daterange，__buildQuickRanges）
+   * 6.319 改为面板右侧竖排预设列（daterangepicker 式：左日历 280 + 右预设列
+   * 124 = 404）：容器由 JS 加 fp-has-ranges，月头部/时间行收窄回 280 保持与
+   * 日历对齐，预设列绝对定位占满右侧全高；主题变量随 13 主题切换。
+   * ============================================================
+   */
+.flatpickr-calendar.fp-has-ranges {
+  width: 404px !important;
+  min-width: 404px;
+  max-width: 404px;
+}
+
+/* 月头部与时间行收窄回日历宽度——它们是容器级块级，默认会撑满 404 把
+   月份-年份/时间行拉到预设列底下 */
+.flatpickr-calendar.fp-has-ranges .flatpickr-months,
+.flatpickr-calendar.fp-has-ranges .flatpickr-time {
+  width: 280px !important;
+}
+
+/* 6.327 ‹›箭头是 absolute 且 vendor 的 .flatpickr-months 没有 relative——
+   锚到 404 容器后 > 会落到预设列头上（与 Today 混淆）；锚回月头部即原位 */
+.flatpickr-calendar.fp-has-ranges .flatpickr-months {
+  position: relative;
+}
+
+.flatpickr-calendar.fp-has-ranges .fp-quick-ranges {
+  position: absolute;
+  top: 0;
+  left: 280px;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.375rem 0.375rem;
+  border-left: 1px solid oklch(var(--bc) / 0.08);
+  overflow-y: auto;
+}
+
+.flatpickr-calendar.fp-has-ranges .fp-quick-range {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  padding: 0.375rem 0.5rem;
+  border: none;
+  border-radius: var(--rounded-btn, 0.125rem);
+  background: transparent;
+  color: oklch(var(--bc) / 0.7);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.flatpickr-calendar.fp-has-ranges .fp-quick-range:hover {
+  background: oklch(var(--b2) / 1);
+  color: oklch(var(--p));
+}
+
+/* 当前值恰好命中该预设区间时高亮（onOpen 里比对 selectedDates） */
+.flatpickr-calendar.fp-has-ranges .fp-quick-range.is-active {
+  background: oklch(var(--p) / 0.12);
+  color: oklch(var(--p));
+}
+
+/*
+   6.328 年/月面板打开时隐藏预设列——年/月面板接管整个 404 容器（年格 3 列 +
+   «» 翻页都在全宽上），预设列 absolute 全高会叠在年格/翻页箭头上造成混排；
+   选完年/月面板收起后预设列自动恢复
+   */
+.flatpickr-calendar.fp-has-ranges.fp-year-open .fp-quick-ranges,
+.flatpickr-calendar.fp-has-ranges.fp-month-open .fp-quick-ranges {
+  display: none !important;
+}

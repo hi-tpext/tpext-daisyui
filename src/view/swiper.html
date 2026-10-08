@@ -1,0 +1,22 @@
+{if condition="$slide_count gt 0"}
+<div class="carousel w-full rounded-box {$class}" style="height:{$height}" {$attr|raw}>
+    {volist name="slides" id="vo"}
+    <div id="{$vo.id}" class="carousel-item relative w-full">
+        <img src="{$vo.image}" alt="{$vo.title}" class="w-full h-full object-cover">
+        {if condition="$slide_count gt 1"}
+        <div class="absolute flex justify-between transform -translate-y-1/2 left-2 right-2 top-1/2">
+            <a href="#{$vo.prev}" class="btn btn-circle btn-sm btn-neutral" aria-label="{:__blang('builder_swiper_prev')}"><i class="mdi mdi-chevron-left"></i></a>
+            <a href="#{$vo.next}" class="btn btn-circle btn-sm btn-neutral" aria-label="{:__blang('builder_swiper_next')}"><i class="mdi mdi-chevron-right"></i></a>
+        </div>
+        {/if}
+    </div>
+    {/volist}
+</div>
+{if condition="$slide_count gt 1"}
+<div class="flex w-full justify-center gap-2 py-2">
+    {volist name="slides" id="vo"}
+    <a href="#{$vo.id}" class="h-2 w-2 rounded-full bg-base-content/30 hover:bg-base-content/60" aria-label="{$vo.title}"></a>
+    {/volist}
+</div>
+{/if}
+{/if}

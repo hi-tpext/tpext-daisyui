@@ -1,0 +1,11 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}" title="{$placeholder}{:__blang('builder_tags_enter_to_split')}">
+    <x-select class="{$class}" cfg="{$cfg|raw}">
+        <select class="select select-bordered w-full input-tags" name="{$name}[]" id="{$id}" multiple="multiple" {$attr|raw}>
+            {volist name="tags" id="tag"}
+            <option value="{$tag}" selected>{$tag}</option>
+            {/volist}
+        </select>
+    </x-select>
+    {include file="$helptempl" /}
+</div>

@@ -1,0 +1,133 @@
+{/* show-left 展开树列箭头：只在整页渲染输出（局部响应不携带，随局部刷新天然不重复、
+    不丢失——它在该 div 外部，局部刷新不会触达）。放进文档流、收起时显示在工具栏行上方，
+    不用绝对定位悬浮（列顶上方就是页头标题，悬浮会压标题，6.185 用户反馈）。
+    注意：本注释内禁止出现任何模板标签（变量/逻辑标签）——think-template 的变量解析
+    先于注释剥离，模板标签会撑破注释导致注释文本原样渲染到页面（6.185 踩坑）。
+    可见性完全由 CSS 状态类控制——全局默认隐藏，仅 body.left-tree-collapsed 下
+    .right-table 内显示，普通列表页（无 .right-table 包裹）永久不可见 */}
+{if condition="$partial == 0"}<a href="javascript:;" class="show-left" title="{:__blang('builder_action_open_left_tree')}"><i class="mdi mdi-format-horizontal-align-right"></i></a>{/if}
+{notempty name="searchForm"}
+{:$searchForm->render()}
+{/notempty}
+{notempty name="toolbar"}
+<div class="table-toolbar mb-2">
+    {:$toolbar->render()}
+</div>
+{/notempty}
+
+<div id="{$id}" x-data="{ partial: '{$partial}' == '1' }">
+    {notempty name="addTop"}
+    {:$addTop->render()}
+    {/notempty}
+    <div class="overflow-x-auto table-wrap rounded-box border border-base-300 bg-base-100{if condition="$freezeHead"} table-freeze-head{/if}">
+        <table class="table table-zebra table-hover table-sm w-full{if condition="$freezeOn"} table-freeze-on{/if} {$class}" {$attr|raw}>
+            {notempty name="$headers"}
+            <thead class="bg-base-200">
+                <tr>
+                    {if condition="$useCheckbox"}
+                    <th class="table-checkbox text-center{if condition="in_array('__check__', $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array('__check__', $freezeRightCols)"} freeze-col-right{/if}">
+                        <label class="cursor-pointer">
+                            <input type="checkbox" id="checkall-{$name}" data-check="check-{$name}" class="checkall
+                                table-row-checkall checkbox checkbox-primary checkbox-sm" x-ref="checkall">
+                        </label>
+                    </th>
+                    {/if}
+                    {volist name="headers" id="header"}
+                    <th class="{$headTextAlign} whitespace-nowrap{if condition="in_array($key, $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array($key, $freezeRightCols)"} freeze-col-right{/if}">
+                        {$header|raw}
+                        {in name="$key" value="$sortable"}
+                        {if condition="$key eq $sortKey"}
+                        {if condition="$sortOrder eq 'asc'"}
+                        <a data-key="{$key}" href="javascript:;" class="sortable mdi mdi-sort-ascending text-primary"></a>
+                        {else/}
+                        <a data-key="{$key}" href="javascript:;" class="sortable mdi mdi-sort-descending text-primary"></a>
+                        {/if}
+                        {else/}
+                        <a data-key="{$key}" href="javascript:;" class="sortable mdi mdi-sort text-base-content/40 hover:text-base-content"></a>
+                        {/if}
+                        {/in}
+                    </th>
+                    {/volist}
+                    {notempty name="$actionbars"}
+                    <th class="row-__action__ {$headTextAlign}{if condition="in_array('__action__', $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array('__action__', $freezeRightCols)"} freeze-col-right{/if}">{$actionRowText|raw}</th>
+                    {/notempty}
+                </tr>
+            </thead>
+            {/notempty}
+            <tbody>
+                {volist name="list" id="row"}
+                <tr class="table-row-id hover" data-id="{$ids[$key]}">
+                    {if condition="$useCheckbox"}
+                    <td class="table-checkbox text-center {$tdClass}{if condition="in_array('__check__', $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array('__check__', $freezeRightCols)"} freeze-col-right{/if}">
+                        <input type="checkbox" id="{$name}-{$key}" name="id[]" value="{$ids[$key]}" {in name="$ids[$key]"
+value="$checked" }checked{/in} class="check-{$name} table-row-checkbox checkbox checkbox-primary checkbox-sm">
+                    </td>
+                    {/if}
+                    {foreach name="row" id="col" key="co"}
+                    <td class="{$tdClass} {$col.wrapper->getClass()} row-{$col.wrapper->getClassName()}-td whitespace-nowrap{if condition="in_array($co, $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array($co, $freezeRightCols)"} freeze-col-right{/if}"
+                        {$col.wrapper->getAttrWithStyle()|raw}>
+                        {$col.value|raw}
+                    </td>
+                    {/foreach}
+                    {notempty name="$actionbars"}
+                    <td class="text-center row-__action__ whitespace-nowrap {$verticalAlign}{if condition="in_array('__action__', $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array('__action__', $freezeRightCols)"} freeze-col-right{/if}">
+                        {$actionbars[$key]|raw}
+                    </td>
+                    {/notempty}
+                </tr>
+                {/volist}
+            </tbody>
+        </table>
+    </div>
+    {empty name="$list"}
+    <div class="text-center py-16 text-base-content/50 items-empty-text">
+        {$emptyText|raw}
+    </div>
+    {/empty}
+    {notempty name="paginator"}
+    <div class="pagination-bar mt-2">
+        <nav class="join {:$paginator->getClass()}" {:$paginator->getAttrWithStyle()}>
+            {:$paginator->render()}
+        </nav>
+        {notempty name="pagesizeDropdown"}
+        <div class="pagesize-dropdown">
+            {:$pagesizeDropdown->render()}
+        </div>
+        {/notempty}
+    </div>
+    {/notempty}
+    {notempty name="addBottom"}
+    {:$addBottom->render()}
+    {/notempty}
+    <script>
+        var partial = '{$partial}' == 1;
+
+        if (!window.__auto_post_bind__) {
+            window.__auto_post_bind__ = [];
+        }
+
+        document.getElementById('form-__sort__-{$id}').value = '{$sort}';
+
+        if (partial) {
+            var pageInput = document.getElementById('form-__page__-{$id}');
+            if (pageInput) pageInput.value = '{$paginator->currentPage()}';
+
+            // checkbox 全选/行选逻辑统一由 Table.php::tableScript() 原生 JS 事件委托处理，
+            // 这里不再重复注册 handler（AJAX 刷新会导致重复绑定）
+
+            if (window.renderFiles) {
+                window.renderFiles('#{$id} ');
+            }
+
+            // 6.230 表头/列冻结：局部刷新后单元格是新建的，重新测量分配 sticky 偏移
+            if (window.tpextbuilder && window.tpextbuilder.initTableFreeze) {
+                window.tpextbuilder.initTableFreeze(document.getElementById('{$id}'));
+            }
+
+            // 6.286 树参考线满格：局部刷新后单元格重建，重新实测回写
+            if (window.tpextbuilder && window.tpextbuilder.initTreeLines) {
+                window.tpextbuilder.initTreeLines(document.getElementById('{$id}'));
+            }
+        }
+    </script>
+</div>

@@ -1,0 +1,15 @@
+{include file="$labeltempl" /}
+<div class="{$size[1]}" x-data="switchBtn('{$pair['on']}', '{$pair['off']}')">
+    <input type="hidden" name="{$name}" x-ref="hidden" value="{$checked ? $pair['on'] : $pair['off']}" class="ignore" {$attr|raw}>
+    <!-- 6.272 label 加 w-fit：flex 是块级会占满控件列整行宽，点到按钮右侧空白也触发切换；
+         收缩到内容宽（≈toggle 48px）后只有按钮本身可点，32px 行高不受影响。
+         6.274 加 switch-group 标记类：表格单元格（td text-center）罩不到块级 label，
+         core-layout 用 .table .switch-group{margin-inline:auto} 居中；表单控件列贴左不套用 -->
+    <label class="switch-group flex w-fit items-center gap-2 cursor-pointer {$class}">
+        <input type="checkbox" x-ref="switchEl" class="toggle toggle-primary"
+            data-on="{$pair['on']}" data-off="{$pair['off']}" id="{$id}-box"
+            {if condition="$checked" }checked{/if}
+            @change="onToggle">
+    </label>
+    {include file="$helptempl" /}
+</div>
