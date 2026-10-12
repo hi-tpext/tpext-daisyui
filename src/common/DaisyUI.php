@@ -7,11 +7,11 @@ use tpext\common\Module as baseModule;
 
 class DaisyUI extends baseModule
 {
-    protected $version = '1.0.0';
+    protected $version = '1.2.0';
 
     protected $name = 'tpext.daisyui';
 
-    protected $title = 'tpext DaisyUI 生成';
+    protected $title = 'DaisyUI 生成';
 
     protected $description = '后台ui生成(DaisyUI+Tailwind+Alpine)';
 

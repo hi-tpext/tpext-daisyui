@@ -372,7 +372,7 @@ class Search extends SWrapper implements Renderable, ReleaseAble
      * @param string $class
      * @return $this
      */
-    public function btnSubmit($label = '筛&nbsp;&nbsp;选', $size = '2 col-lg-2 col-sm-6 col-xs-12', $class = 'btn-info')
+    public function btnSubmit($label = '筛&nbsp;&nbsp;选', $size = '2 col-lg-2 col-sm-6 col-xs-12', $class = 'btn-primary')
     {
         if ($label == '筛&nbsp;&nbsp;选') {
             $label = __blang('builder_button_filter');

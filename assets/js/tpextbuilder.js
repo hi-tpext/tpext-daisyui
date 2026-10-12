@@ -345,6 +345,11 @@
 
     /* ============================================================
      * 4. 表单提交拦截：调用 window.__forms__[id].formSubmit()
+     * 6.433 旧库靠 jquery.validate submitHandler 的「返回 false 才取消」
+     * 语义，formSubmit 返回 true 时原生提交照常进行；addEventListener
+     * 的返回值会被忽略且 preventDefault 已取消默认行为，故非 ajax 且
+     * 校验通过时必须程序化补发 form.submit()——它不再触发 submit 事件
+     * （不会递归），约束校验已由 novalidate + validateForm 接管
      * ============================================================ */
     function initFormSubmit() {
         d.addEventListener('submit', function (e) {
@@ -358,7 +363,11 @@
             if (!w.__forms__ || !w.__forms__[formId]) return;
 
             e.preventDefault();
-            return w.__forms__[formId].formSubmit();
+            var conf = w.__forms__[formId];
+            var proceed = conf.formSubmit();
+            if (proceed !== false && !conf.ajax && typeof form.submit === 'function') {
+                form.submit();
+            }
         });
     }
 

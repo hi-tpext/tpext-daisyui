@@ -19,10 +19,25 @@
         var MDI_JSON_URL = '/assets/tpextdaisyui/js/fontIconPicker/fontjson/materialdesignicons.json';
         var ICON_LOADED = null;
 
+        // 本文件排在 axios.min.js 之前，且 Alpine 启动（组件 init）可能早于 axios
+        // 执行——6.437 实测 w.axios 那一刻还是 undefined。轮询等就绪再发请求
+        // （经典脚本同步加载，通常一两帧内命中），避免永久缓存空结果
+        function whenAxios() {
+            if (w.axios) return Promise.resolve();
+            return new Promise(function (resolve) {
+                var timer = setInterval(function () {
+                    if (w.axios) { clearInterval(timer); resolve(); }
+                }, 50);
+            });
+        }
+
         function loadIcons() {
             if (ICON_LOADED) return ICON_LOADED;
-            ICON_LOADED = fetch(MDI_JSON_URL)
-                .then(function (r) { return r.json(); })
+            // 6.437 fetch 统一为 axios
+            ICON_LOADED = whenAxios().then(function () {
+                return w.axios.get(MDI_JSON_URL);
+            })
+                .then(function (r) { return r.data; })
                 .then(function (data) {
                     if (data.glyphs && data.glyphs.length) {
                         return data.glyphs.map(function (g) { return g.css; });

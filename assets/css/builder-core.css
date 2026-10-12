@@ -1382,11 +1382,12 @@ nav.join ul.pagination > li > span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 6.264 24px→20px：与无分页形态（min-height 20px）靠拢 */
-  height: 1.25rem;
-  min-height: 1.25rem;
-  min-width: 1.25rem;
-  padding: 0 0.5rem;
+  /* 6.444 20px→26px→6.445 定稿 24px（用户反馈 26 略大）：24×24 方正盒；
+     padding 0.25rem 让个位数页码宽度由 min-width 决定（否则内容+0.5rem 内边距+边框超 1px） */
+  height: 1.5rem;
+  min-height: 1.5rem;
+  min-width: 1.5rem;
+  padding: 0 0.25rem;
   font-size: 0.75rem;
   font-weight: 500;
   line-height: 1;
@@ -1413,11 +1414,13 @@ nav.join ul.pagination > li > span:hover {
 
 nav.join ul.pagination > li.active > a,
 nav.join ul.pagination > li.active > span {
-  color: var(--fallback-pc, oklch(var(--pc) / 1));
-  background-color: var(--fallback-p, oklch(var(--p) / 1));
+  /* 6.446 用户反馈：由实心主色底+白字改为描边语言——深色边框、深色文字、
+     浅 tint 底（与工具栏描边按钮同族，当前页仍靠主色边框/文字突出） */
+  color: oklch(var(--p) / 0.95);
+  background-color: oklch(var(--p) / 0.08);
   border-width: 1px;
   border-style: solid;
-  border-color: var(--fallback-p, oklch(var(--p) / 1));
+  border-color: oklch(var(--p) / 0.8);
   cursor: default;
 }
 
@@ -1452,19 +1455,18 @@ nav.join {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   gap: 0.5rem;
-  /* 6.264 单页无分页时 nav/ul 全部缺席、summary 是绝对定位不撑高，bar 塌成 0；
-     定 min-height 与有分页形态（20px）统一，两种态观感一致 */
-  min-height: 1.25rem;
   /* 6.364 与表格间距 8px(mt-2)→12px，对齐本批搜索/工具栏/表格 12px 节奏；
-     未分层规则压 @layer 工具类 */
+     未分层规则压 @layer 工具类。
+     6.445 min-height 随页码按钮定稿 24px */
   margin-top: 0.75rem;
+  min-height: 1.5rem;
 }
 
-/* 6.264 pagesize 下拉（daisyUI btn-xs 默认 24px）同步压到 20px，
-   否则 bar 被它撑回 24，与页码按钮/无分页态不一致 */
+/* 6.264 pagesize 下拉（daisyUI btn-xs 默认 24px）与页码按钮同步尺寸——
+   6.445 随页码定稿 24px，整栏（页码/上下页/pagesize）一致 */
 .pagination-bar .btn-xs {
-  height: 1.25rem;
-  min-height: 1.25rem;
+  height: 1.5rem;
+  min-height: 1.5rem;
 }
 
 /*
@@ -1586,8 +1588,12 @@ td.row-__action__ .action-row {
    原本不同颜色的批量按钮全成一片灰。改用专用类 batch-disabled：只降整体
    不透明度（保留各自色相，比原色浅一档）；恢复 pointer-events 以给出
    not-allowed 光标（真拦截靠 postChecked/openChecked/postActionsChecked
-   的 JS 点击守卫）；:hover 用静止原色覆盖 daisyUI 的悬停加深，让禁用态
+   的 JS 点击守卫）；:hover 覆盖 daisyUI 的悬停加深，让禁用态
    外观完全静止、只有光标变化。
+   —— 6.442：6.439 描边化后文字色与 --btn-color 同色相，原「静止原色」
+   （全饱和底）会把文字吞掉（深底同色字）；hover 改钉描边静止档
+   （底 0.08 / 边 0.6，与语义色族静止态一致），灰组静止 0.05/0.22 差异
+   在 0.5 整体透明度下不可辨。
    */
 .batch-action-btn.batch-disabled {
   opacity: 0.5;
@@ -1596,8 +1602,8 @@ td.row-__action__ .action-row {
 }
 
 .batch-action-btn.batch-disabled:hover {
-  background-color: oklch(var(--btn-color, var(--b2)) / 1);
-  border-color: oklch(var(--btn-color, var(--b2)) / 1);
+  background-color: oklch(var(--btn-color, var(--b2)) / 0.08);
+  border-color: oklch(var(--btn-color, var(--b2)) / 0.6);
 }
 
 /* 控件高度统一：select(TomSelect) 与 input 同高，icon 选择器触发按钮同高 */
@@ -1809,4 +1815,64 @@ kbd,
 pre,
 samp {
   font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+}
+/* ============================================================
+   6.439 按钮描边化（用户指定：边框深色、内部背景浅色）
+   daisyUI4 着色公式：background/border = oklch(var(--btn-color) / var(--tw-*-opacity))，
+   主题变量 --p/--in/--su/... 是分量串——所以只能给 --btn-color 塞 var(--p)
+   这类分量引用（塞完整 oklch() 会嵌套非法→背景透明，6.439 首版踩过），
+   浓度用 --tw-bg-opacity / --tw-border-opacity 分开控制：
+   背景浅 tint(0.08)、边框深(0.6)、文字深(0.92)。ghost/link/outline/glass
+   非实底形态与禁用态不在 :not() 范围外——disabled 由 daisyUI 自身规则兜。
+   ============================================================ */
+/* —— 文字色（深色同相） —— —— —— —— —— —— —— —— —— —— —— —— —— —— ——*/
+.btn.btn-primary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--p) / 0.92); }
+.btn.btn-info:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--in) / 0.92); }
+.btn.btn-success:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--su) / 0.92); }
+.btn.btn-warning:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--wa) / 0.92); }
+.btn.btn-error:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--er) / 0.92); }
+.btn.btn-accent:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--a) / 0.92); }
+
+/* —— 默认态：浅 tint 底 + 深边框 —— —— —— —— —— —— —— —— —— —— —— ——*/
+.btn.btn-primary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--p); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
+.btn.btn-info:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--in); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
+.btn.btn-success:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--su); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
+.btn.btn-warning:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--wa); --tw-bg-opacity: 0.1; --tw-border-opacity: 0.6; }
+.btn.btn-error:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--er); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
+.btn.btn-accent:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--a); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
+
+/* —— hover：tint 加深、边框更实。
+      6.443：必须直接声明 bg/border —— daisyUI .btn:hover 有一条直接生效的
+      background-color:color-mix(90% 当前色, 10% 纯黑)，只设变量压不过它：
+      浅底被混入纯黑后透明度翻倍、明度大降（灰组混出灰黑底、蓝主色混出灰蓝底）。
+      本规则(0,9,0) 直接声明同名属性即可覆盖，公式复用基线变量 —— ——*/
+.btn.btn-primary:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-info:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-success:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-warning:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-error:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-accent:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
+  background-color: oklch(var(--btn-color, var(--b2)) / var(--tw-bg-opacity, 1));
+  border-color: oklch(var(--btn-color, var(--b2)) / var(--tw-border-opacity, 1));
+}
+.btn.btn-primary:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
+.btn.btn-info:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
+.btn.btn-success:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
+.btn.btn-warning:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.16; --tw-border-opacity: 0.8; }
+.btn.btn-error:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
+.btn.btn-accent:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
+
+/* —— 次级/无色按钮（secondary/neutral/裸 .btn）：灰系描边，bc 变量深浅主题自适应。
+      6.358 的 secondary 硬编码块已删（暗色主题下白块刺眼），此处统一接管。
+      6.440 边框再浅一档（用户反馈）：0.35 → 0.22，hover 0.5 → 0.38 —— ——*/
+.btn.btn-secondary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-neutral:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
+  --btn-color: var(--bc); --tw-bg-opacity: 0.05; --tw-border-opacity: 0.22;
+  color: oklch(var(--bc) / 0.78);
+}
+.btn.btn-secondary:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-neutral:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
+  background-color: oklch(var(--btn-color, var(--b2)) / var(--tw-bg-opacity, 1));
+  border-color: oklch(var(--btn-color, var(--b2)) / var(--tw-border-opacity, 1));
+  --tw-bg-opacity: 0.09; --tw-border-opacity: 0.38;
 }

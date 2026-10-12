@@ -699,12 +699,26 @@
             /* ---------- 远程懒加载（原 tomSelectScript ajax 分支） ---------- */
             var ajax = cfg.ajax;
             var url = ajax.url;
-            var idField = ajax.id === '_' ? null : ajax.id;
-            var textField = ajax.text === '_' ? null : ajax.text;
+            // 6.436 '_' 占位转 ''（不是 null）：URLSearchParams 会把 null 序列化成
+            // 字面量 'null' 发出去（旧库 jQuery $.param 对 null 是直接省略该参数），
+            // 服务端 input() 收到 'null' 字符串绕过兜底分支报错；空串则被
+            // 服务端 empty() 正常兜底（与 XLoadText 的 idField:'' 同款）
+            var idField = ajax.id === '_' ? '' : ajax.id;
+            var textField = ajax.text === '_' ? '' : ajax.text;
             var separator = cfg.separator || '、';
             var prevId = cfg.prev_id || '';
             var withParams = cfg.withParams || [];
             var fetched = false;
+            // 6.438 分页状态：下拉滚动到底加载下一页（有无关键字都生效）。
+            // 服务端 selectPage 返回 has_more；pageNo=当前下拉里已拉到的页码
+            var pageNo = 1;
+            var hasMore = false;
+            var loadingMore = false;
+
+            function readPage(data) {
+                pageNo = 1;
+                hasMore = !!(data && data.has_more);
+            }
 
             // items 复制行：宿主 id 被重写后 cfg.prev_id 仍是原 id，优先在本行内找
             function findPrev() {
@@ -729,18 +743,20 @@
             }
 
             function fetchList(extra) {
-                var params = new URLSearchParams(Object.assign({
+                var params = Object.assign({
                     q: '', page: 1,
                     prev_val: getPrevVal(),
                     ele_id: select.id,
                     prev_ele_id: prevId,
                     idField: idField,
                     textField: textField,
-                }, extra || {}));
+                }, extra || {});
                 var ep = getExtraParams();
-                for (var k in ep) params.set(k, ep[k]);
-                return fetch(url + '?' + params.toString()).then(function (r) {
-                    return r.json();
+                for (var k in ep) params[k] = ep[k];
+                // 6.437 fetch 统一为 axios：走全局默认（X-Requested-With/错误通知拦截器），
+                // 与表单提交等其余请求同一条出口
+                return w.axios.get(url, { params: params }).then(function (r) {
+                    return r.data;
                 });
             }
 
@@ -762,6 +778,25 @@
                 });
             }
 
+            // 6.438 追加一页选项到打开中的下拉：注册进 store（搜索 sifter 可见）+
+            // 逐条 render 后 appendChild（不重建 DOM，滚动位置保留）。
+            // 返回实际追加条数（去重后），供调用方判停。
+            // ts 由调用方传入——本函数定义在 createTomSelect 之外，拿不到其实例
+            function appendPage(ts, list) {
+                var opts = mapOptions(list).filter(function (o) {
+                    return o.value !== '' && !ts.options[o.value];
+                });
+                opts.forEach(function (o) {
+                    ts.addOptions([o]);
+                    var el = ts.render('option', o);
+                    var node = typeof el === 'string'
+                        ? new DOMParser().parseFromString(el, 'text/html').body.firstChild
+                        : el;
+                    if (node) ts.dropdown_content.appendChild(node);
+                });
+                return opts.length;
+            }
+
             function createTomSelect() {
                 var settings = baseSettings();
                 // null = 不自动 load，全部自己控制；openOnFocus=false 阻止自动开下拉
@@ -769,8 +804,9 @@
                 settings.openOnFocus = false;
                 settings.loadThrottle = 0;
                 settings.load = function (query, callback) {
-                    fetchList({ q: query || '' })
+                    fetchList({ q: query || '', page: 1 })
                         .then(function (data) {
+                            readPage(data);
                             callback(mapOptions(data.data ? data.data : data));
                         })
                         .catch(function () { callback(); });
@@ -783,6 +819,26 @@
                 self.__ts = ts;
                 clearPrehide();
 
+                // 6.438 滚动到底加载下一页：手工 appendOption 而非 ts.load()——
+                // loadCallback→refreshOptions 会重建下拉 DOM（innerHTML=''）把
+                // scrollTop 清零；纯 append 天然保留滚动位置。去重防脏数据死循环
+                ts.dropdown_content.addEventListener('scroll', function () {
+                    if (!ts.isOpen || loadingMore || !hasMore) return;
+                    var c = ts.dropdown_content;
+                    if (c.scrollTop + c.clientHeight < c.scrollHeight - 40) return;
+                    loadingMore = true;
+                    var q = ts.control_input ? ts.control_input.value : '';
+                    fetchList({ q: q, page: pageNo + 1 })
+                        .then(function (data) {
+                            loadingMore = false;
+                            if (!ts.isOpen) return;
+                            var added = appendPage(ts, data.data ? data.data : data);
+                            if (added) pageNo += 1;
+                            hasMore = !!(data && data.has_more) && added > 0;
+                        })
+                        .catch(function () { loadingMore = false; });
+                });
+
                 // 自己接管：第一次点下拉才 fetch，fetch 完才 open → 不闪
                 var control = ts.wrapper.querySelector('.ts-control');
                 control.addEventListener('click', function () {
@@ -791,8 +847,9 @@
                         return;
                     }
                     fetched = true;
-                    fetchList({ q: '' })
+                    fetchList({ q: '', page: 1 })
                         .then(function (data) {
+                            readPage(data);
                             ts.addOptions(mapOptions(data.data ? data.data : data));
                             ts.open();
                         })
@@ -827,6 +884,10 @@
                         var prevHost = prev.closest('x-select');
                         if (prevHost && prevHost.__echoBusy) return;
                         fetched = false;
+                        // 6.438 分页状态一并复位：新 prev_val 下次点开重新从第 1 页拉
+                        pageNo = 1;
+                        hasMore = false;
+                        loadingMore = false;
                         if (self.__ts) {
                             self.__ts.clear();
                             self.__ts.clearOptions();
@@ -919,26 +980,26 @@
                 return;
             }
 
-            var params = new URLSearchParams({
-                q: '', page: 1, selected: selected,
-                ele_id: this.id, prev_ele_id: '', idField: '',
-                textField: textField, load: 1,
+            // 6.437 fetch 统一为 axios（同 fetchList）
+            w.axios.get(cfg.url, {
+                params: {
+                    q: '', page: 1, selected: selected,
+                    ele_id: this.id, prev_ele_id: '', idField: '',
+                    textField: textField, load: 1,
+                },
+            }).then(function (r) {
+                var data = r.data;
+                var list = (data.data ? data.data : data) || [];
+                var texts = [];
+                for (var i = 0; i < list.length; i++) {
+                    var dd = list[i];
+                    texts.push(dd.__text__ || dd[textField] || dd.text);
+                }
+                self.textContent = texts.length ? texts.join(separator) : BE.blang('builder_value_is_empty', '-');
+            }).catch(function () {
+                self.setAttribute('data-selected', '');
+                self.textContent = BE.blang('builder_loading_error', '加载失败');
             });
-            fetch(cfg.url + '?' + params.toString())
-                .then(function (r) { return r.json(); })
-                .then(function (data) {
-                    var list = (data.data ? data.data : data) || [];
-                    var texts = [];
-                    for (var i = 0; i < list.length; i++) {
-                        var dd = list[i];
-                        texts.push(dd.__text__ || dd[textField] || dd.text);
-                    }
-                    self.textContent = texts.length ? texts.join(separator) : BE.blang('builder_value_is_empty', '-');
-                })
-                .catch(function () {
-                    self.setAttribute('data-selected', '');
-                    self.textContent = BE.blang('builder_loading_error', '加载失败');
-                });
         }
     };
     BE.define('x-loadtext', XLoadText);

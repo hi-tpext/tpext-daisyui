@@ -22,8 +22,11 @@
         {/if}
         {/volist}
         <div class="col-span-12 flex justify-center">
+            <!-- 6.434 占位 &nbsp; 已删：外层 min-h-[20px] 负责撑住高度防布局跳动，
+                span 里不放任何字符（&nbsp; 会被文字选中高亮成蓝点）。
+                .error-label 保留作旧式错误挂载点（HasWhen 清空用） -->
             <div id="help-block" class="text-center min-h-[20px]">
-                <span class="text-error text-xs error-label">&nbsp;</span>
+                <span class="text-error text-xs error-label"></span>
             </div>
         </div>
         <input type="hidden" name="__token__" value="{$__token__}" />

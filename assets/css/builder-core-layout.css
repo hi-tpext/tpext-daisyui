@@ -1592,38 +1592,37 @@ main .card.bg-base-100 {
    这里按 lightyearadmin/css/style.min.css 的原色补齐。
    —— 必须放在本文件末尾（上面的 .btn:hover 文字色锁定块之后），
    否则同优先级(0,2,0)下会被 .btn:hover 兜底规则覆盖掉文字色。
-   —— 文字色锁定为原色不变，仅背景随 hover 变化（沿用原库 hover 色）。
    —— 6.339 设计债 Batch D：与主题 token 重合的色值改引变量——
    btn-dark = neutral 同值（--n/--nc），btn-link = info 同值（--in）；
    purple/pink/cyan/yellow/brown 是 LightYear 扩展色板（不在 DaisyUI
    8 语义色内），保留 hex 作为该色板的唯一定义处（文档化例外）。
-   hover 提亮档（#515d70 等）无对应 token，也属该色板的组成部分。
-   —— 6.339 对比度修复（用户已确认有意的视觉变化）：btn-yellow(#fcc525)
-   与 btn-cyan(#57c7d4) 白字实测约 1.9:1 / 2.1:1，远低于 WCAG AA，
-   文字改深灰 = secondary-content 同档（引 --sc，全主题恒定 #4d5259）；
-   其余深色底（purple/pink/brown/dark）白字达标不动。
+   —— 6.440 按钮描边化（随 6.439 全站描边语言）：实底 → 同色相
+   「浅 tint 底 + 原色边框 + 深化文字」。tint = 原色 8%（hover 14%）混白，
+   手算 hex 写死（该色板本就是 hex 例外）；浅色相（cyan/yellow）文字用
+   深化档保证可读，深色相（purple/pink/brown/dark）文字用原色。
+   6.339 的白字对比度问题随描边化自然消解（不再有浅底白字组合）。
    */
-.btn-dark { background-color: oklch(var(--n)); border-color: oklch(var(--n)); color: oklch(var(--nc)); }
-.btn-dark:hover, .btn-dark:focus, .btn-dark:active { background-color: #515d70; border-color: #515d70; color: oklch(var(--nc)); }
+.btn-dark { background-color: oklch(var(--n) / 0.08); border-color: oklch(var(--n) / 0.6); color: oklch(var(--n) / 0.92); }
+.btn-dark:hover, .btn-dark:focus, .btn-dark:active { background-color: oklch(var(--n) / 0.14); border-color: oklch(var(--n) / 0.8); color: oklch(var(--n) / 0.92); }
 
-.btn-purple { background-color: #926dde; border-color: #926dde; color: #fff; }
-.btn-purple:hover, .btn-purple:focus, .btn-purple:active { background-color: #a282e3; border-color: #a282e3; color: #fff; }
+.btn-purple { background-color: #f6f3fc; border-color: #926dde; color: #7645d8; }
+.btn-purple:hover, .btn-purple:focus, .btn-purple:active { background-color: #f0edf8; border-color: #7d54d4; color: #7645d8; }
 
-.btn-pink { background-color: #f96197; border-color: #f96197; color: #fff; }
-.btn-pink:hover, .btn-pink:focus, .btn-pink:active { background-color: #fa75a4; border-color: #fa75a4; color: #fff; }
+.btn-pink { background-color: #fef2f7; border-color: #f96197; color: #e03a74; }
+.btn-pink:hover, .btn-pink:focus, .btn-pink:active { background-color: #fee9f0; border-color: #e84880; color: #e03a74; }
 
 /*
-   6.355：刷新按钮（btn-cyan）文字/图标改白，背景保持青色不动。
-   注：#57c7d4 上白字对比约 2:1（低于 6.339 深灰的 4:1），若觉得图标偏淡可改深青底。
+   6.355：刷新按钮（btn-cyan）。6.440 描边化：浅青 tint 底 + 青边框 + 深青字
+   （#2b8f9c 于浅底对比约 4.5:1，同时解决 6.339 记录的白字 2.1:1 问题）
    */
-.btn-cyan { background-color: #57c7d4; border-color: #57c7d4; color: #fff; }
-.btn-cyan:hover, .btn-cyan:focus, .btn-cyan:active { background-color: #77d2dc; border-color: #77d2dc; color: #fff; }
+.btn-cyan { background-color: #f2fafc; border-color: #57c7d4; color: #2b8f9c; }
+.btn-cyan:hover, .btn-cyan:focus, .btn-cyan:active { background-color: #e7f7f9; border-color: #35b3c2; color: #2b8f9c; }
 
-.btn-yellow { background-color: #fcc525; border-color: #fcc525; color: oklch(var(--sc)); }
-.btn-yellow:hover, .btn-yellow:focus, .btn-yellow:active { background-color: #fdd04d; border-color: #fdd04d; color: oklch(var(--sc)); }
+.btn-yellow { background-color: #fefaed; border-color: #fcc525; color: oklch(var(--sc)); }
+.btn-yellow:hover, .btn-yellow:focus, .btn-yellow:active { background-color: #fef7e0; border-color: #eab414; color: oklch(var(--sc)); }
 
-.btn-brown { background-color: #8d6658; border-color: #8d6658; color: #fff; }
-.btn-brown:hover, .btn-brown:focus, .btn-brown:active { background-color: #9d7162; border-color: #9d7162; color: #fff; }
+.btn-brown { background-color: #f6f3f2; border-color: #8d6658; color: #6d4c40; }
+.btn-brown:hover, .btn-brown:focus, .btn-brown:active { background-color: #efeae8; border-color: #75544a; color: #6d4c40; }
 
 .btn-link { background-color: transparent; border-color: transparent; color: oklch(var(--in)); text-decoration: none; }
 .btn-link:hover, .btn-link:focus, .btn-link:active { background-color: transparent; border-color: transparent; color: oklch(var(--in)); text-decoration: none; }
@@ -1639,12 +1638,9 @@ main .card.bg-base-100 {
 /*
    6.358 .btn-default / .btn-secondary 回退 6.357，改回原版浅底配色（用户对照原版确认）
    —— 用户参考原版 UI 发现：default/secondary 本就是【浅底 + 深/灰字】，并非深底白字。
-   6.357 的中灰底属多余改动，回退。原版精确值：
-   .btn-default   bg #fcfdfe / border #ebebeb / color #8b95a5
-   .btn-secondary bg #e4e7ea / border #e4e7ea / color #4d5259
-   —— 直接写死 background/border/color（不再走 --btn-color 机制），并显式给 hover，
-   避免 daisyUI .btn:hover{background:color-mix(--btn-color,black)} 把浅底刷成中灰。
-   hover 取略深一档、文字保持可读。只碰这两族，不动 primary/info/success/warning/error/cyan。
+   6.439 按钮描边化：secondary 改由 builder-core.css 灰组接管（--bc 变量 tint，
+   深浅主题自适应）——6.358 硬编码 #e4e7ea 在暗色主题下是一块刺眼白，已删。
+   .btn-default 保留 6.358 原值（存量控制器 legacy 兼容，使用面小）。
    */
 .btn-default {
     background-color: #fcfdfe;
@@ -1655,17 +1651,6 @@ main .card.bg-base-100 {
     background-color: #f1f3f5;
     border-color: #ebebeb;
     color: #6b7683;
-}
-
-.btn-secondary {
-    background-color: #e4e7ea;
-    border-color: #e4e7ea;
-    color: #4d5259;
-}
-.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active {
-    background-color: #d7dbdf;
-    border-color: #e4e7ea;
-    color: #4d5259;
 }
 
 /*

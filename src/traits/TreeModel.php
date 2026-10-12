@@ -338,7 +338,6 @@ trait TreeModel
      */
     protected function getChildrenData($pid, $deep = 1, $parentHasNext = false, $prefixHtml = '')
     {
-
         $data = [];
         $deep += 1;
 
@@ -365,7 +364,8 @@ trait TreeModel
             $d['__id__'] = $d[$this->treeIdField];
 
             if ($this->lineType) {
-                $isLast= false;
+                $isLast = false;
+                $useL = false;
                 if ($this->lineType == 1) {
                     // 6.278 表格树形 HTML 化；6.281 末枝判定（用户：标签管理 用 T 形 ├ 而非 L 形 └，
                     // 因为父级「产品管理」后面还有同级「商城订单」——└ 只在父级后面没有同级兄弟时用）：
