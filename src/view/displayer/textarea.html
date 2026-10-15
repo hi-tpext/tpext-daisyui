@@ -1,6 +1,7 @@
 {include file="$labeltempl" /}
 <div class="{$size[1]}">
-    <x-textarea class="block w-full {$class}" placeholder="{$placeholder}"
+    <!-- 6.459 宿主预挂成品控件类（同 text.html 占位说明），build 后摘除 -->
+    <x-textarea class="textarea textarea-bordered block w-full {$class}" placeholder="{$placeholder}"
         value="{$value}" name="{$name}" id="{$id}" {$attr|raw} rows="{$rows|default=3}"></x-textarea>
     {include file="$helptempl" /}
 </div>

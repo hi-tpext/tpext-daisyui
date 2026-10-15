@@ -890,6 +890,82 @@
     // 防止 displayer autoPost 重复绑定的标记
     w.__auto_post_bind__ = w.__auto_post_bind__ || [];
 
+    /* 6.460 表格刷新换体：先把新 tbody 挂到文档离屏暂存区（display:none），
+     * 让其中的 x-* Web Components 完成 upgrade + build + init（原生 select、
+     * 空宿主这类「半成品几何」只存在于隐藏区，不参与可见布局），构建齐了
+     * 再把整段建好的行原子换入真表。此前直接换入：新行的原生 select 以
+     * 「最长 option」宽度先撑一版布局，TomSelect 重建后缩到选中项宽度——
+     * 列宽两段跳变，整表肉眼可见地抖一下（刷新/筛选每次都发生）。
+     * 同步时序：appendChild 入暂存区即触发 upgrade，custom element 反应在
+     * 微任务里跑完，Base 的 start 定时器（setTimeout 0）先于本函数 32ms
+     * 轮询执行，正常 1~2 帧（~32ms）即就绪；期间真表保持旧内容原样。
+     * 竞态：快速连点刷新/翻页时旧暂存作废（stale），只丢弃不再提交；
+     * 兜底：暂存 400ms 仍未齐（组件库缺失/构建异常）强制提交，不阻塞刷新。 */
+    w.tpextbuilder.stagedSwapTbody = function (target, liveTbody, freshTbody, done) {
+        var prev = target.__tbodySwap__;
+        if (prev && prev.abort) prev.abort();
+
+        var stage = document.createElement('div');
+        stage.style.display = 'none';
+        document.body.appendChild(stage);
+        // 6.461 组件在暂存区构建时不在 .table-wrap 里，靠这个标记让 x-select 等
+        // 仍能识别「自己属于表格」（如下拉挂 body 的判定）；换入后摘除
+        freshTbody.setAttribute('data-builder-staged', '1');
+        stage.appendChild(freshTbody);
+
+        var slot = { stale: false };
+        slot.abort = function () {
+            slot.stale = true;
+            if (stage.parentNode) stage.parentNode.removeChild(stage);
+        };
+        target.__tbodySwap__ = slot;
+
+        var waited = 0;
+        var commit = function () {
+            if (slot.stale) return;
+            if (!liveTbody.parentNode || !freshTbody.parentNode) {
+                if (stage.parentNode) stage.parentNode.removeChild(stage);
+                return;
+            }
+            // 搬迁前给已构建的宿主挂 __moving__（Base.disconnectedCallback 据此
+            // 跳过 deinit），换入后摘除；未构建的（兜底强制提交场景）不挂，
+            // 让它们在新位置照常走 connectedCallback
+            var hosts = freshTbody.getElementsByTagName('*');
+            var i, el;
+            for (i = 0; i < hosts.length; i++) {
+                el = hosts[i];
+                if (el.__ready__ === true) el.__moving__ = true;
+            }
+            liveTbody.parentNode.replaceChild(freshTbody, liveTbody);
+            for (i = 0; i < hosts.length; i++) { hosts[i].__moving__ = false; }
+            freshTbody.removeAttribute('data-builder-staged');
+            if (stage.parentNode) stage.parentNode.removeChild(stage);
+            target.__tbodySwap__ = null;
+            if (done) done();
+        };
+        var pending = function () {
+            var all = freshTbody.getElementsByTagName('*');
+            for (var i = 0; i < all.length; i++) {
+                var tag = all[i].tagName || '';
+                // 自定义元素名必带连字符；x-* 且 __ready__!==true 即未建完。
+                // 未注册的 x-*（如只在表单出现的 x-icon/x-transfer）永远不会
+                // 构建，不计入 pending，否则只能等 400ms 兜底
+                if (tag.charAt(0) === 'X' && tag.indexOf('-') > 0) {
+                    if (w.customElements && !w.customElements.get(tag.toLowerCase())) continue;
+                    if (all[i].__ready__ !== true) return true;
+                }
+            }
+            return false;
+        };
+        var poll = function () {
+            if (slot.stale) return;
+            if (!pending() || waited >= 400) { commit(); return; }
+            waited += 32;
+            w.setTimeout(poll, 32);
+        };
+        w.setTimeout(poll, 32);
+    };
+
     /** autoPost — table 行内组件自动保存
      *  PHP 端 Field::autoPost() 注册, classname = 'row-{field}-td'
      *  监听 checkbox/radio/text/textarea/select change → 提取 {id, name, value} → autoSendData
@@ -1384,18 +1460,27 @@
         // 6.231 冻结列内容被压缩溢出时先撑列：auto 布局可能把操作列压得比按钮行窄
         //（如 w-48 建议值被挤掉），不冻结时只是普通裁切，冻结钉住后永久可见。
         // 按溢出量在表头单元格设 min-width 撑整列，生效后再测列宽。
-        // 上限=容器可视宽-60：冻结列的意义就是保持可见，超过它必然是误测
-        if (allowRefit) {
+        // 上限=容器可视宽-60：冻结列的意义就是保持可见，超过它必然是误测。
+        // 6.452 列宽已被用户拖拽接管（colw-fixed）时跳过：撑列的 min-width 会
+        // 顶开钉定宽，翻页即列位置漂移；溢出交给横向滚动
+        if (allowRefit && !table.__colwFixed__) {
             var wrapper = table.closest('.table-freeze-head');
             var cap = wrapper ? wrapper.clientWidth - 60 : 0;
             var fitNeed = {};
-            Array.prototype.forEach.call(table.rows, function (tr) {
-                leftIdx.concat(rightIdx).forEach(function (i) {
-                    var cell = tr.cells[i];
-                    if (!cell || cell.scrollWidth <= cell.clientWidth) return;
-                    var cs = w.getComputedStyle(cell);
-                    var need = cell.scrollWidth + parseFloat(cs.paddingRight);
-                    if (need > (fitNeed[i] || 0)) fitNeed[i] = need;
+            // 6.457 只量数据行（tbody）：table.rows 含表头行，而表头 th 里挂着
+            // 列宽手柄（.col-resizer 右缘悬出 3px），th.scrollWidth 恒=自身宽+悬出
+            // 量——撑列每跑一轮就「测出」超宽再抬一档 min-width。6.453 骨架分离后
+            // thead 常驻不重建，这个误测从「每次整表刷新重置」变成跨刷新棘轮累加
+            //（用户：连续点刷新 id 列不停变宽，实测每轮 +20~59px）
+            Array.prototype.forEach.call(table.tBodies, function (tb) {
+                Array.prototype.forEach.call(tb.rows, function (tr) {
+                    leftIdx.concat(rightIdx).forEach(function (i) {
+                        var cell = tr.cells[i];
+                        if (!cell || cell.scrollWidth <= cell.clientWidth) return;
+                        var cs = w.getComputedStyle(cell);
+                        var need = cell.scrollWidth + parseFloat(cs.paddingRight);
+                        if (need > (fitNeed[i] || 0)) fitNeed[i] = need;
+                    });
                 });
             });
             var refit = false;
@@ -1449,10 +1534,33 @@
     // scrollHeight 不可测（恒等于 clientHeight），同样由 RO force 重锁兜底
     function relockFreezeBump(wrap) {
         if (!wrap || !wrap.style.height) return;
+        // 6.467b maxHeight ≤ height 时 height 是被钳制的虚值（实际渲染由
+        // maxHeight 决定），lack 是内容放不下的真溢出——校平只会反向加高、
+        // 永远消不掉，真溢出就该让滚动条出现
+        if (wrap.style.maxHeight && parseFloat(wrap.style.maxHeight) <= parseFloat(wrap.style.height)) return;
         var lack = wrap.scrollHeight - wrap.clientHeight;
         if (lack > 0 && lack < 8) {
             wrap.style.height = (parseFloat(wrap.style.height) + lack) + 'px';
         }
+    }
+
+    // 6.467b 锁高路径不得把整页顶出滚动条：6.256 校正只作用于 maxHeight，
+    // height 锁到自然高后 height 才是决定性尺寸，整页溢出只能缩 height 消除
+    // （缩量由 wrap 自身滚动条承接——页面级滚动改回表格内滚动）。迭代：每轮
+    // 按溢出量缩一次决定性尺寸再重测——wrap 是文档高度主体，缩多少溢出减多少，
+    // 2~3 轮收敛；上限 8 防异常几何下打转。220 下限同 6.256
+    function fitWrapToPage(wrap) {
+        var guard = 0;
+        while (guard++ < 8) {
+            var over = (d.documentElement.scrollHeight || d.body.scrollHeight) - w.innerHeight;
+            if (over <= 0) return true;
+            var prop = wrap.style.height ? 'height' : (wrap.style.maxHeight ? 'maxHeight' : '');
+            if (!prop) return false;
+            var cur = parseFloat(wrap.style[prop]);
+            if (!isFinite(cur) || cur - over < 220) return false;
+            wrap.style[prop] = (cur - over) + 'px';
+        }
+        return false;
     }
 
     function applyHeadFreeze(wrapper, force) {
@@ -1475,6 +1583,18 @@
         if (bar) {
             reserve = bar.offsetHeight + (parseFloat(w.getComputedStyle(bar).marginTop) || 0) + 8;
         }
+        // 6.467b 底部预留改实测：此刻 wrap 处于自然高（force 已清限高），below =
+        // 文档总高 - wrap 文档底，即 wrap 之下全部内容（分页条、其上边距、footer、
+        // 内容区底部留白）。原只量分页条（~47px），实测 52px（还差内容区底部
+        // 留白 16px）——锁高路径无 6.256 校正，视口高 842~848 窗口整页被顶出
+        // 1~4px 滚动条（表格内滚 + 页面滚同时出现）。依赖 scrollHeight 无
+        // absolute 大元素虚高（正常布局成立）。
+        // -1 是整数化豁免：docH 与 wrap 自然高各自取整，预算精确到 0 时表格的
+        // sub-pixel 真实高（624.x）会被判成差 1px 放不下、滚动条阴魂不散；让出
+        // 1px 由锁满值 + fit 以页面 scrollHeight 口径裁决（850 视口实例：锁 627
+        // 后 docH 850.x 的 scrollHeight=850=视口，页面、表格两无滚动条）
+        var below = (d.documentElement.scrollHeight || d.body.scrollHeight) - (top + wrapper.offsetHeight) - 1;
+        if (below > reserve) reserve = below;
         var h = w.innerHeight - top - reserve;
         if (h > w.innerHeight - 100) h = w.innerHeight - 100;
         if (h < 220) h = 220;
@@ -1485,9 +1605,27 @@
         // 执行时间 footer、自定义 addBottom 等）——menu 页 30px footer 令页面 730>720
         // 出现页面级纵条。设完 maxHeight 测一次整页溢出，能扣且扣后不破 220 下限就扣掉
         var over = (document.documentElement.scrollHeight || document.body.scrollHeight) - w.innerHeight;
+
         if (over > 0 && h - over >= 220) {
             h -= over;
             wrapper.style.maxHeight = h + 'px';
+        }
+        // 6.467b 整页溢出的迭代收敛放在锁高之后：fit 若先缩 maxHeight，
+        // 锁高块里 naturalH=offsetHeight 会被压到限高值、测不出内容真实自然高
+
+        // 6.467 延迟复测整页溢出：首轮量几何时组件未稳（搜索区的 TomSelect/flatpickr
+        // 晚建会把 wrap 顶部往下推、行内组件把表格撑高），当时的顶部偏移/溢出量
+        // 是过期的——边界窗口高度下页面级滚动条由此复现（表格内滚 + 页面滚同时
+        // 出现）。只补做「整页溢出扣减」这一步，不重算全量（全量归 RO force 管）
+        if (wrapper.style.maxHeight && !wrapper.__pageOverTimer__) {
+            wrapper.__pageOverTimer__ = w.setTimeout(function () {
+                wrapper.__pageOverTimer__ = null;
+                if (!wrapper.isConnected) return;
+                // 6.467b 锁高模式同样参与：RO 只观察 table 尺寸，锁高不变表格盒，
+                // 无人触发 force 自愈——首轮实现 return 跳过锁高，842~848 窗口
+                // 的 1~4px 页面溢出长期留存（用户「问题仍然存在」的根因）
+                fitWrapToPage(wrapper);
+            }, 400);
         }
 
         // 6.231 消除幻影纵向滚动条：横向滚动条会挤占 clientHeight，内容只差 1px 也算
@@ -1507,16 +1645,283 @@
             // [0,1)px 小数残差。注意 ceil 必须作用在内容高上——ceil 盒高会把
             // 边框吃进 clientHeight，差 1px 又触发滚动条
             var wrapBorderV = wrapper.offsetHeight - wrapper.clientHeight;
-            var tableRectH = tableEl ? tableEl.getBoundingClientRect().height : 0;
             wrapper.style.overflowY = 'auto';
             if (naturalH <= h && tableH > 0 && naturalH + 4 >= tableH) {
-                wrapper.style.height = (Math.ceil(tableRectH) + wrapBorderV) + 'px';
-                relockFreezeBump(wrapper); // 锁定瞬间的取整差即校平
+                // 6.467 锁高必须含 wrap 内部的分页条（table.html 的分页条在
+                // .table-wrap 里随内容滚动）：只按表格高锁会把分页条挤出可视区，
+                // 凭空多出 ~32px 的「轻微」纵向滚动（窗口高度恰在边界时的
+                // 双滚动条来源之一）。scrollHeight 是取整后的内容高（含分页条），
+                // clientHeight = height - 纵向边框，锁到两者之和即可让纵向
+                // 滚动条不再出现；relockFreezeBump 校平残余取整差
+                // 6.467b 不钳到 h：表格真实高带小数、scrollHeight 与页面 docH
+                // 各自整数化，钳到 h 会把 scrollHeight 口径的 1px 残差变成表格
+                // 内真滚动条（内容 625 > client 624）。锁满 scrollHeight+border，
+                // 超出 h 的零头由随后的 fitWrapToPage 以页面 scrollHeight 口径
+                // 裁决——整页无溢出（sub-pixel 豁免）保留满锁，有溢出才缩
+                wrapper.style.height = (wrapper.scrollHeight + wrapBorderV) + 'px';
+                // 6.467b 内容放不下时仍会进本分支（naturalH 被 maxHeight 压小、
+                // ≤h 恒真），锁出的 height 超过 maxHeight 成虚值——实际渲染由
+                // maxHeight 决定，对齐消歧义，relockFreezeBump 的 lack 也不误读
+                if (parseFloat(wrapper.style.maxHeight) < parseFloat(wrapper.style.height)) {
+                    wrapper.style.height = wrapper.style.maxHeight;
+                }
+                relockFreezeBump(wrapper);
             }
             // 放不下或量不可靠的场景维持 maxHeight，让纵向滚动条正常工作（占宽属正常 UI）
         }
+        fitWrapToPage(wrapper); // 6.467b 6.256 单次扣减不收敛/锁高突破可用空间时，迭代到整页无溢出
         if (wrapper.scrollTop !== st) wrapper.scrollTop = st;
         if (wrapper.scrollLeft !== sl) wrapper.scrollLeft = sl;
+    }
+
+    /* ============================================================
+     * 6.452 表格列宽拖拽调整 + localStorage 记忆
+     * 手柄（.col-resizer）挂在 th 右缘。表格是 table-layout:auto（宽度由内容
+     * 撑），拖动前必须切 fixed 并把全列实测宽一次性钉到 th 上，否则 auto→fixed
+     * 的换算瞬间全表跳动。宽度按「pathname + 表容器 id + 列 key」存 localStorage，
+     * 换表/AJAX 刷新后 initTableFreeze 挂载点重新应用（不依赖 DOM 结构不变，
+     * 局部 HTML 刷新照常工作）。双击手柄恢复该列默认宽；全表记忆清空后退回 auto。
+     * 列 key 来自 th 的 data-col-key（table.html 模板输出，显示列勾选变更后
+     * 列序号会变，必须按 key 不能按序号）。
+     * ============================================================ */
+
+    var COLW_MIN = 40;
+    var COLW_MAX = 1200;
+
+    // 多选框/操作列不参与拖宽（tinyvue 同款：末列定宽）。富余宽度由最后一个
+    // 可拖列吸收（见 colwFill），所以这两列也无记忆宽可清理
+    var COLW_NO_RESIZE = ['__check__', '__action__'];
+
+    function colwCanResize(th) {
+        var key = th.dataset.colKey;
+        return !!key && COLW_NO_RESIZE.indexOf(key) < 0;
+    }
+
+    /* 6.465 输入组件列的拖宽下限：过窄的行内编辑控件没法看。按列首行单元格
+     * 内容识别——x-select 80 / x-text、x-textarea 40；number 组件自身有
+     * min-width 不在此列（拖窄后由 colw-fixed 裁剪）；普通文本列仍用
+     * COLW_MIN。挂载/吸收两处共用（拖拽 move 每帧查一个单元格，开销可忽略） */
+    function colwColMinW(table, th) {
+        var row = table.tBodies[0] && table.tBodies[0].rows[0];
+        var cell = row && row.cells[th.cellIndex];
+        if (!cell) return COLW_MIN;
+        if (cell.querySelector('x-select')) return 80;
+        if (cell.querySelector('x-text, x-textarea')) return 40;
+        return COLW_MIN;
+    }
+
+    function colwStoreKey(table) {
+        var holder = table.closest('[id]');
+        var id = (holder && holder.id) || table.id || '';
+        return 'tpext_colw:' + location.pathname + ':' + id;
+    }
+
+    function colwRead(table) {
+        try {
+            var saved = JSON.parse(localStorage.getItem(colwStoreKey(table)) || '{}');
+            if (!saved || typeof saved !== 'object') return {};
+            // 过滤不可拖列的残留值（早期版本给全列挂手柄，存储里可能存有
+            // __check__/__action__）+ 非法值；写回时残留自然清掉
+            var map = {};
+            for (var k in saved) {
+                if (COLW_NO_RESIZE.indexOf(k) < 0 && saved[k] > 0) map[k] = saved[k];
+            }
+            return map;
+        } catch (e) {
+            return {};
+        }
+    }
+
+    function colwWrite(table, map) {
+        try {
+            var key = colwStoreKey(table);
+            if (Object.keys(map).length) {
+                localStorage.setItem(key, JSON.stringify(map));
+            } else {
+                localStorage.removeItem(key); // 全表无记忆宽：清键，不留 '{}' 尸体
+            }
+        } catch (e) { /* 隐私模式等写失败静默：功能退化为会话内拖动 */ }
+    }
+
+    /** auto→fixed 切换并把全列当前实测宽钉到 th（一次性；重复调用幂等）。
+     * 表宽同时钉为当前值：fixed 布局下列在表宽内伸缩，「表宽 ≠ 各列要求宽之和」
+     * 时差额按比例摊回所有列（拖 +80 只净得 +39/+180 的失真根源），此后表宽
+     * 只随拖拽增量式变化（见 mousedown 内 move），列宽即所写 */
+    function colwPinTable(table) {
+        if (table.__colwFixed__) return;
+        var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
+        Array.prototype.forEach.call(headRow.cells, function (th) {
+            if (th.offsetWidth > 0) th.style.width = th.offsetWidth + 'px';
+        });
+        table.style.tableLayout = 'fixed';
+        table.style.maxWidth = 'none'; // max-width:100% 会把表钳回容器宽，超宽列被等比缩
+        colwSyncTableWidth(table);
+        table.__colwFixed__ = true;
+        table.classList.add('colw-fixed'); // 6.456 钉定后启用单元格溢出裁剪（见 CSS 同名规则）
+    }
+
+    /** 表宽 := 各列「指定宽」之和。只能读 style.width：读 offsetWidth 会强制
+     * 排版，而排版瞬间表宽还是旧值，fixed 布局的盈余摊派先于读取发生——拿到
+     * 的是已膨胀的渲染宽，写回表宽等于把漂移锁死（6.453 刷新后整表等比放大的
+     * 根因）。指定宽和值精确后摊派余额恒为 0，列宽即所写 */
+    function colwSyncTableWidth(table) {
+        var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
+        var sum = 0;
+        Array.prototype.forEach.call(headRow.cells, function (th) {
+            sum += parseFloat(th.style.width) || 0;
+        });
+        table.style.width = sum + 'px';
+    }
+
+    /** 富余宽度填充（对称吸收）：列宽和 ≠ 容器可视宽时差额记在最后一个可拖列
+     * （吸收列）头上——富余补给它（拖窄某列右侧不留白），超出时它反向收缩
+     * （其他列自然宽波动/拖宽别的列时表格仍铺满，吸收余量耗尽才出横向滚动），
+     * Element/naive「末列吸收」同款。吸收值只写 style.width 不入存储：容器宽
+     * 不变、保存宽不变，重应用时吸收值天然复现，翻页/刷新吸收列之外零漂移。
+     * 吸收列自己被拖过（存了宽）就不做负向收缩——用户钉的宽神圣 */
+    function colwFill(table) {
+        var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
+        if (!headRow) return;
+        var port = table.closest('.table-freeze-head') || table.closest('.table-wrap');
+        if (!port) return;
+        var portW = port.clientWidth;
+        if (!portW) return;
+        var filler = null;
+        var sum = 0;
+        Array.prototype.forEach.call(headRow.cells, function (th) {
+            if (colwCanResize(th)) filler = th;
+            sum += parseFloat(th.style.width) || 0;
+        });
+        if (!filler) return;
+        var slack = portW - sum;
+        if (slack > 0) {
+            filler.style.width = ((parseFloat(filler.style.width) || 0) + slack) + 'px';
+        } else if (slack < 0) {
+            var saved = colwRead(table);
+            var key = filler.dataset.colKey;
+            if (!(key && saved[key] > 0)) {
+                var shrunk = Math.max(colwColMinW(table, filler), (parseFloat(filler.style.width) || 0) + slack);
+                if (shrunk !== parseFloat(filler.style.width)) {
+                    filler.style.width = shrunk + 'px';
+                }
+            }
+        }
+        sum = 0;
+        Array.prototype.forEach.call(headRow.cells, function (th) {
+            sum += parseFloat(th.style.width) || 0;
+        });
+        table.style.width = sum + 'px';
+    }
+
+    /** 按存储重应用列宽（initTableFreeze 挂载点调用；须在冻结偏移计算前） */
+    function applyColWidths(table) {
+        var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
+        if (!headRow) return;
+        var saved = colwRead(table);
+        var hit = false;
+        Array.prototype.forEach.call(headRow.cells, function (th) {
+            var key = th.dataset.colKey;
+            if (key && saved[key] > 0) hit = true;
+        });
+        if (!hit) return;
+        colwPinTable(table);
+        Array.prototype.forEach.call(headRow.cells, function (th) {
+            var key = th.dataset.colKey;
+            if (key && saved[key] > 0) th.style.width = saved[key] + 'px';
+        });
+        colwFill(table); // 覆写保存宽后重定表宽并吸收富余，否则等比摊派漂移/右侧留白
+    }
+
+    /** 恢复某列默认宽；全表记忆清空后退回 auto 布局 */
+    function colwResetCol(table, th) {
+        var saved = colwRead(table);
+        delete saved[th.dataset.colKey];
+        if (table.__colwFixed__) {
+            // 暂回 auto 量该列内容自然宽（表宽/列宽约束全摘掉才能量到真值），
+            // 再回 fixed 把自然宽钉回该列、其余列保持指定宽。旧写法「表宽先减
+            // 该列占宽再清宽」在精确同步下 leftover=0，被清列会塌缩成最小宽
+            table.style.tableLayout = 'auto';
+            table.style.width = '';
+            th.style.width = '';
+            void th.offsetWidth; // 强制回流后再量
+            var natural = th.offsetWidth;
+            table.style.tableLayout = 'fixed';
+            th.style.width = natural + 'px';
+            colwFill(table);
+        }
+        if (!Object.keys(saved).length) {
+            colwWrite(table, {});
+            table.style.tableLayout = '';
+            table.__colwFixed__ = false;
+            table.classList.remove('colw-fixed');
+            table.style.width = '';
+            table.style.maxWidth = '';
+            Array.prototype.forEach.call(table.tHead.rows[0].cells, function (c) {
+                c.style.width = '';
+            });
+        } else {
+            colwWrite(table, saved);
+        }
+        applyTableFreeze(table, false);
+    }
+
+    // 6.454 窗口宽变化时已钉定表重算吸收：表是固定像素宽，不会自己跟着容器
+    // 变宽/变窄——变宽后右侧会重新留白，变窄后吸收列白占富余（改横向滚动即可）
+    var colwResizeTimer = null;
+    w.addEventListener('resize', function () {
+        clearTimeout(colwResizeTimer);
+        colwResizeTimer = setTimeout(function () {
+            Array.prototype.forEach.call(d.querySelectorAll('table'), function (table) {
+                if (table.__colwFixed__) colwFill(table);
+            });
+        }, 150);
+    });
+
+    /** 给表头每个带 data-col-key 的 th 挂右缘拖拽手柄（幂等） */    function mountColResize(table) {
+        var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
+        if (!headRow || table.__colwMounted__) return;
+        table.__colwMounted__ = true;
+        Array.prototype.forEach.call(headRow.cells, function (th) {
+            if (!colwCanResize(th) || th.__colwHandle__) return;
+            var handle = d.createElement('span');
+            handle.className = 'col-resizer';
+            handle.title = '拖动调整列宽，双击恢复';
+            th.appendChild(handle);
+            th.__colwHandle__ = handle;
+            handle.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                colwResetCol(table, th);
+            });
+            handle.addEventListener('mousedown', function (e) {
+                if (e.button !== 0) return;
+                e.preventDefault();
+                e.stopPropagation();
+                colwPinTable(table);
+                var startX = e.clientX;
+                var startW = th.offsetWidth;
+                var move = function (ev) {
+                    var req = Math.max(colwColMinW(table, th), Math.min(startW + ev.clientX - startX, COLW_MAX));
+                    th.style.width = req + 'px';
+                    // 实时吸收富余：拖窄时表宽不跟着缩、右侧不留白缝；拖超容器
+                    // 宽则表宽=列宽和走横向滚动。colwFill 同时负责表宽=列宽和的
+                    // 精确同步（增量式算术已由它取代）
+                    colwFill(table);
+                };
+                var up = function () {
+                    document.removeEventListener('mousemove', move, true);
+                    document.removeEventListener('mouseup', up, true);
+                    d.documentElement.classList.remove('colw-resizing');
+                    var saved = colwRead(table);
+                    saved[th.dataset.colKey] = th.offsetWidth;
+                    colwWrite(table, saved);
+                    colwFill(table); // 收尾兜底（move 中已同步，此处幂等）
+                    applyTableFreeze(table, false); // 冻结列偏移按新列宽重算
+                };
+                d.documentElement.classList.add('colw-resizing');
+                document.addEventListener('mousemove', move, true);
+                document.addEventListener('mouseup', up, true);
+            });
+        });
     }
 
     /** 扫描 scope（默认整页）内的表格，应用表头/列冻结；幂等，可重复调用 */
@@ -1533,6 +1938,11 @@
 
             var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
             if (!headRow) return;
+
+            // 6.452 列宽记忆重应用（必须先于冻结偏移测量：先钉宽再算 left/right）
+            // + 拖拽手柄挂载（幂等）。force=true 自愈路径跳过重应用（存值不变，省回流）
+            if (!force) applyColWidths(table);
+            mountColResize(table);
 
             var hasMark = Array.prototype.some.call(headRow.cells, function (cell) {
                 return cell.classList.contains('freeze-col-left') || cell.classList.contains('freeze-col-right');

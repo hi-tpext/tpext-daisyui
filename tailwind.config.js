@@ -103,6 +103,11 @@ module.exports = {
     // 全部基于 corporate 结构扩展，只变颜色；key 必须与 layout.html 的清单一致
     themes: [
       { blue:   lightTheme(structuralBase['primary']) }, // 现代蓝（默认，沿用 corporate 蓝）
+      // 6.448 'default'：父壳 lightyearadmin 切回亮色时向 iframe body 写
+      // data-theme="default"（与内层共用 localStorage 键 site_theme），
+      // 不注册则该属性匹配不到任何规则，内层回落 html 上的旧主题——卡死暗黑。
+      // 与 blue 同款亮色，且故意不进 layout.html 切换器清单（避免重复项）
+      { default: lightTheme(structuralBase['primary']) }, // 父壳亮色别名（= blue）
       { gray:   lightTheme('#475569') },                 // 简约灰
       { green:  lightTheme('#16a34a') },                 // 清新绿
       { orange: lightTheme('#fa541c') },                 // 火山橙（6.431 对齐主流：Ant Design volcano-6，原 #ea580c 偏深）

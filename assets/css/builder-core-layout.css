@@ -302,8 +302,8 @@
   line-height: 1.75rem !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
-  padding-left: 0.5rem !important; /* 8px — 表格内更紧凑 */
-  padding-right: 0.5rem !important;
+  padding-left: 0.25rem !important; /* 4px — 6.465 用户指定再收紧（原 8px） */
+  padding-right: 0.25rem !important;
 }
 
 /* 表格内 TomSelect 适配 */
@@ -862,18 +862,71 @@ table.table-freeze-on {
   flex-wrap: wrap; /* 顶部工具栏兜底：超长行降级为行内折行；操作列由下方规则禁掉 */
 }
 
-/* 表格内按钮（操作列）。6.236：padding 再压缩——btn-sm 8px→4px、btn-xs 6px→4px */
+/*
+   6.452 列宽拖拽：th 右缘 7px 热区手柄（tpextbuilder.js mountColResize 注入）。
+   th 需成为定位基准。6.455 修正：这里原先写 position:relative，与表头冻结规则
+   .table-freeze-head thead th{position:sticky} 特异性相同（都是 0,1,2）且位置
+   更靠后，把非冻结列的吸顶静默覆盖掉（冻结列有 .freeze-col-* 类特异性更高
+   幸存——表现为「只有多选/操作列表头吸顶，其余随滚动跑掉」）。改用无偏移
+   sticky：不写 top/left 时吸附行为等同 relative、同样是 absolute 手柄的包含块，
+   而 .table-freeze-head 里的 top:0/z-index 得以生效，表头冻结整体恢复 */
+.table thead th {
+  position: sticky;
+}
+.col-resizer {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 7px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 6;
+}
+.col-resizer:hover {
+  border-right: 2px solid oklch(var(--p) / 0.5);
+}
+
+/*
+   6.456 钉定表格的单元格溢出裁剪：auto 布局时代列随内容长，td 的
+   nowrap+overflow:visible 永不跨列；钉定 fixed 后长文本会直接画过格线
+   跨到邻列（用户：「文字会跨列显示」）。钉定表（.colw-fixed，colwPinTable
+   挂/全清记忆时摘）统一 td 裁剪 + 纯文字 .the-field 省略号（Element 同款）。
+   th 不裁：拖拽手柄是 th 子元素、右缘悬出 3px，overflow:hidden 会削掉手柄尖
+   （表头文字换行不受影响，不会跨列）。仅作用于钉定表，auto 表维持现状 */
+.table.colw-fixed td {
+  overflow: hidden;
+}
+.table.colw-fixed td .the-field {
+  display: block; /* 原 inline-flex：ellipsis 只对块级生效 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.table.colw-fixed td .the-field:has(> .tline) {
+  /* 树形列保留 flex 拉伸链（6.286 参考线满格依赖），裁剪交给 td 本身 */
+  display: flex;
+}
+html.colw-resizing,
+html.colw-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+/* 表格内按钮（操作列）。6.236：padding 再压缩——btn-sm 8px→4px、btn-xs 6px→4px
+   6.450：高 22→24px、补 min-width 24px（用户反馈），与工具条 btn-xs 同档 */
 .table .btn.btn-sm {
   height: 1.5rem !important; /* 24px — 表格内按钮更小 */
   min-height: 1.5rem !important;
+  min-width: 1.5rem !important;
   font-size: 0.75rem !important; /* 12px */
   padding-left: 0.25rem !important;
   padding-right: 0.25rem !important;
 }
 .table .btn.btn-xs,
 .table .btn-xs {
-  height: 1.375rem !important; /* 22px */
-  min-height: 1.375rem !important;
+  height: 1.5rem !important; /* 6.450 22px→24px */
+  min-height: 1.5rem !important;
+  min-width: 1.5rem !important;
   font-size: 0.6875rem !important; /* 11px */
   padding-left: 0.25rem !important;
   padding-right: 0.25rem !important;
@@ -881,7 +934,7 @@ table.table-freeze-on {
 
 /*
    6.236 纯图标按钮（ActionBtn label 为空时加 .btn-icon-only）：
-   去掉左右 padding、宽度=高度（btn-sm 24px / btn-xs 22px），收成正方形。
+   去掉左右 padding、宽度=高度（btn-sm/btn-xs 6.450 起 24px），收成正方形。
    必须放在上面尺寸块之后——同特异性 (0,3,0)+!important 靠源顺序压过 btn-xs 的 padding
    */
 .table .btn.btn-icon-only {
@@ -891,7 +944,7 @@ table.table-freeze-on {
 }
 .table .btn.btn-xs.btn-icon-only,
 .table .btn-icon-only.btn-xs {
-  width: 1.375rem !important;
+  width: 1.5rem !important; /* 6.450 22px→24px */
 }
 
 /* 表格内空状态 / no_results 也缩小 */
@@ -1369,8 +1422,14 @@ label.full-label {
    令牌集中在 :root，@supports 不支持 backdrop-filter 时（老浏览器）整组
    退化到近实心底，视觉只是少了「透」，不掉可读性。透明底用 oklch(var(--b1)/α)，
    亮暗主题自动跟随；顶缘高光固定用白（两种主题下都是玻璃该有的反光）。
+   —— 6.448 作用域 :root → :root,[data-theme]：自定义属性在【声明处】解析，
+   :root 上的 oklch(var(--b1)/α) 恒用 html 的 --b1；父壳 lightyearadmin 是把
+   data-theme 写在 iframe 的 body 上（body 变量亮、html 仍暗），玻璃面就会
+   钉死 html 主题不跟翻。挂到 [data-theme] 后令牌在带属性的元素上就地取值
+   （body 无属性时仍从 html 继承，行为不变）。
    */
-:root {
+:root,
+[data-theme] {
   /* 6.424 增强：用户反馈效果不明显。玻璃感来自「背后有东西可透」——色斑层
      （body::before）同步加大浓度才是主杠杆；α 再往下降文字对比度开始吃紧，
      blur/sat/高光补足质感。仍无动画。 */
@@ -1383,7 +1442,8 @@ label.full-label {
 }
 
 @supports not (backdrop-filter: blur(1px)) {
-  :root {
+  :root,
+  [data-theme] {
     --glass-blur: 0px;
     --glass-card-bg: oklch(var(--b1) / 0.97);
     --glass-float-bg: oklch(var(--b1) / 0.98);
@@ -1626,6 +1686,21 @@ main .card.bg-base-100 {
 
 .btn-link { background-color: transparent; border-color: transparent; color: oklch(var(--in)); text-decoration: none; }
 .btn-link:hover, .btn-link:focus, .btn-link:active { background-color: transparent; border-color: transparent; color: oklch(var(--in)); text-decoration: none; }
+
+/*
+   6.451 扩展色板/legacy 类的批量禁用态 hover 静止钉死。
+   6.442 的公式 background/border: oklch(var(--btn-color)/α) 对本色板无效——
+   这些类是 hex 直接声明、不设 --btn-color，公式回落 var(--b2) 灰，
+   hover 后边框色消失（用户实测 btn-yellow 批量钮）。(0,4,0) 压过
+   builder-core.css 的 (0,3,0) 公式，逐族钉回各自静止态（= 6.441 值）。
+   */
+.batch-action-btn.btn-dark.batch-disabled:hover { background-color: oklch(var(--n) / 0.08); border-color: oklch(var(--n) / 0.6); }
+.batch-action-btn.btn-purple.batch-disabled:hover { background-color: #f6f3fc; border-color: #926dde; }
+.batch-action-btn.btn-pink.batch-disabled:hover { background-color: #fef2f7; border-color: #f96197; }
+.batch-action-btn.btn-cyan.batch-disabled:hover { background-color: #f2fafc; border-color: #57c7d4; }
+.batch-action-btn.btn-yellow.batch-disabled:hover { background-color: #fefaed; border-color: #fcc525; }
+.batch-action-btn.btn-brown.batch-disabled:hover { background-color: #f6f3f2; border-color: #8d6658; }
+.batch-action-btn.btn-default.batch-disabled:hover { background-color: #fcfdfe; border-color: #ebebeb; }
 
 /*
    6.356：回退 6.353——.btn-default/.btn-secondary 恢复主题自适应浅灰底+深字
@@ -1879,6 +1954,17 @@ body.left-tree-collapsed .right-table .show-left {
   display: inline-flex !important;
 }
 
+/* 6.471 有 tablink 的页面（shopgoods）：收起后箭头不再独占一行压在 tabs 上面
+   （文档流内 show-left 在 tablink 渲染之前 → 各占一行）。浮动到左端即可与
+   tabs 同行——tabs 容器（flex）整体避开 float 右移，视觉即「箭头 + tabs」
+   一行、垂直居中。:has(+ .tabs-tablink) 限定只有紧跟 tabs 时才浮动：无
+   tablink 的页面 show-left 后面是 grid 搜索表单，grid 容器同样会整体避开
+   float 被挤窄 28px，那些页面保持文档流原位（工具栏上方） */
+body.left-tree-collapsed .right-table a.show-left:has(+ .tabs-tablink) {
+  float: left;
+  margin-top: 0.3125rem;
+}
+
 @media (max-width: 767px) {
   .left-tree,
   .right-table .show-left {
@@ -1920,6 +2006,10 @@ table.table .toggle {
 /* 表格容器外框减淡：base-300 → base-200，边界更轻 */
 .table-wrap {
   border-color: oklch(var(--b2));
+  /* 6.467 双层滚动隔离：表格滚到顶/底后不再把滚动链给外层页面——窗口高度
+     恰在边界时表格内滚与页面滚动条同时存在，滚轮一动两层一起滚（用户反馈
+     「表格和外部页面整体同时有上下滚动条」） */
+  overscroll-behavior: contain;
 }
 
 /* 表头：文字降饱和 + 适度加粗 + 轻微字距 + 纵向留白，读起来更像现代数据表

@@ -25,7 +25,7 @@
             <thead class="bg-base-200">
                 <tr>
                     {if condition="$useCheckbox"}
-                    <th class="table-checkbox text-center{if condition="in_array('__check__', $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array('__check__', $freezeRightCols)"} freeze-col-right{/if}">
+                    <th data-col-key="__check__" class="table-checkbox text-center{if condition="in_array('__check__', $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array('__check__', $freezeRightCols)"} freeze-col-right{/if}">
                         <label class="cursor-pointer">
                             <input type="checkbox" id="checkall-{$name}" data-check="check-{$name}" class="checkall
                                 table-row-checkall checkbox checkbox-primary checkbox-sm" x-ref="checkall">
@@ -33,7 +33,7 @@
                     </th>
                     {/if}
                     {volist name="headers" id="header"}
-                    <th class="{$headTextAlign} whitespace-nowrap{if condition="in_array($key, $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array($key, $freezeRightCols)"} freeze-col-right{/if}">
+                    <th data-col-key="{$key}" class="{$headTextAlign} whitespace-nowrap{if condition="in_array($key, $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array($key, $freezeRightCols)"} freeze-col-right{/if}">
                         {$header|raw}
                         {in name="$key" value="$sortable"}
                         {if condition="$key eq $sortKey"}
@@ -49,7 +49,7 @@
                     </th>
                     {/volist}
                     {notempty name="$actionbars"}
-                    <th class="row-__action__ {$headTextAlign}{if condition="in_array('__action__', $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array('__action__', $freezeRightCols)"} freeze-col-right{/if}">{$actionRowText|raw}</th>
+                    <th data-col-key="__action__" class="row-__action__ {$headTextAlign}{if condition="in_array('__action__', $freezeLeftCols)"} freeze-col-left{/if}{if condition="in_array('__action__', $freezeRightCols)"} freeze-col-right{/if}">{$actionRowText|raw}</th>
                     {/notempty}
                 </tr>
             </thead>

@@ -6,17 +6,17 @@
             {volist name="options" id="group"}
             <optgroup label="{$group.label}">
                 {volist name="group.options" id="option"}
+                <!-- 6.464 闭合标签必须紧跟文本：换行缩进会进 option.textContent（尾随
+                    空白实测虚增 item/canvas 宽度 ~44px，表格预留列宽跟着偏大） -->
                 <option value="{$key}" {if condition="'-'.$key eq $checked" }selected{/if} {in name="'-'.$key"
-                    value="$disabledOptions" }disabled{/in}>{$option}
-                </option>
+                    value="$disabledOptions" }disabled{/in}>{$option}</option>
                 {/volist}
             </optgroup>
             {/volist}
             {else/}
             {volist name="options" id="option"}
             <option value="{$key}" {if condition="'-'.$key eq $checked" }selected{/if} {in name="'-'.$key"
-                value="$disabledOptions" }disabled{/in}>{$option}
-            </option>
+                value="$disabledOptions" }disabled{/in}>{$option}</option>
             {/volist}
             {/if}
         </select>

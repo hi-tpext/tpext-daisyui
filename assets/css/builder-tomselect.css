@@ -20,6 +20,26 @@
   min-width: 2.5rem;
 }
 
+/*
+   6.461 表格行内 select 的焦点态宽度抖动：vendor 在 input-active（下拉展开、
+   或刚选完值仍聚焦）时把 .ts-control 里的过滤输入框从离流（input-hidden：
+   absolute left:-10000px）切回流内 flex 项（flex:1 1 auto），auto 布局的列宽
+   由内容 max-content 驱动，实测列宽被撑开 ~45px、失焦回落——整列跟随抖动
+   （用户：空值选中后变宽、点开下拉变宽，鼠标离开即恢复）。表单里 select 坐
+   在固定宽的 grid 轨道上、items 表列宽有富余，均无此症状，故只压表格容器：
+   输入框任何状态零几何（width/flex/margin/padding 全归零），键盘过滤仍可
+   聚焦输入（下拉筛选照常），代价是表格内键入文字不可见——行内 select 是
+   取值器，可接受。 */
+.table-wrap .ts-wrapper .ts-control > input {
+  width: 0 !important;
+  min-width: 0 !important;
+  flex: 0 0 auto !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  margin-left: 0 !important;
+  margin-right: 0 !important;
+}
+
 .ts-wrapper.multi .ts-control > item,
 .ts-wrapper.multi .ts-control > div {
   margin: 2px 4px 2px 0;

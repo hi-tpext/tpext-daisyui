@@ -354,7 +354,7 @@ class Search extends SWrapper implements Renderable, ReleaseAble
             $this->fields('search_buttons', ' ', '3 col-lg-3 col-sm-12 col-xs-12 search-buttons')
                 ->size('3 col-lg-4 col-sm-2 col-xs-12', '9 col-lg-8 col-sm-8 col-xs-12')
                 ->with(
-                    $this->button('submit', __blang('builder_button_filter'), '6 col-lg-6 col-sm-6 col-xs-6')->class('btn-info ' . $this->butonsSizeClass),
+                    $this->button('submit', __blang('builder_button_filter'), '6 col-lg-6 col-sm-6 col-xs-6')->class('btn-primary ' . $this->butonsSizeClass),
                     // 6.395 重置为次级色（无色按钮统一映射 btn-secondary）
                     $this->button('button', __blang('builder_button_reset'), '6 col-lg-6 col-sm-6 col-xs-6')->class('btn-secondary ' . $this->butonsSizeClass)->attr('onclick="location.replace(location.href)"')
                 );

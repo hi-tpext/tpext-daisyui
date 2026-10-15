@@ -33,11 +33,6 @@
                     // 后端分页等参数只从 get 读取（Table.php input('get.__page__')），写死 post 会导致翻页永远停在第 1 页
                     var method = ((formEl && formEl.getAttribute('method')) || 'POST').toUpperCase();
                     var url = that.action || location.href;
-                    // 6.249 翻页/刷新前记录表格滚动壳（.table-wrap，旧代码拿 .table-wrapper
-                    // 在主表格片段里从不命中=僵尸代码）的双轴位置，片段替换后恢复
-                    var holdPort = document.getElementById('{$searchFor}') ? document.getElementById('{$searchFor}').querySelector('.table-wrap') : null;
-                    var holdTop = holdPort ? holdPort.scrollTop : 0;
-                    var holdLeft = holdPort ? holdPort.scrollLeft : 0;
 
                     var request;
                     if (method === 'POST') {
@@ -54,31 +49,114 @@
                             tpb.loading('hide');
                             var data = response.data;
                             var target = document.getElementById(that.searchFor);
-                            if (target) {
-                                target.outerHTML = data;
-                                var fresh = document.getElementById(that.searchFor);
-                                // 【规范】原生 outerHTML 插入的 <script> 不会执行——重建 script 节点
-                                // 使表格片段内组件的初始化脚本生效（原库靠 jQuery replaceWith 隐性执行）
-                                if (fresh) {
-                                    fresh.querySelectorAll('script').forEach(function (old) {
-                                        var s = document.createElement('script');
-                                        s.textContent = old.textContent;
-                                        old.parentNode.replaceChild(s, old);
-                                    });
-                                    // 6.249 恢复滚动位置：放在 script 重建之后——片段脚本里的
-                                    // initTableFreeze 同步设容器 max-height，几何就绪后设置才不被钳制；
-                                    // 新数据更短时浏览器自动钳到最大可滚位置（"尽量保持"）
-                                    var port = fresh.querySelector('.table-wrap');
-                                    if (port) {
-                                        port.scrollTop = holdTop;
-                                        port.scrollLeft = holdLeft;
+                            if (!target || typeof data !== 'string') return;
+
+                            // 6.453 骨架/数据分离换表：旧整容器 outerHTML 替换把 thead
+                            // 连同列宽/拖拽手柄/滚动位置一起扔掉（列位置每页漂移 + 横向
+                            // 滚动复位的根源）。改为只移植「数据层」——tbody、空态、
+                            // 分页条，并重执行片段脚本；.table-wrap/thead/列宽/手柄/
+                            // 冻结表头原样存活，水平/垂直滚动位置天然保持，无需保存恢复
+                            var doc = new DOMParser().parseFromString(data, 'text/html');
+                            var fresh = doc.getElementById(that.searchFor);
+                            if (!fresh) { target.outerHTML = data; return; } // 结构异常兜底：退回整替换
+
+                            // 1) tbody（列表数据本体）
+                            // 6.460 不再直接换入：新行里的 x-select 等宿主带着原生
+                            // 控件（select 宽度=最长 option）直接参与可见布局，组件
+                            // 建好后（TomSelect 收缩到选中项宽度）列宽再跳一版——刷新
+                            // /筛选时整表抖动。改为 stagedSwapTbody 离屏暂存构建，
+                            // 建好后原子换入；片段脚本与选中态同步必须等换入后执行
+                            //（initTableFreeze 量冻结偏移、initTreeLines 画参考线都
+                            // 依赖新行已在真表里），故挂到 done 回调
+                            var freshTbody = fresh.querySelector('.table-wrap tbody');
+                            var liveTable = target.querySelector('.table-wrap table');
+                            var liveTbody = liveTable ? liveTable.tBodies[0] : null;
+
+                            // 2) 空态提示（fresh 有/无 ↔ live 无/有 四种组合都对齐）
+                            var freshEmpty = fresh.querySelector('.items-empty-text');
+                            var liveEmpty = target.querySelector('.items-empty-text');
+                            if (freshEmpty && liveEmpty) {
+                                liveEmpty.parentNode.replaceChild(document.importNode(freshEmpty, true), liveEmpty);
+                            } else if (freshEmpty) {
+                                // 6.468 兜底插入必须落在 .table-wrap 之外（模板原生位置
+                                // 就是 wrap 之后）——liveTable.parentNode 是 wrap 内部，
+                                // freeze 限高后空态提示会随表格内容滚动/被裁剪
+                                var emptyHost = liveTable ? liveTable.closest('.table-wrap') : null;
+                                if (emptyHost) emptyHost.insertAdjacentElement('afterend', document.importNode(freshEmpty, true));
+                                else target.appendChild(document.importNode(freshEmpty, true));
+                            } else if (liveEmpty) {
+                                liveEmpty.parentNode.removeChild(liveEmpty);
+                            }
+
+                            // 3) 分页条（含 summary/pagesize 下拉；fresh 缺席=单页，移除旧条）
+                            var freshBar = fresh.querySelector('.pagination-bar');
+                            var liveBar = target.querySelector('.pagination-bar');
+                            if (freshBar && liveBar) {
+                                liveBar.parentNode.replaceChild(document.importNode(freshBar, true), liveBar);
+                            } else if (freshBar) {
+                                // 6.468 同空态提示：插到 wrap 之外。首帧空表格（无 live
+                                // 分页条可换）时旧代码 appendChild 进 wrap，freeze 限高
+                                // 内滚后分页条随滚动条上下移动（operationlog 首帧空表 +
+                                // AJAX 填充场景实测复现；admin 直出有数据的页面走不到此分支故无感）
+                                var barHost = liveTable ? liveTable.closest('.table-wrap') : null;
+                                if (barHost) barHost.insertAdjacentElement('afterend', document.importNode(freshBar, true));
+                                else target.appendChild(document.importNode(freshBar, true));
+                            } else if (liveBar) {
+                                liveBar.parentNode.removeChild(liveBar);
+                            }
+
+                            // 4+5) 换入完成后的收尾：重执行片段脚本 + 行选中态对齐。
+                            // 片段脚本（页码 hidden input 回写、renderFiles、
+                            // initTableFreeze——冻结偏移按新 tbody 重算、initTreeLines）
+                            // 内联 script append 即同步执行，随后摘除防跨页堆积；
+                            // 存活 thead 上的列宽/手柄经 initTableFreeze 的幂等路径自愈
+                            var afterSwap = function () {
+                                // 6.466 行选择框的 check-{id} 类按渲染时间生成，每次响应
+                                // 都是全新类名；6.453 换表后 thead 存活，master 的
+                                // data-check 还挂着上一轮的旧类 → 子项选择器落空，全选/
+                                // 批量选择全失效（旧整容器替换时 thead 一起换新不暴露）。
+                                // 从 fresh thead 同步，且必须在片段脚本前——脚本里的
+                                // 初始态同步同样活读这个属性
+                                var freshMaster = fresh.querySelector('thead input.checkall');
+                                var liveMaster = target.querySelector('input.checkall');
+                                if (freshMaster && liveMaster) {
+                                    var freshCls = freshMaster.getAttribute('data-check');
+                                    if (freshCls && freshCls !== liveMaster.getAttribute('data-check')) {
+                                        liveMaster.setAttribute('data-check', freshCls);
                                     }
                                 }
-                                // Alpine 3.x 没有 scan 方法（裸调会抛 TypeError，被下方 catch 误报网络错误）；
-                                // 插入的新 x-data 由 Alpine 的 MutationObserver 自动初始化，无需手动扫描
-                                if (window.Alpine && typeof window.Alpine.scan === 'function') window.Alpine.scan(target);
+
+                                fresh.querySelectorAll('script').forEach(function (old) {
+                                    var s = document.createElement('script');
+                                    s.textContent = old.textContent;
+                                    target.appendChild(s);
+                                    s.parentNode.removeChild(s);
+                                });
+
+                                // 行选中样式/checkall 与新数据对齐（委托逻辑只在首绑时同步过初始态）
+                                var checkall = target.querySelector('input.checkall');
+                                var cls = checkall ? checkall.getAttribute('data-check') : null;
+                                var cbs = cls ? target.querySelectorAll('.table-wrap .' + cls) : [];
+                                var total = cbs.length, checked = 0;
+                                cbs.forEach(function (cb) {
+                                    var tr = cb.closest('tr');
+                                    if (tr) tr.classList.toggle('active', cb.checked);
+                                    if (cb.checked) checked++;
+                                });
+                                if (checkall) checkall.checked = total > 0 && checked === total;
+
                                 // 表格刷新后行选中态归零，同步批量按钮禁用态（工具栏在刷新片段之外，需手动重算）
                                 if (window.tpextbuilder && window.tpextbuilder.updateBatchBtnState) window.tpextbuilder.updateBatchBtnState();
+                            };
+
+                            if (freshTbody && liveTbody && window.tpextbuilder && window.tpextbuilder.stagedSwapTbody) {
+                                window.tpextbuilder.stagedSwapTbody(target, liveTbody, document.importNode(freshTbody, true), afterSwap);
+                            } else {
+                                // 旧路径兜底（tpextbuilder.js 缺位等）：直接换入
+                                if (freshTbody && liveTbody) {
+                                    liveTbody.parentNode.replaceChild(document.importNode(freshTbody, true), liveTbody);
+                                }
+                                afterSwap();
                             }
                         })
                         .catch(function () {

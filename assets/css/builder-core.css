@@ -153,13 +153,17 @@ body {
 }
 
 /*
-   表格行最小高度 42px
-   table-sm 单行约 36px（上下 padding 8px + line-height 20px），
-   给 th/td 设 height 撑到 42px。table-cell 的 height 表现为「最小高」，
-   多行内容 / 内嵌组件（按钮组、textarea 等）会自动撑开，不受影响。
+   表格行最小高度：数据行 42px（table-sm 单行约 36px：上下 padding 8px +
+   line-height 20px，height 撑到 42）。
+   6.447 表头单独压到最小 36px（用户反馈）。table-cell 的 height 表现为
+   「最小高」，多行内容 / 内嵌组件（按钮组、textarea 等）会自动撑开，不受影响。
    */
-.table :where(th, td) {
+.table :where(td) {
   height: 42px;
+}
+
+.table :where(th) {
+  height: 36px;
 }
 
 /* 空表格/空 items 占位图居中：Tailwind preflight 把 img 设为 block，

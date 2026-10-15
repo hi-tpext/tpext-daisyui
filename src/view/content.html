@@ -6,8 +6,15 @@
   // layout.html 硬编码 data-theme="blue"，恢复主题的原逻辑在 content 块（<body> 内），
   // 暖缓存下浏览器可能先以默认 light 主题完成首次绘制（暗色用户见短暂白底），
   // 再切到 dark。这里提前到 head 设置，框架稍后重复设置同一属性是幂等的。
+  // 6.449 偏好键改为 builder_theme（与父壳共写的 site_theme 隔离）；site_theme
+  // 仅在值为内层切换器专属色名时一次性迁移——'dark' 不迁移：父壳也写它，
+  // 误 adopt 会让「父壳回亮色」后内层错误地停在暗黑
   (function() {
-      var t = localStorage.getItem('site_theme');
+      var t = localStorage.getItem('builder_theme');
+      if (!t) {
+          var legacy = localStorage.getItem('site_theme');
+          if (legacy && /^(blue|gray|green|orange|purple)$/.test(legacy)) t = legacy;
+      }
       if (t) document.documentElement.setAttribute('data-theme', t);
   })();
 </script>
@@ -89,20 +96,35 @@
           // 若 DCL 即显示，用户会看到下方内容被突然推下的「抖动」。
           // 故检测到延迟加载表格时，等表格容器被替换（outerHTML 后旧父节点脱连）
           // 或分页条出现再显示；80ms 轮询、约 2.5s 兜底，防请求失败永远遮罩。
+          // 6.458 判定改用「延迟壳签名」：服务端在延迟壳空态上打的
+          // .builder-table-loading 类（Table.php，需 PHP 进程重载后生效）+
+          // 加载文案文本匹配（加载中.../Loading...，类未生效时的现行标记）。
+          // 旧启发式「有 .table-wrap 且无 .pagination-bar」会把空结果/单页
+          // 表格误判成延迟壳——空表恰恰没有分页条，整页被遮罩轮询到 2.5s
+          // 兜底才显示（用户：没有数据的表格显示慢；有数据的多页表有分页
+          // 条秒开，对比更明显）
           var wrapParents = Array.prototype.map.call(
               document.querySelectorAll('.table-wrap'),
               function(w) { return w.parentNode; }
           );
-          var hasDelayedTable = wrapParents.length > 0 && !document.querySelector('.pagination-bar');
+          var loadingEmpty = document.querySelector('.items-empty-text');
+          var hasDelayedTable = !!(loadingEmpty &&
+              (/builder-table-loading/i.test(loadingEmpty.className) ||
+               /加载中|loading/i.test(loadingEmpty.textContent)));
           if (!hasDelayedTable) {
               revealPage();
           } else {
               var revealed = false;
               var polls = 0;
+              var stillLoading = function() {
+                  var le = document.querySelector('.items-empty-text');
+                  return !!le && (/builder-table-loading/i.test(le.className) ||
+                      /加载中|loading/i.test(le.textContent));
+              };
               var tryReveal = function() {
                   if (revealed) { clearInterval(iv); return; }
                   var swapped = wrapParents.some(function(p) { return !p.isConnected; });
-                  if (swapped || document.querySelector('.pagination-bar') || ++polls > 31) {
+                  if (swapped || !stillLoading() || ++polls > 31) {
                       revealed = true;
                       clearInterval(iv);
                       revealPage();
@@ -113,12 +135,29 @@
 
           {$script|raw}
 
+          // 6.449 父壳暗黑期间新开/刷新 iframe（无 postMessage 重发）：父壳在
+          // site_theme 留有 'dark' 残留而自己偏好非暗黑时，强制跟随暗黑，
+          // 等父壳下次切回亮色（postMessage/移除）再回自己偏好
+          if (localStorage.getItem('site_theme') === 'dark' && localStorage.getItem('builder_theme') !== 'dark') {
+              document.documentElement.setAttribute('data-theme', 'dark');
+              document.body.setAttribute('data-theme', 'dark');
+          }
+
           // 监听主题切换消息（iframe 与父页面通信）
+          // 6.449 联动机制：父级暗黑 → 强制跟随（html+body 双保险）；
+          // 父级非暗黑 → 移除联动属性、回到内层自己原先的主题（builder_theme，
+          // 未选过则回默认亮色 blue）。原实现把父壳的 'light' 原样写上 html
+          //（未注册主题）且覆写 site_theme 污染自己的偏好
           window.addEventListener('message', function(event) {
-              if (event.data.type === 'change_theme') {
-                  var themeValue = event.data.value || event.data.theme || 'blue';
-                  document.documentElement.setAttribute('data-theme', themeValue);
-                  localStorage.setItem('site_theme', themeValue);
+              if (!event.data || event.data.type !== 'change_theme') return;
+              var theme = event.data.theme || event.data.value;
+              if (theme === 'dark') {
+                  document.documentElement.setAttribute('data-theme', 'dark');
+                  document.body.setAttribute('data-theme', 'dark');
+              } else {
+                  document.body.removeAttribute('data-theme');
+                  var own = localStorage.getItem('builder_theme');
+                  document.documentElement.setAttribute('data-theme', own === 'dark' ? 'dark' : (own || 'blue'));
               }
           });
       }

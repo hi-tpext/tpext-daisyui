@@ -79,6 +79,12 @@
         }
 
         disconnectedCallback() {
+            // 6.460 表格刷新换体：构建好的宿主从离屏暂存区 appendChild 移入真表，
+            // 移动=disconnect+reconnect，照常 deinit 会拆掉 TomSelect/flatpickr
+            // 再重建一遍——原生控件闪现、抖动原样回归。__moving__ 标记的宿主
+            // 跳过销毁，DOM 原样随迁；__ready__ 保持 true，重连时
+            // connectedCallback 早退，组件状态无感续用
+            if (this.__moving__) return;
             if (!this.__ready__) return;
             this.__ready__ = false;
             this.deinit();
@@ -128,7 +134,17 @@
 
             var val = this.getAttribute('value');
             if (val !== null) {
-                input.value = val;
+                // 6.473 以「控件默认值」形态搬运：原生 form.reset() 恢复的是
+                // attribute 默认值——property-only 赋值（input.value = val）时
+                // 编辑表单点重置一律清空回显。textarea 无 value attribute，
+                // 默认值走 defaultValue（解析安全的文本入口）。宿主 attribute
+                // 照旧移除（宿主无 name 不参与提交）
+                if (input.tagName === 'TEXTAREA') {
+                    input.value = val;
+                    input.defaultValue = val;
+                } else {
+                    input.setAttribute('value', val);
+                }
                 this.removeAttribute('value');
             }
 
@@ -246,7 +262,9 @@
             }
             var val = this.getAttribute('value');
             if (val !== null) {
-                carrier.value = val;
+                // 6.473 载体同样走 attribute（hidden input 的 property-only 赋值
+                // 在原生 reset 时被清成空，见 carryFormAttrs 内注释）
+                carrier.setAttribute('value', val);
                 this.removeAttribute('value');
             }
             this.__carrier = carrier;
@@ -442,7 +460,9 @@
             }
             var val = this.getAttribute('value');
             if (val !== null) {
-                carrier.value = val;
+                // 6.473 载体同样走 attribute（hidden input 的 property-only 赋值
+                // 在原生 reset 时被清成空，见 carryFormAttrs 内注释）
+                carrier.setAttribute('value', val);
                 this.removeAttribute('value');
             }
             this.__carrier = carrier;
@@ -673,6 +693,32 @@
                     placeholder: cfg.placeholder || '',
                     plugins: cfg.plugins || [],
                 };
+                // 6.461 表格内 select：下拉挂到 body。默认挂在 .ts-wrapper（td 内部，
+                // absolute 定位）——底部行的下拉超出 .table-wrap 滚动容器会给滚动
+                // 高度添一笔，撑出竖向滚动条（用户：最后一列的下拉撑开表格高度）。
+                // 表单/表单 items 容器无 overflow，保持默认不受影响。
+                // 注意 6.460 暂存构建期宿主在 body 下的暂存区里、不在 .table-wrap，
+                // 靠 stagedSwapTbody 打的 data-builder-staged 标记一并命中
+                if (self.closest('.table-wrap, [data-builder-staged]')) {
+                    s.dropdownParent = document.body;
+                    // 挂 body 后 vendor 不做 JS 定位（top:100% 相对 body 解析到
+                    // 视口外、width:100% 解析到视口宽，实测 1900px）——展开时自己
+                    // 定位到控件正下方并同步宽度；贴近视口底时向上翻。容器滚动
+                    // 由全局捕获监听直接收起，不存在跟随重定位问题
+                    s.onDropdownOpen = function () {
+                        var dd = self.__ts && self.__ts.dropdown;
+                        if (!dd) return;
+                        var r = self.getBoundingClientRect();
+                        dd.style.left = r.left + 'px';
+                        dd.style.width = r.width + 'px';
+                        var h = dd.offsetHeight || 160;
+                        if (window.innerHeight - r.bottom < Math.min(h, 200) && r.top > Math.min(h, 200)) {
+                            dd.style.top = Math.max(4, r.top - Math.min(h, window.innerHeight - 8)) + 'px';
+                        } else {
+                            dd.style.top = r.bottom + 'px';
+                        }
+                    };
+                }
                 if (cfg.maxItems === null) s.maxItems = null;
                 else if (cfg.maxItems) s.maxItems = cfg.maxItems;
                 if (cfg.create) s.create = true;
@@ -689,9 +735,57 @@
                 return s;
             }
 
+            /* 6.462 表格内 select 列宽稳定下限：空态单元格只有 caret 很窄，选中后
+             * item 文本 + 清除按钮参与内容驱动布局，auto 布局列宽随之涨一截（用户
+             * 实测 Test 列 64→110px）。按「最宽 option 文本」在构建时给 wrapper 设
+             * min-width——空态列就定宽到位，选任何值（文本 ≤ 最宽 option）列宽不再
+             * 变化。canvas measureText 不依赖布局，6.460 的 display:none 暂存区里也
+             * 能量；48px ≈ caret + 清除按钮× + 内边距余量。ajax 选项未知不预留
+             * （clone 探测方案在暂存区会量出 0，弃用）。表单/items 不在表格容器，
+             * 保持内容自适应不动。
+             * 6.463 曾改为按 computed 内边距精确拼余量 + 选项文本 trim，已按用户
+             * 要求撤销：① 用户看到的偏宽初始宽度其实是自己拖拽保存的列宽（colw
+             * 记忆），不是预留算出来的；② 掐得过紧后（canvas 按控件 13px 量、item
+             * 实际渲染字号/边框有出入）空值选中又出现几像素变宽。模板缩进会给
+             * option.textContent 带尾随空格、measureText/item 宽度双双虚增（实测
+             * +47px）的事实保留在注释里备查 */
+            function reserveTableWidth(ts) {
+                if (!self.closest('.table-wrap, [data-builder-staged]')) return;
+                var ctrl = ts.wrapper.querySelector('.ts-control');
+                if (!ctrl) return;
+                // 6.474 量测字体的真源是 .table 内的控件（.table .ts-control 有
+                // 缩小字号等专属样式）：初始加载时组件自身就在 .table 里；刷新时
+                // 组件在离屏 staging（无 .table 祖先），computed 字体回退变宽，
+                // canvas 量出的预留 min-width 偏大 ~3px → 刷新后 select 列宽
+                // 跳动（用户：页面加载后正常，刷新一下宽度变化）。staging 场景
+                // 活 tbody 的旧控件还挂着，从那里取——两次量测同源
+                var fontRef = self.closest('.table-wrap') ? ctrl : (d.querySelector('.table-wrap .ts-control') || ctrl);
+                var fs = getComputedStyle(fontRef);
+                var ctx = d.createElement('canvas').getContext('2d');
+                ctx.font = fs.fontWeight + ' ' + fs.fontSize + ' ' + fs.fontFamily;
+                var w = 0;
+                var opts = ts.options || {};
+                Object.keys(opts).forEach(function (k) {
+                    var t = opts[k] && opts[k].text;
+                    if (t) w = Math.max(w, ctx.measureText(String(t)).width);
+                });
+                if (w > 0) ts.wrapper.style.minWidth = Math.ceil(w + 48) + 'px';
+            }
+
             if (!cfg.ajax) {
                 prepTreeOptions(select); // 6.284 树形标记 → 干净文本 + data 属性
-                this.__ts = new w.TomSelect(select, baseSettings());
+                // 6.464 选项文本去首尾空白兜底：模板缩进/换行会进 option.textContent
+                //（尾随空白实测虚增 item/canvas 宽度 ~44px，表格预留列宽跟着偏大）。
+                // 源头已在 select.html 修正（闭合标签紧跟文本），这里覆盖缓存片段/
+                // 其他渲染路径。6.463 撤销的是「computed 精确余量」，48px 余量不动
+                Array.prototype.forEach.call(select.options, function (o) {
+                    if (o.textContent && o.textContent !== o.textContent.trim()) {
+                        o.textContent = o.textContent.trim();
+                    }
+                });
+                var tsStatic = new w.TomSelect(select, baseSettings());
+                this.__ts = tsStatic;
+                reserveTableWidth(tsStatic);
                 clearPrehide();
                 return;
             }
@@ -818,6 +912,7 @@
                 // 旧徽章残留 + 新省城市追加进旧选项（新旧两省城市混列）
                 self.__ts = ts;
                 clearPrehide();
+                reserveTableWidth(ts); // 6.462 回显分支 addOptions 后会再调一次补足
 
                 // 6.438 滚动到底加载下一页：手工 appendOption 而非 ts.load()——
                 // loadCallback→refreshOptions 会重建下拉 DOM（innerHTML=''）把
@@ -935,6 +1030,7 @@
                             ts.setValue(select.multiple
                                 ? selected.split(',').filter(function (v) { return v !== ''; })
                                 : selected);
+                            reserveTableWidth(ts); // 6.462 选项此时才可知，补足列宽下限
                         }
                         self.__echoBusy = false;
                     })
@@ -1224,12 +1320,16 @@
             from.max = cfg.max;
             from.step = cfg.step;
             from.value = cfg.from;
+            // 6.473 初始值同时钉成 attribute（cfg 值只进 property 时原生 reset
+            // 会把手柄清到 (min+max)/2），重置即回到初始手柄位
+            from.setAttribute('value', String(cfg.from == null ? '' : cfg.from));
 
             if (double || cfg.useValues) {
                 carrier = d.createElement('input');
                 carrier.type = 'hidden';
                 carrier.className = 'ignore rs-hidden';
                 carrier.value = cfg.initValue || '';
+                carrier.setAttribute('value', String(cfg.initValue || '')); // 6.473 同上
                 this.carryTo(carrier, 'name');
                 this.carryTo(carrier, 'id');
                 this.carryTo(carrier, 'value');
@@ -2190,6 +2290,9 @@
             this.carryFormAttrs(input);
             this.appendChild(input);
             this.__input = input;
+            // 6.459 摘掉模板预挂的占位类（text.html）：宿主升级前以 input 类
+            // 占位（几何=成品控件，防零高→撑开行高的抖动），真控件就位后还原
+            this.classList.remove('input', 'input-bordered');
             this.setupCount(input);
         }
         deinit() { this.__input = null; }
@@ -2208,10 +2311,131 @@
             this.carryFormAttrs(ta);
             this.appendChild(ta);
             this.__input = ta;
+            this.classList.remove('textarea', 'textarea-bordered'); // 6.459 同 x-text 占位说明
             this.setupCount(ta);
         }
         deinit() { this.__input = null; }
     };
     BE.define('x-textarea', XTextarea);
+
+    /*
+     * 6.461 表格滚动时收起已打开的 select 下拉。
+     * dropdownParent=body 后，下拉以文档坐标定位，vendor 没有 scroll 重定位
+     * 监听——表格容器一滚，下拉就漂移脱锚。收起是最稳妥的交互（AntD/Element
+     * 表格滚动时同样关闭弹层）。scroll 事件不冒泡，用 document 捕获阶段监听；
+     * 经 self.__ts 取实例可安全越过已销毁的行实例。
+     */
+    d.addEventListener('scroll', function (e) {
+        var t = e.target;
+        if (!t || t.nodeType !== 1 || !t.classList || !t.classList.contains('table-wrap')) return;
+        Array.prototype.forEach.call(t.querySelectorAll('x-select'), function (host) {
+            var ts = host.__ts;
+            if (ts && ts.isOpen) {
+                try { ts.close(); } catch (err) { /* 行已被移除等场景容错 */ }
+            }
+        });
+    }, true);
+
+    /*
+     * 6.473 表单重置后的组件 UI 重同步。
+     * 原生 reset 把原生控件恢复到 attribute 默认值（初始回显值——上方各搬运
+     * 已改为 attribute/defaultValue 形态），但第三方实例的 UI 不感知 reset：
+     * TomSelect 显示选区、flatpickr 面板选中态与区间可见框、富文本编辑区
+     * （值在 carrier textarea 里，编辑器 iframe 内部是独立文档）都停在重置前。
+     * reset 事件在默认行为生效前触发，延后一拍按控件当前值逐组件回填。
+     * 纯原生控件的组件（x-text/x-number/x-color/x-rate 等）reset 自动恢复，
+     * 无需处理；x-slider 手柄、x-map/x-tree/x-upload 的可视化面板不在本轮
+     * （值已随 carrier 恢复，视觉刷新属组件各自演进项）。
+     * reset 不冒泡：document 捕获阶段委托（同上 scroll 的监听方式）。
+     */
+    BE.resyncForm = function (scope) {
+        Array.prototype.forEach.call(scope.querySelectorAll('x-select'), function (host) {
+            if (host.__ts) {
+                try { host.__ts.sync(); } catch (err) { /* 实例已随行销毁等 */ }
+            }
+        });
+        Array.prototype.forEach.call(scope.querySelectorAll('x-date'), function (host) {
+            if (host.__fp && host.__input) {
+                try { host.__fp.setDate(host.__input.value, false); } catch (err) {}
+            }
+        });
+        // 区间（日期/时间）：载体已恢复回显值，拆回两端并刷新面板选中态
+        Array.prototype.forEach.call(scope.querySelectorAll('x-daterange, x-timerange'), function (host) {
+            if (!host.__fps || !host.__fps.length || !host.__carrier) return;
+            try {
+                var sep = (host.cfg && host.cfg.separator) || ',';
+                var arr = String(host.__carrier.value).split(sep);
+                host.__fps.forEach(function (fp, i) {
+                    fp.setDate(arr[i] || '', false);
+                });
+            } catch (err) {}
+        });
+        // 富文本/代码编辑器：值载体是 carrier textarea，编辑区按驱动 API 回填
+        Array.prototype.forEach.call(scope.querySelectorAll('x-editor'), function (host) {
+            var inst = host.__inst;
+            var carrier = host.__carrier;
+            if (!inst || !carrier) return;
+            var html = carrier.value;
+            try {
+                if (host.__driver === 'ace') { inst.setValue(html); inst.moveCursorTo(0, 0); }
+                else if (host.__driver === 'ckeditor' || host.__driver === 'ueditor') { inst.setData(html); }
+                else if (host.__driver === 'tinymce') { inst.setContent(html); }
+                else if (host.__driver === 'wang') { inst.txt.html(html); }
+                else if (host.__driver === 'mde') { inst.value(html); }
+            } catch (err) {}
+        });
+        // Alpine 系（iconPicker/monthPicker/yearPicker/transferBox）：可见态吃
+        // 组件内部状态（构造参数给的初值），reset 不感知——载体是服务端渲染的
+        // hidden input（attribute 已随原生 reset 恢复回显值），用 Alpine.$data
+        // 刷回状态，可见框再直接回写兜底
+        if (w.Alpine && w.Alpine.$data) {
+            Array.prototype.forEach.call(scope.querySelectorAll('.icon-picker-wrap'), function (wrap) {
+                var carrier = wrap.querySelector('input[type=hidden]');
+                var code = wrap.querySelector('.icon-code-input');
+                if (!carrier) return;
+                if (code) code.value = carrier.value;
+                try { w.Alpine.$data(wrap).current = carrier.value; } catch (err) {}
+            });
+            Array.prototype.forEach.call(scope.querySelectorAll('.transfer-box'), function (wrap) {
+                var carrier = wrap.querySelector('input[type=hidden]');
+                if (!carrier) return;
+                try {
+                    w.Alpine.$data(wrap).selected = String(carrier.value || '').split(',').filter(Boolean);
+                } catch (err) {}
+            });
+            Array.prototype.forEach.call(scope.querySelectorAll('[x-data^="monthPicker"], [x-data^="yearPicker"]'), function (wrap) {
+                var carrier = wrap.querySelector('input[type=hidden]');
+                if (!carrier) return;
+                try { w.Alpine.$data(wrap).current = carrier.value; } catch (err) {}
+            });
+        }
+        // x-slider：载体已恢复回显值（attribute 形态），手柄与标注按载体重摆
+        Array.prototype.forEach.call(scope.querySelectorAll('x-slider'), function (host) {
+            var from = host.__from, to = host.__to, out = host.__out, carrier = host.__carrier;
+            if (!from) return;
+            try {
+                var vals = (host.cfg && host.cfg.useValues && host.cfg.values) ? host.cfg.values : null;
+                var parts = String(carrier ? carrier.value : from.value).split(';');
+                if (!parts[0] && parts[0] !== '0') return;
+                var locate = function (v) {
+                    if (!vals) return v;
+                    var i = vals.indexOf(v);
+                    return i >= 0 ? String(i) : v;
+                };
+                from.value = locate(parts[0]);
+                if (to && parts.length > 1) to.value = locate(parts[1]);
+                if (out) {
+                    var pre = (host.cfg && host.cfg.prefix) || '', post = (host.cfg && host.cfg.postfix) || '';
+                    var a = parts[0], b = parts.length > 1 ? parts[1] : parts[0];
+                    out.textContent = to ? (pre + a + post + ' — ' + pre + b + post) : (pre + a + post);
+                }
+            } catch (err) {}
+        });
+    };
+    d.addEventListener('reset', function (e) {
+        var form = e.target;
+        if (!form || form.tagName !== 'FORM') return;
+        w.setTimeout(function () { BE.resyncForm(form); }, 0);
+    }, true);
 
 })(window, document);

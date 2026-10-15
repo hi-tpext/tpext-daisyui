@@ -2,7 +2,11 @@
 <div class="{$size[1]}">
     <div class="text-suffix-wrap flex w-full items-stretch">
         {if $befor}<span class="text-prefix">{$befor|raw}</span>{/if}
-        <x-text class="flex-1 {$class}" placeholder="{$placeholder}"
+        <!-- 6.459 宿主预挂成品控件类（input input-bordered）：x-text 在
+             builder-elements.js 执行前是零高空块，DCL 后 build 出真控件会撑高
+             行/挤压邻居（首屏与表格 AJAX 换入都可见一次抖动）。占位框与成品
+             input 同类同形，build 后宿主摘除这两个类（XText.build），无缝替换 -->
+        <x-text class="input input-bordered flex-1 {$class}" placeholder="{$placeholder}"
             value="{$value}" name="{$name}" id="{$id}" {$attr|raw}></x-text>
         {if $after}<span class="text-suffix">{$after|raw}</span>{/if}
     </div>

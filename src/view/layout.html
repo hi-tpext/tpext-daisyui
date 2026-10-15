@@ -22,18 +22,41 @@
     window.__token__ = "{$__token__|default=''}";
     // 6.392 启动加载层/隐藏与恢复已迁移至 content.html（layout 可被替换，
     // 相关逻辑放这里会因 layout 不同而丢失或重复）
-    document.addEventListener('DOMContentLoaded', function () {
-      // 不要手动 Alpine.start()：vendors/alpine.min.js 是 CDN 自动启动构建
-      // （脚本加载即 queueMicrotask 启动），重复调用会触发
-      // "Alpine has already been initialized" 警告并重复初始化组件
 
-      // 主题选择器：从 localStorage 恢复上次选择
-      var saved = localStorage.getItem('site_theme');
-      if (saved) document.documentElement.setAttribute('data-theme', saved);
-    });
+    // 主题偏好：6.449 起用独立键 builder_theme（父壳也写 site_theme，共键会
+    // 被父壳切换覆盖/误跟随）；site_theme 仅在值为内层专属色名时迁移，
+    // 'dark' 不迁移（父壳同样写它，无法区分来源），'light'/'default' 为父壳值
+    // 6.472 定义必须在脚本顶层同步完成：Alpine 是「加载即启动」构建，
+    // 面板 x-data 求值早于 DOMContentLoaded——定义放 DCL 里时 theme 初值
+    // 永远落到 'blue' 回退（用户：刷新后勾选始终在第一个主题；页面主题
+    // 却是对的——data-theme 设置不经 Alpine）。函数只读 localStorage、
+    // documentElement 此时已存在，内联脚本先于主题切换器 div 解析执行
+    window.__builderOwnTheme = function () {
+        var t = localStorage.getItem('builder_theme');
+        if (!t) {
+            var legacy = localStorage.getItem('site_theme');
+            if (legacy && /^(blue|gray|green|orange|purple)$/.test(legacy)) t = legacy;
+        }
+        return t || '';
+    };
+    var __savedTheme = window.__builderOwnTheme();
+    if (__savedTheme) document.documentElement.setAttribute('data-theme', __savedTheme);
+    // 6.448/6.449 内嵌父壳时对齐：只在父壳为暗黑时强制跟随（写 body）；
+    // 父壳亮色值不碰 body——让内层自己的偏好生效，父壳切回亮色后内层
+    // 自然回到原先主题
+    try {
+      if (window.parent && window.parent !== window) {
+        var pt = window.parent.document.body.getAttribute('data-theme');
+        if (pt === 'dark') document.body.setAttribute('data-theme', 'dark');
+      }
+    } catch (e) {}
+
+    // 不要手动 Alpine.start()：vendors/alpine.min.js 是 CDN 自动启动构建
+    // （脚本加载即 queueMicrotask 启动），重复调用会触发
+    // "Alpine has already been initialized" 警告并重复初始化组件
   </script>
   <!-- 主题切换器（右下角浮动按钮） -->
-  <div x-data="{ open: false, theme: localStorage.getItem('site_theme') || 'blue' }"
+  <div x-data="{ open: false, theme: (window.__builderOwnTheme && window.__builderOwnTheme()) || 'blue' }"
        class="fixed bottom-4 right-4 z-[9999]">
         <button type="button" class="btn btn-circle btn-sm shadow-lg" @click="open = !open" title="{:__blang('builder_theme_switch')}">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2m-6 12H7m8-10h2a2 2 0 012 2v2m-2 0h-2m2 0v2m0-2v-2m-8 4h.01M16 13h.01" /></svg>
@@ -44,7 +67,7 @@
                       :key="t[0]">
                 <button type="button" class="w-full text-left px-2 py-1.5 rounded text-sm hover:bg-base-200 flex items-center gap-2"
                         :class="theme === t[0] ? 'bg-primary/10 font-medium' : ''"
-                        @click="theme = t[0]; document.documentElement.setAttribute('data-theme', t[0]); localStorage.setItem('site_theme', t[0]); open = false">
+                        @click="theme = t[0]; document.documentElement.setAttribute('data-theme', t[0]); document.body.removeAttribute('data-theme'); localStorage.setItem('builder_theme', t[0]); open = false">
                     <!-- 6.339 色板色值单一来源：span 自身挂 data-theme 解析对应主题变量，
                          配色见 builder-core.css .theme-swatch（原内联 hex 映射表删除） -->
                     <span class="w-3 h-3 rounded-full inline-block border border-base-300 theme-swatch" :data-theme="t[0]"></span>

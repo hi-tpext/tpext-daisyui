@@ -119,6 +119,13 @@
     /** 隐藏通知的兼容占位（lightyear.notify('msg', 'success', {offset:0}) 不会自动处理 offset） */
     tpb.loading = function (action) {
         if (action === 'show') {
+            // 6.469 boot-loader（content.html 启动遮罩）存续期间不再叠加第二个
+            // loading 遮罩：延迟表格页的 boot-loader 要等数据换入才 reveal，
+            // 而 formSubmit 在此期间调用本方法会再建一个全屏遮罩，两个中心
+            // spinner 几何重叠（37px boot-spin 叠 40px tpb-spin，转速色圈都
+            // 不同——用户：表格中心两个加载动画重叠在一起）。boot-loader
+            // 本身就是加载态，hide 时 mask 不存在自然 no-op
+            if (document.getElementById('boot-loader')) return;
             // 只在页面还没有 loading 遮罩时创建
             if (!document.getElementById('tpb-loading-mask')) {
                 var mask = document.createElement('div');
@@ -139,8 +146,11 @@
                 spinner.style.cssText = [
                     'width:40px',
                     'height:40px',
-                    'border:3px solid rgba(0,0,0,0.1)',
-                    'border-top-color:hsl(var(--p))',
+                    // 6.470 主题色：daisyUI4 的 --p 是 oklch 值（"60.39% 0.228 269.1"），
+                    // 旧写法 hsl(var(--p)) 解析成灰黑（rgb(77,82,89)）与主题脱节；
+                    // 与 boot-loader 同款（oklch(var(--p)/alpha)，底圈淡主题色）
+                    'border:3px solid oklch(var(--p)/0.2)',
+                    'border-top-color:oklch(var(--p)/1)',
                     'border-radius:50%',
                     'animation:tpb-spin 0.8s linear infinite'
                 ].join(';');

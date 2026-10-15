@@ -1233,7 +1233,11 @@ EOT;
 
         $emptyText = $this->emptyText;
         if (!$fetchData && $this->delay) {
-            $emptyText = '<div class="text-center">' . __blang('builder_loading') . '</div>';
+            // 6.458 延迟壳标记类：content.html 靠它识别「真延迟壳」决定是否遮罩
+            // 等取数。旧启发式（有 .table-wrap 且无 .pagination-bar）会把空结果/
+            // 单页表格误判成延迟壳，整页白等 ~2.5s 兜底才显示（用户：没有数据的
+            // 表格显示慢——空表恰恰没有分页条）
+            $emptyText = '<div class="text-center builder-table-loading">' . __blang('builder_loading') . '</div>';
         }
 
         if ($this->partial && !empty($this->rowScripts)) {
