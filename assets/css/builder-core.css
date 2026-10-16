@@ -792,6 +792,17 @@ textarea.textarea {
 }
 
 /*
+   6.482 表格/items 单元格内的 fields 组合列（如 名称/spu）：直接子项是
+   col-span-12 整宽 div（无 field-row 类），上面的清零规则不命中——11 条
+   16px 列间隙仍构成 176px min-content 底，拖列宽（colw）把列压到 ~190px
+   以下后内容被底撑住溢出 td，文字整体偏移不再居中（用户实测 名称/spu 列）。
+   同 6.408 道理：整宽子项间横向 gap 无意义，清零；行距(row-gap 8px)保留
+   */
+.table .fields-content {
+  column-gap: 0;
+}
+
+/*
    6.408 when 包裹层例外：makeWhenWrapper 的 fields() 包裹也带 fields-content 类，
    但 when 里的字段是横排（label+控件双列），列距清零会让轨道变宽（102.5 vs 87.8px）、
    整行右移 13px 与普通行错位（testwhen 页实测）。恢复标准 16px——when 包裹层恒为
@@ -1880,3 +1891,34 @@ samp {
   border-color: oklch(var(--btn-color, var(--b2)) / var(--tw-border-opacity, 1));
   --tw-bg-opacity: 0.09; --tw-border-opacity: 0.38;
 }
+
+/*
+   6.477 表单只读输入框：灰底 + 不可点击聚焦（用户指定）
+   —— readonly 属性只挡键入，点击仍会聚焦：光标闪烁、可拖选，看上去像可编辑。
+   pointer-events:none 让点击直接穿透（不聚焦、不出文本光标）；键盘 Tab 聚焦
+   不拦（本就无编辑可能，且保住 textarea 键盘滚动能力）。灰底取 --b2
+   （base-200）按主题推导，夜间自动为深灰。
+   —— 只用属性选择器：日期区间可见框的固定 readonly 是 JS 设的 property
+   （无 attr，XDateRange），不匹配即保持白底——那里日历按钮仍可用，灰底会
+   让人误判整组已禁用。checkbox/radio 只读由 6.337 choice 规则 + 模板
+   disabled/onclick 处理，不在本块范围；hidden 载体（month/year 等）无视觉，
+   一并排除。
+   */
+.form-wrapper input[readonly]:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+.form-wrapper textarea[readonly] {
+  pointer-events: none;
+  background-color: oklch(var(--b2) / 1);
+}
+
+/*
+   6.480 只读 select（ts:false 原生分支，JS 在 readonly attr 基础上置
+   disabled）：daisyUI .select:disabled 自带灰底但文字淡到 bc/0.4，与 6.477
+   只读输入框的正常文字不一致——提回正常前景色，只读家族观感统一。
+   用 [readonly][disabled] 组合限定：只命中本只读分支，纯 disabled 字段
+   （->disabled(true)，无 readonly）保持 daisyUI 原生淡显语义。灰底/不可
+   交互 daisyUI 已处理，无需重复
+   */
+.form-wrapper select[readonly]:disabled {
+  color: oklch(var(--bc) / 1);
+}
+

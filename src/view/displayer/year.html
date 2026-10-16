@@ -3,7 +3,7 @@
     <div x-data="yearPicker('{$id}', '{$value}')" @click.outside="open = false" class="relative">
         <input type="hidden" name="{$name}" id="{$id}" value="{$value}" x-ref="carrier" {$attr|raw}>
         <button type="button" class="input input-bordered w-full flex items-center justify-between text-left picker-trigger"
-                style="height: 2rem; min-height: 2rem;" @click="open = !open">
+                style="height: 2rem; min-height: 2rem;" @click="open = !open"{if condition="$readonly"} disabled{/if}>
             <!-- 6.158/6.164 占位走标准键并接字段文字，与其他组件一致 -->
             <span x-text="current ? current : '{:__blang('builder_please_select')}{$label}'"
                   :class="current ? '' : 'text-base-content/40'"></span>

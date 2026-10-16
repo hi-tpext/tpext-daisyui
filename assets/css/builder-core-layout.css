@@ -838,6 +838,35 @@ table.table-freeze-on {
   line-height: 1 !important;
 }
 
+/*
+   6.481 表格/items 单元格内 checkbox/radio 组（choice-group）：
+   —— 组是块级 flex（模板 gap-3），占满整行、选项贴左；而属性这类列的 td 是
+   text-center，其他内容都居中、唯独这组偏左（用户：没有居中排列）。
+   text-center 列让组内容随之居中（flex 换行后的残行一并居中），
+   text-left 列保持靠左，尊重列的对齐配置。
+   —— 选项间距收紧：选项间 12px→6px、框与文字 8px→4px（行距 4px 已由
+   上方 :has 规则定过，这里只收列向）。radio 组模板同构，一并生效
+   */
+td.text-center .choice-group {
+  justify-content: center;
+}
+
+/*
+   6.481b 纵排组（inline(false)，flex-col）：主轴是垂直向，justify-content
+   管不到水平——水平居中走交叉轴 align-items，label 收缩为内容宽后随列居中
+   */
+td.text-center .choice-group.flex-col {
+  align-items: center;
+}
+
+td .choice-group {
+  column-gap: 0.375rem;
+}
+
+td .choice-group > label {
+  column-gap: 0.25rem;
+}
+
 /* 表格内按钮图标与文字间距：daisyUI .btn 默认 gap .5rem(8px)，按旧版紧凑观感收紧
    （6.234 收到 4px，6.236 用户要求图标再往文字靠拢 → 2px） */
 .table .btn {
@@ -895,6 +924,13 @@ table.table-freeze-on {
    （表头文字换行不受影响，不会跨列）。仅作用于钉定表，auto 表维持现状 */
 .table.colw-fixed td {
   overflow: hidden;
+}
+/* 6.479 操作列豁免钉定裁剪：dropdown 模式的 [...] 菜单 absolute 于操作格内、
+   向左伸出单元格 160px，td overflow:hidden 会把菜单裁到只剩本格内的一窄条
+   （用户实测：拖过列宽后点 [...] 无反应——菜单其实 display:block 只是几乎
+   全被裁掉）。操作格内容只有按钮，无跨列溢出风险，豁免不影响 6.456 目的 */
+.table.colw-fixed td.row-__action__ {
+  overflow: visible;
 }
 .table.colw-fixed td .the-field {
   display: block; /* 原 inline-flex：ellipsis 只对块级生效 */

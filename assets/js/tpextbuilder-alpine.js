@@ -51,11 +51,14 @@
             return ICON_LOADED;
         }
 
-        Alpine.data('iconPicker', function (id, current) {
+        Alpine.data('iconPicker', function (id, current, ro) {
             return {
                 open: false,
                 q: '',
                 current: current || '',
+                // 6.476 只读态（icon.html 传第三参）：@focus 不开面板、pick 不改值，
+                // 可见框 readonly 与按钮 disabled 由模板输出
+                ro: !!ro,
                 all: [],
                 loaded: false,
                 loading: true,
@@ -114,6 +117,7 @@
                     }
                 },
                 pick(ic) {
+                    if (this.ro) return; // 6.476 只读双保险（面板正常不会打开）
                     this.current = ic;
                     var el = this.carrier();
                     if (el) { el.value = ic; el.dispatchEvent(new Event('change', { bubbles: true })); }

@@ -533,6 +533,37 @@
     /* ============================================================
      * 5. 批量选择 + Table 全选 checkbox
      * ============================================================ */
+
+    /* 6.479 操作列 [...] 下拉辅助收合：触发器的「点击开/关」由 Actionbar.php
+     * 渲染的内联 onclick 负责（内联 important 三件套强制显示/隐藏 + 事件在
+     * 触发器上 stopImmediatePropagation 不会到本委托）；这里只兜两件事——
+     * 点菜单内按钮后收起、点击页面其他任意位置收起全部已开的。收起时须把
+     * 内联 onclick 写入的 important 三件套一并清掉，否则菜单关不上 */
+    function initActionDropdownToggle() {
+        var closeDd = function (dd) {
+            dd.classList.remove('dropdown-open');
+            var mm = dd.querySelector('.action-dropdown-menu');
+            if (mm) {
+                mm.style.removeProperty('display');
+                mm.style.removeProperty('visibility');
+                mm.style.removeProperty('opacity');
+            }
+        };
+        d.addEventListener('click', function (e) {
+            var menu = e.target.closest('.action-dropdown-menu');
+            if (menu) {
+                // 点菜单内按钮即操作完成，收起
+                var dd = menu.closest('.dropdown');
+                if (dd) closeDd(dd);
+                return;
+            }
+            if (e.target.closest('.action-dropdown-trigger')) return; // 内联已处理
+            d.querySelectorAll('.action-dropdown.dropdown-open').forEach(function (x) {
+                closeDd(x);
+            });
+        });
+    }
+
     function initBatchSelect() {
         // 全选 checkbox
         d.querySelectorAll('[data-toggle="check-all"]').forEach(function (master) {
@@ -1206,12 +1237,14 @@
 
     /** postChecked — LinkBtn 批量操作, 收集选中项 ids（逗号串）提交 */
     w.tpextbuilder.postChecked = function (inputId, url, confirmMsg) {
-        // 打批量标记并同步初始禁用态（无选中时专用类 batch-disabled：原色变浅+禁止光标）
+        // 6.475 服务端已预置 batch-action-btn batch-disabled（页面加载后不可能
+        // 有行被选中，初始必为禁用）；这里仍补标记并同步一次初始态——幂等，
+        // 兜底旧缓存页面/其他渲染路径没带预置类的情形
         var batchBtn = d.getElementById(inputId);
         if (batchBtn && !batchBtn.classList.contains('batch-action-btn')) {
             batchBtn.classList.add('batch-action-btn');
-            updateBatchBtnState();
         }
+        updateBatchBtnState();
         d.addEventListener('click', function (e) {
             var btn = e.target.closest('#' + inputId);
             if (!btn) return;
@@ -1234,11 +1267,12 @@
     /** openChecked — LinkBtn 打开选中项：对齐原库契约，layer 弹层打开 url?ids=逗号串
      *  （旧版为 layerOpen，勿用 window.open——Attachment 曾因 url='#' 弹出新标签页） */
     w.tpextbuilder.openChecked = function (inputId, url) {
+        // 6.475 同 postChecked：服务端预置禁用态，这里兜底补标记 + 同步一次
         var batchBtn = d.getElementById(inputId);
         if (batchBtn && !batchBtn.classList.contains('batch-action-btn')) {
             batchBtn.classList.add('batch-action-btn');
-            updateBatchBtnState();
         }
+        updateBatchBtnState();
         d.addEventListener('click', function (e) {
             var btn = e.target.closest('#' + inputId);
             if (!btn) return;
@@ -2077,6 +2111,7 @@
         initFormSubmit();
         // 6.429 校验提示层：修正即摘红的委托监听（validateForm 由 form.html 闸门调用）
         initInvalidClear();
+        initActionDropdownToggle();
         initBatchSelect();
         initFormCheckall();
         initVerticalTabs();

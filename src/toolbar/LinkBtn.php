@@ -103,6 +103,11 @@ EOT;
 
             if (Builder::checkUrl($this->postChecked)) {
                 $this->postCheckedScript();
+                // 6.475 服务端预置批量禁用态：页面加载后不可能有行被选中，批量
+                // 按钮初始必为禁用——此前等 JS 绑定时才打 batch-disabled，按钮会
+                // 先以可用态绘制再变灰（短暂闪烁）。勾选行时 updateBatchBtnState
+                // 自动摘除
+                $this->addClass('batch-action-btn batch-disabled');
             } else {
                 $this->addClass('hidden disabled');
             }
@@ -110,6 +115,7 @@ EOT;
 
             if (Builder::checkUrl($this->openChecked)) {
                 $this->openCheckedScript();
+                $this->addClass('batch-action-btn batch-disabled'); // 6.475 同上
             } else {
                 $this->addClass('hidden disabled');
             }

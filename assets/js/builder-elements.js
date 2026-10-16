@@ -199,6 +199,8 @@
             btn.appendChild(icon);
             var self = this;
             btn.addEventListener('click', function () {
+                // 6.476 只读时图标按钮不再聚焦/开面板（input 的 readonly 挡键盘输入）
+                if (self.__input && self.__input.readOnly) return;
                 self.__input.focus();
             });
 
@@ -214,6 +216,9 @@
             for (var k in this.cfg) {
                 opts[k] = this.cfg[k];
             }
+            // 6.476 只读（readonly attr 已由 carryFormAttrs 搬到 input，挡键盘输入）
+            // 时禁点开面板
+            if (this.__input && this.__input.readOnly) opts.clickOpens = false;
 
             this.__fp = w.flatpickr(this.__input, opts);
             slimNumInputs(this.__fp);
@@ -294,6 +299,8 @@
             btn.appendChild(icon);
             var self = this;
             btn.addEventListener('click', function () {
+                // 6.476 只读时图标按钮不再聚焦/开面板（input 的 readonly 挡键盘输入）
+                if (self.__input && self.__input.readOnly) return;
                 self.__input.focus();
             });
 
@@ -543,6 +550,12 @@
             startOpts.defaultDate = startEl.value || null;
             var endOpts = makeOpts.call(this);
             endOpts.defaultDate = endEl.value || null;
+            // 6.476 只读（载体 readonly 由 carryFormAttrs 搬运；两端可见框本就
+            // readOnly 不可手输）时禁点开面板
+            if (carrier.readOnly) {
+                startOpts.clickOpens = false;
+                endOpts.clickOpens = false;
+            }
 
             function syncMainValue() {
                 var sv = startEl.value.trim();
@@ -669,7 +682,22 @@
             this.__select = select;
 
             var cfg = this.cfg || {};
-            if (!cfg.ts) return; // select2(false) / 只读 tags：原生 select，不初始化
+            // 6.480 只读 select：保留组件外观（控件盒/箭头/多选 pills 可见），
+            // 不再退化为旧库遗留的纯文本 span；灰底不可交互与 6.477 input[readonly] 一致
+            var makeTsReadonly = function (ts) {
+                if (!ts) return;
+                if (ts.control_input) ts.control_input.disabled = true; // 键盘焦点/输入一并禁掉
+                ts.wrapper.classList.add('ts-readonly');
+            };
+            if (!cfg.ts) {
+                // 6.476 ts:false（select2(false)/只读 tags）走原生 select，但原生
+                // select 不吃 readonly（下拉/键盘仍可改选）——只读时 disabled：
+                // daisyUI .select:disabled 自带灰底且不可交互，组件类型仍可辨（6.480）
+                if (select.hasAttribute('readonly')) {
+                    select.disabled = true;
+                }
+                return; // select2(false) / 只读 tags：原生 select，不初始化
+            }
 
             if (typeof w.TomSelect === 'undefined') {
                 if (w.console) w.console.warn('[x-select] TomSelect is not loaded');
@@ -783,7 +811,12 @@
                         o.textContent = o.textContent.trim();
                     }
                 });
+                // 6.480 静态选项 select 的只读：TomSelect 不认 readonly attr（实例
+                // 仍可开下拉改选）——照常初始化后锁定为只读态（6.480 起保留组件
+                // 外观，不再替换成纯文本 span）
+                var isReadonly = select.hasAttribute('readonly');
                 var tsStatic = new w.TomSelect(select, baseSettings());
+                if (isReadonly) makeTsReadonly(tsStatic);
                 this.__ts = tsStatic;
                 reserveTableWidth(tsStatic);
                 clearPrehide();
@@ -799,7 +832,6 @@
             // 服务端 empty() 正常兜底（与 XLoadText 的 idField:'' 同款）
             var idField = ajax.id === '_' ? '' : ajax.id;
             var textField = ajax.text === '_' ? '' : ajax.text;
-            var separator = cfg.separator || '、';
             var prevId = cfg.prev_id || '';
             var withParams = cfg.withParams || [];
             var fetched = false;
@@ -994,25 +1026,28 @@
             }
 
             if (select.hasAttribute('readonly')) {
-                // readonly：fetch selected 后用纯文本 span 替换 select（原 ajax readonly 分支）
+                // readonly：仍初始化 TomSelect 保留组件外观（6.480 起不再替换纯文本），
+                // 拉到已选项后 setValue 再锁定；失败时空控件锁定、显示 placeholder。
+                // setValue 触发的 change 会经 __echoBusy 挡住下级级联误清（同回显分支）
                 fetchList(selected ? { selected: selected } : {})
                     .then(function (data) {
                         var options = mapOptions((data.data ? data.data : data) || []);
-                        var texts = options.map(function (o) { return o.text; });
-                        var span = d.createElement('span');
-                        span.style.lineHeight = '33px';
-                        span.textContent = texts.length ? texts.join(separator) : '-';
-                        if (select.parentNode) {
-                            select.parentNode.replaceChild(span, select);
-                            var parent = span.closest('.field');
-                            if (parent) parent.classList.add('field-show');
+                        var ts = createTomSelect();
+                        if (ts) {
+                            self.__echoBusy = true;
+                            ts.addOptions(options);
+                            // 6.216 setValue 的 addItems 里非数组参数被当作单个值：
+                            // 逗号串 'HTKY,STO,...' 匹配不到任何 option → 多选回显全空（单值恰好能过）
+                            ts.setValue(select.multiple
+                                ? selected.split(',').filter(function (v) { return v !== ''; })
+                                : selected);
+                            self.__echoBusy = false;
+                            makeTsReadonly(ts);
+                            reserveTableWidth(ts); // 6.462 选项此时才可知，补足列宽下限
                         }
                     })
                     .catch(function () {
-                        var span = d.createElement('span');
-                        span.style.lineHeight = '33px';
-                        span.textContent = BE.blang('builder_loading_error', '加载失败');
-                        if (select.parentNode) select.parentNode.replaceChild(span, select);
+                        makeTsReadonly(createTomSelect());
                     });
             } else if (selected !== '') {
                 // 有选中值：eager fetch 让 TomSelect 能显示已选项（完整列表仍等点开再拉）。
@@ -1277,8 +1312,14 @@
                 input.dispatchEvent(new Event('change', { bubbles: true }));
             });
             input.addEventListener('focus', this.__onFocus = function () {
+                // 6.476 只读时聚焦不再弹色板（文本框 readonly 已挡键入，Pickr
+                // disable 挡色板交互与清除）
+                if (input.readOnly) return;
                 pickr.show();
             });
+            if (input.readOnly) {
+                try { pickr.disable(); } catch (err) { /* 老版本无 disable */ }
+            }
 
             this.__pickr = pickr;
         }
@@ -1399,6 +1440,13 @@
             var carrier = this.__carrier;
             var vals = (cfg.useValues && cfg.values) ? cfg.values : null;
             var pre = cfg.prefix || '', post = cfg.postfix || '';
+
+            // 6.476 只读：range 原生不吃 readonly（仍可拖），用 disabled 禁交互；
+            // 值提交走 hidden 载体（未禁）不受影响
+            if (this.hasAttribute('readonly')) {
+                from.disabled = true;
+                if (to) to.disabled = true;
+            }
 
             function label(i) { return vals ? pre + String(vals[i]) + post : pre + i + post; }
 
@@ -2209,6 +2257,21 @@
                 };
                 editor.create();
                 this.__inst = editor;
+            }
+
+            // 6.476 只读（readonly 已由 carryFormAttrs 搬到 carrier textarea，但
+            // 各编辑器的可编辑区是独立文档/实例，不感知原生 readonly）——按驱动
+            // 置只读。wangEditor v4 的 disable() 会同时关内容编辑与工具栏
+            if (carrier.readOnly && this.__inst) {
+                var roInst = this.__inst;
+                try {
+                    if (this.__driver === 'ace') roInst.setReadOnly(true);
+                    else if (this.__driver === 'ckeditor') roInst.setReadOnly(true);
+                    else if (this.__driver === 'tinymce') roInst.setMode('readonly');
+                    else if (this.__driver === 'wang') roInst.disable();
+                    else if (this.__driver === 'mde') roInst.codemirror.options.readOnly = true;
+                    else if (this.__driver === 'ueditor') roInst.setDisabled();
+                } catch (e) { /* 驱动 API 差异容错 */ }
             }
         }
 

@@ -529,3 +529,29 @@
 .ts-dropdown .option .tline-elbow-last::before {
   bottom: 50%;
 }
+
+/*
+   6.480 只读 select：保留组件外观（控件盒/箭头/多选 pills 可见，类型可辨），
+   灰底 + 不可交互，与 6.477 input[readonly] 的视觉约定一致（不再退化为纯文本）。
+   灰底打在 wrapper 上——它挂着 .input/.input-bordered，是盒子样式的宿主；
+   pointer-events:none 挡鼠标，control_input 的 disabled（builder-elements.js
+   makeTsReadonly）挡键盘焦点/输入，下拉因此开不了。
+   */
+.ts-wrapper.ts-readonly {
+  pointer-events: none;
+  background-color: oklch(var(--b2) / 1);
+}
+
+.ts-wrapper.ts-readonly .ts-control {
+  cursor: default;
+}
+
+/* 只读下清空 ×、pills 删除 × 均无意义，藏掉（pills 本体保留）。
+   第三条镜像 368 行的归一规则（特异性 (0,5,1)），否则多选 clear × 藏不掉 */
+.ts-wrapper.ts-readonly .clear-button,
+.ts-wrapper .ts-control > .clear-button,
+.ts-wrapper.multi .ts-control > div.clear-button,
+.ts-wrapper.ts-readonly .ts-control .item .remove {
+  display: none !important;
+}
+

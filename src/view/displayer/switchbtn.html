@@ -9,6 +9,7 @@
         <input type="checkbox" x-ref="switchEl" class="toggle toggle-primary"
             data-on="{$pair['on']}" data-off="{$pair['off']}" id="{$id}-box"
             {if condition="$checked" }checked{/if}
+            {if condition="$readonly"} disabled{/if}
             @change="onToggle">
     </label>
     {include file="$helptempl" /}

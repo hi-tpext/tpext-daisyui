@@ -117,8 +117,19 @@
     };
 
     /** 隐藏通知的兼容占位（lightyear.notify('msg', 'success', {offset:0}) 不会自动处理 offset） */
+    // 6.478 延迟移除的定时器：行内编辑 autopost 成功后链式触发表格刷新
+    //（autoSendData hide → .search-refresh click → formSubmit hide+show），
+    // 旧实现 hide 立即移除遮罩、show 重建——同一微任务里无闪断，但 spinner
+    // 是新元素，CSS 动画从 0deg 重新起转，视觉上「两个动画中间抖一下」
+    var loadingHideTimer = null;
     tpb.loading = function (action) {
         if (action === 'show') {
+            // 6.478 撤销未决的延迟 hide：hide→show 相邻调用（提交接刷新等）
+            // 合并为一次连续动画，遮罩与 spinner 元素原样存活、旋转不跳变
+            if (loadingHideTimer) {
+                clearTimeout(loadingHideTimer);
+                loadingHideTimer = null;
+            }
             // 6.469 boot-loader（content.html 启动遮罩）存续期间不再叠加第二个
             // loading 遮罩：延迟表格页的 boot-loader 要等数据换入才 reveal，
             // 而 formSubmit 在此期间调用本方法会再建一个全屏遮罩，两个中心
@@ -167,8 +178,14 @@
                 }
             }
         } else if (action === 'hide') {
-            var mask = document.getElementById('tpb-loading-mask');
-            if (mask && mask.parentNode) mask.parentNode.removeChild(mask);
+            // 6.478 延迟移除而非立即移除：紧跟的 show 会取消本次移除（动画连续）；
+            // 真正的收尾 hide 定时器到点后照常移除，60ms 延迟肉眼不可感知
+            if (loadingHideTimer) return;
+            loadingHideTimer = setTimeout(function () {
+                loadingHideTimer = null;
+                var mask = document.getElementById('tpb-loading-mask');
+                if (mask && mask.parentNode) mask.parentNode.removeChild(mask);
+            }, 60);
         }
     };
 

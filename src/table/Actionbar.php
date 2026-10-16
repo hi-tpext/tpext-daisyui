@@ -72,9 +72,38 @@ class Actionbar extends Toolbar
 
         $label = htmlspecialchars($this->dropdownLabel, ENT_QUOTES, 'UTF-8');
 
+        // 6.479 触发器内联 onclick 开合菜单：不依赖任何外部 JS 文件加载
+        //（用户真实浏览器出现过「点击无反应且元素上无任何事件」而无头环境
+        // 全场景无法复现——内联属性是最后一道保险，元素面板可直接看到。
+        // 真正根因是拖列宽后 colw-fixed 的 td overflow:hidden 裁剪菜单，
+        // 已在 builder-core-layout.css 对操作列豁免；内联开合保留作保险）。
+        // 开关是 .dropdown-open 类：显示规则 .dropdown.dropdown-open >
+        // .dropdown-content{display:block!important} 在 builder-core-layout.css，
+        // 关闭规则 display:none!important 在无类时生效——内联 display 会被
+        // !important 压死，必须走类。**同时内联 important 三件套直接强制
+        // 显示/隐藏**（内联 important 优先级高于任何样式表 important，用户
+        // 浏览器 CSS 疑似不全时也能开合）。stopImmediatePropagation 阻断
+        // 冒泡，避免 tpextbuilder.js 的 document 委托二次翻转
+        $onclick = "try{"
+            . "var dd=this.parentNode,m=dd.querySelector('.action-dropdown-menu'),"
+            . "o=dd.classList.contains('dropdown-open');"
+            . "document.querySelectorAll('.action-dropdown.dropdown-open').forEach(function(x){"
+            . "x.classList.remove('dropdown-open');"
+            . "var mm=x.querySelector('.action-dropdown-menu');"
+            . "if(mm){mm.style.removeProperty('display');mm.style.removeProperty('visibility');mm.style.removeProperty('opacity');}"
+            . "});"
+            . "dd.classList.toggle('dropdown-open',!o);"
+            . "if(m){"
+            . "if(!o){m.style.setProperty('display','block','important');m.style.setProperty('visibility','visible','important');m.style.setProperty('opacity','1','important');}"
+            . "else{m.style.removeProperty('display');m.style.removeProperty('visibility');m.style.removeProperty('opacity');}"
+            . "}"
+            . "if(o&&this.blur)this.blur();"
+            . "if(event&&event.stopImmediatePropagation)event.stopImmediatePropagation();"
+            . "}catch(ex){console.error('[dd-toggle] error',ex);}";
+
         return '<div class="action-row action-row-dropdown">'
             . '<div class="dropdown dropdown-hover dropdown-left action-dropdown">'
-            . '<div tabindex="0" role="button" class="btn btn-xs btn-secondary action-dropdown-trigger">' . $label . '</div>'
+            . '<div tabindex="0" role="button" class="btn btn-xs btn-secondary action-dropdown-trigger" onclick="' . htmlspecialchars($onclick, ENT_QUOTES, 'UTF-8') . '">' . $label . '</div>'
             . '<div tabindex="0" class="dropdown-content action-dropdown-menu">' . $this->rowsHtml() . '</div>'
             . '</div>'
             . '</div>';
