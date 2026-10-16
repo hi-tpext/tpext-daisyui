@@ -48,6 +48,24 @@ class MultipleFile extends Field
 
     protected $cover = '/assets/tpextdaisyui/images/cover/file.svg';
 
+    /**
+     * 6.483 只读展示时各扩展名的占位图标（mdi 类，着色规则在 builder-widgets.css
+     * 的 .upload-readonly-file 段）。未命中的扩展名走通用 mdi-file-outline
+     *
+     * @var array
+     */
+    protected static $fileIcons = [
+        'xls' => 'mdi-file-excel-outline', 'xlsx' => 'mdi-file-excel-outline', 'csv' => 'mdi-file-excel-outline',
+        'doc' => 'mdi-file-word-outline', 'docx' => 'mdi-file-word-outline', 'dot' => 'mdi-file-word-outline',
+        'ppt' => 'mdi-file-powerpoint-outline', 'pptx' => 'mdi-file-powerpoint-outline',
+        'pdf' => 'mdi-file-pdf-box',
+        'zip' => 'mdi-folder-zip-outline', 'rar' => 'mdi-folder-zip-outline', '7z' => 'mdi-folder-zip-outline',
+        'mp4' => 'mdi-file-video-outline', 'avi' => 'mdi-file-video-outline', 'mov' => 'mdi-file-video-outline',
+        'wmv' => 'mdi-file-video-outline', 'webm' => 'mdi-file-video-outline', 'flv' => 'mdi-file-video-outline',
+        'mp3' => 'mdi-file-music-outline', 'wav' => 'mdi-file-music-outline', 'flac' => 'mdi-file-music-outline', 'ogg' => 'mdi-file-music-outline',
+        'txt' => 'mdi-file-document-outline', 'md' => 'mdi-file-document-outline', 'log' => 'mdi-file-document-outline',
+    ];
+
     protected $jsOptions = [
         'resize' => false,
         'compress' => false, //前端压缩jpg图片设置，与后端压缩图片设置其中一种
@@ -352,12 +370,24 @@ class MultipleFile extends Field
         $index = 0;
 
         foreach ($this->files as $file) {
-            $ext = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+            // 6.483 带 query 的地址（xxx.jpg?i=w1080_h2340）从路径部分取扩展名/文件名，
+            // 否则 pathinfo 把 `jpg?i=w1080_h2340` 整个当扩展名，图片被误判成普通文件
+            $path = parse_url($file, PHP_URL_PATH);
+            if (!is_string($path) || $path === '') {
+                $path = (string)$file;
+            }
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
             $fileItems[] = [
                 'url' => $file,
                 'thumb' => isset($thumbs[$index]) ? $thumbs[$index] : $file,
-                'name' => basename($file),
-                'isImage' => in_array($ext, ['jpg', 'jpeg', 'gif', 'png', 'bmp', 'webp', 'ico', 'svg', 'avif']),
+                'name' => basename($path),
+                // Image/MultipleImage 明确声明 jsOptions.isImage：跳过扩展名检查按图片渲染（6.483）
+                'isImage' => !empty($this->jsOptions['isImage'])
+                    || in_array($ext, ['jpg', 'jpeg', 'gif', 'png', 'bmp', 'webp', 'ico', 'svg', 'avif']),
+                // 6.483 非图片按格式给占位图标（着色规则在 builder-widgets.css），未知格式走通用 outline
+                'icon' => isset(static::$fileIcons[$ext]) ? static::$fileIcons[$ext] : 'mdi-file-outline',
+                // 6.484 占位框内展示的扩展名标签
+                'ext' => strtoupper($ext),
             ];
             $index++;
         }

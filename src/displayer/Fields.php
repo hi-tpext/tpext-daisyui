@@ -207,7 +207,33 @@ class Fields extends Field
     {
         return [
             'fields_content' => $this->__fields_content__,
+            // 6.485c 组内含 inline(true) 的行内组件（raw/show 等，模板输出裸 span）：
+            // 给 fields-content 打标记类，表格内转块流让多个行内组件同行并排
+            //（CSS 见 builder-core-layout.css .fields-inline-flow；不依赖 CSS :has，
+            //  兼容 FF<121/ESR 等旧浏览器）。duck-typing 兼容 TColumn 包装与直挂字段
+            'inline_flow' => $this->hasInlineChild(),
         ];
+    }
+
+    /**
+     * 组内是否含 inline(true) 的行内子组件（6.485c）
+     *
+     * @return boolean
+     */
+    protected function hasInlineChild()
+    {
+        if (!method_exists($this->__fields_content__, 'getCols')) {
+            return false; // 表单侧内容区是 row 结构，行内流目前只用于表格组合列
+        }
+
+        foreach ($this->__fields_content__->getCols() as $col) {
+            $displayer = method_exists($col, 'getDisplayer') ? $col->getDisplayer() : $col;
+            if (is_object($displayer) && method_exists($displayer, 'isInline') && $displayer->isInline()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -49,6 +49,16 @@ class Show extends Field
     }
 
     /**
+     * 是否行内显示（6.485c Fields 组合器据此判定行内流布局）
+     *
+     * @return boolean
+     */
+    public function isInline()
+    {
+        return $this->inline;
+    }
+
+    /**
      * 获取渲染用值：超长截断并保存全文供展开
      *
      * @return string

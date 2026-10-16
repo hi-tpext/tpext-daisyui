@@ -1367,17 +1367,34 @@
      *  —— 事件委托到 document，幂等（boot 只跑一次）
      * ============================================================ */
     function initLeftTreeToggle() {
+        // 6.487 收起/展开树 = 切换列宽记忆模式（colwStoreKey 按 :o/:c 后缀隔离）：
+        // colwApplyMode 摘掉当前钉定态、按新模式记忆重应用（无记忆=auto 自然
+        // 铺满，正好不留白）；冻结页随后重算表头冻结与列偏移。6.486 的「切模式
+        // 沿用一套宽靠吸收列吸收」方案被用户否掉——两模式宽度本就该各自调整
+        var relayoutColw = function () {
+            Array.prototype.forEach.call(d.querySelectorAll('table'), function (table) {
+                colwApplyMode(table);
+                var wrap = table.closest('.table-freeze-head');
+                if (wrap) {
+                    applyHeadFreeze(wrap, true);
+                    relockFreezeBump(wrap);
+                }
+                applyTableFreeze(table, false);
+            });
+        };
         d.addEventListener('click', function (e) {
             var hide = e.target.closest('.hide-left');
             if (hide) {
                 e.preventDefault();
                 d.body.classList.add('left-tree-collapsed');
+                relayoutColw();
                 return;
             }
             var show = e.target.closest('.show-left');
             if (show) {
                 e.preventDefault();
                 d.body.classList.remove('left-tree-collapsed');
+                relayoutColw();
             }
         });
     }
@@ -1744,10 +1761,38 @@
         return COLW_MIN;
     }
 
-    function colwStoreKey(table) {
+    function colwBaseKey(table) {
         var holder = table.closest('[id]');
         var id = (holder && holder.id) || table.id || '';
         return 'tpext_colw:' + location.pathname + ':' + id;
+    }
+
+    function colwStoreKey(table) {
+        var key = colwBaseKey(table);
+        // 6.487 树页双模式隔离：展开/收起各存一套列宽记忆，用户在两个模式下
+        // 分别调整（收起后容器更宽，同一套宽度对两个布局毫无意义；6.486 的
+        // 「切模式沿用一套宽+吸收列吸收」方案被用户否掉）。非树页无后缀，键
+        // 与旧版完全兼容；拖拽保存/重置/重应用全走本函数，自动按当前模式读写
+        if (d.querySelector('.left-tree')) {
+            key += d.body.classList.contains('left-tree-collapsed') ? ':c' : ':o';
+        }
+        return key;
+    }
+
+    /** 6.487 一次性迁移：树页旧版无后缀键并入展开态键（升级用户已有记忆不丢），
+     * 随后摘除旧键。applyColWidths 挂载点调用，重复调用无副作用 */
+    function colwMigrateLegacy(table) {
+        if (!d.querySelector('.left-tree')) return;
+        try {
+            var base = colwBaseKey(table);
+            var legacy = localStorage.getItem(base);
+            if (legacy) {
+                if (!localStorage.getItem(base + ':o') && !localStorage.getItem(base + ':c')) {
+                    localStorage.setItem(base + ':o', legacy);
+                }
+                localStorage.removeItem(base);
+            }
+        } catch (e) { /* 隐私模式等写失败静默 */ }
     }
 
     function colwRead(table) {
@@ -1851,6 +1896,7 @@
     function applyColWidths(table) {
         var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
         if (!headRow) return;
+        colwMigrateLegacy(table);
         var saved = colwRead(table);
         var hit = false;
         Array.prototype.forEach.call(headRow.cells, function (th) {
@@ -1864,6 +1910,25 @@
             if (key && saved[key] > 0) th.style.width = saved[key] + 'px';
         });
         colwFill(table); // 覆写保存宽后重定表宽并吸收富余，否则等比摊派漂移/右侧留白
+    }
+
+    /** 6.487 树收起/展开切换：摘掉当前钉定态回 auto，再按新模式记忆重应用
+     * （applyColWidths：有记忆钉定+吸收；无记忆保持 auto 自然铺满=该模式初始
+     * 态）。两模式宽度互不干扰，用户分别调整。冻结页由调用方随后重算偏移 */
+    function colwApplyMode(table) {
+        var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
+        if (!headRow) return;
+        if (table.__colwFixed__) {
+            table.style.tableLayout = '';
+            table.style.width = '';
+            table.style.maxWidth = '';
+            table.__colwFixed__ = false;
+            table.classList.remove('colw-fixed');
+            Array.prototype.forEach.call(headRow.cells, function (c) {
+                c.style.width = '';
+            });
+        }
+        applyColWidths(table);
     }
 
     /** 恢复某列默认宽；全表记忆清空后退回 auto 布局 */

@@ -640,6 +640,74 @@ input.ignore[type="hidden"] {
   flex: none;
 }
 
+/*
+   6.484 非图片文件占位框：复用 .upload-readonly-item 的盒（宽高由模板按
+   thumbnailWidth/Height 内联控制），改为纵向 flex 居中容纳大图标 + 扩展名标签
+   */
+.upload-readonly-item-file {
+  display: inline-flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  line-height: normal !important;
+  text-align: center; /* 6.484b 扩展名标签水平居中（flex 交叉轴居中之外的双保险） */
+}
+
+.upload-readonly-item-file .mdi {
+  font-size: 2.25rem !important;
+}
+
+.upload-readonly-item-file .upload-readonly-file-ext {
+  max-width: 88%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  color: oklch(var(--bc) / 0.5);
+}
+
+.upload-readonly-item-file:hover {
+  background: oklch(var(--p) / 0.08) !important;
+}
+
+/*
+   6.483 分格式占位图标着色（图标名来自 MultipleFile::$fileIcons）：
+   daisyUI 的 text-success/warning/info 工具类未被 Tailwind JIT 生成，
+   颜色直接按图标类给语义变量。默认的 mdi-file-outline 不在此列，
+   跟随容器本身的主题色
+   */
+.upload-readonly-file .mdi-file-excel-outline,
+.upload-readonly-item-file .mdi-file-excel-outline {
+  color: oklch(var(--su) / 0.8);
+}
+.upload-readonly-file .mdi-file-word-outline,
+.upload-readonly-item-file .mdi-file-word-outline {
+  color: oklch(var(--in) / 0.8);
+}
+.upload-readonly-file .mdi-file-powerpoint-outline,
+.upload-readonly-item-file .mdi-file-powerpoint-outline {
+  color: oklch(var(--wa) / 0.9);
+}
+.upload-readonly-file .mdi-file-pdf-box,
+.upload-readonly-item-file .mdi-file-pdf-box {
+  color: oklch(var(--er) / 0.75);
+}
+.upload-readonly-file .mdi-folder-zip-outline,
+.upload-readonly-item-file .mdi-folder-zip-outline {
+  color: oklch(var(--wa) / 0.9);
+}
+.upload-readonly-file .mdi-file-video-outline,
+.upload-readonly-file .mdi-file-music-outline,
+.upload-readonly-item-file .mdi-file-video-outline,
+.upload-readonly-item-file .mdi-file-music-outline {
+  color: oklch(var(--in) / 0.8);
+}
+.upload-readonly-file .mdi-file-document-outline,
+.upload-readonly-item-file .mdi-file-document-outline {
+  color: oklch(var(--bc) / 0.5);
+}
+
 .upload-readonly-file span {
   overflow: hidden;
   text-overflow: ellipsis;

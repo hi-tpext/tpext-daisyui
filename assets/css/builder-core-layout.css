@@ -2420,6 +2420,47 @@ td.row-__action__ {
   vertical-align: middle;
 }
 
+/*
+   6.485c raw/show 的 inline(true) 是行内组件（模板输出裸 the-field span）：
+   多个 inline 在 fields 组合列里应同行并排（用户契约），但上面 6.408 的
+   「无 col-span 子项占满整行」兜底把每个 span 各自顶成一行。
+   6.485b 首版用 @supports :has 由 CSS 探测行内子项，用户浏览器实测
+   不支持（FF ESR），改由 PHP 侧 Fields::hasInlineChild() 探测后给
+   fields-content 打 fields-inline-flow 标记类（fields.html 服务端输出），
+   不依赖任何 CSS 选择器能力，全浏览器一致。
+   容器转块流：行内 span 自然并排（无人为间距，6.485f）；
+   表单区（.table 外）不适用，保持 12 列栅格布局（hasInlineChild 对
+   表单侧 row 结构返回 false）
+   */
+.table td .fields-content.fields-inline-flow {
+  display: block !important; /* 压过 .fields-content 的 display:grid !important */
+}
+
+.table td .fields-content.fields-inline-flow > .the-field {
+  /* 6.485c：colw 钉定模式（用户拖过列宽，记忆常驻）会用
+     .table.colw-fixed td .the-field{display:block}（6.456 省略号）把行内
+     span 转块——inline 契约要求组合列内的行内组件保持行内流。
+     (0,4,2) 压过钉定规则的 (0,3,1)，只限本容器直子项，其他列照常省略号；
+     组合列拖窄时行内 span 像文本一样折行（td overflow:hidden 兜底防跨列）。
+     6.485f：不加 margin——raw 是用户 HTML 原样输出，人为间距破坏拼贴语义
+     （用户：两个 raw 组合时文字之间有间隙）；组件间的分隔交给 fieldscontent
+     模板 volist 行间的一个自然空白（与旧库一致），再多的间距用户在自己
+     HTML 里自行控制 */
+  display: inline-flex;
+}
+
+/*
+   6.485 raw 组件在表格单元格内嵌的 HTML 图片（<img> 片段）不居中：
+   Tailwind preflight 把 img 统一 display:block——text-align:center 对块级图
+   失效；且 .the-field 是 inline-flex（colw 下 block），img 作为其 flex 子项/
+   子块同样不吃 text-align，贴 flex-start/左侧。auto 边距两种容器形态都居中；
+   上传缩略图（upload-readonly-item img）display:block !important + 满宽，
+   auto 边距为 0 不受影响；树形/星级等 .the-field 内无 img
+   */
+.table td .the-field img {
+  margin-inline: auto;
+}
+
 .table td .the-field > .tline {
   align-self: stretch;
   height: auto;

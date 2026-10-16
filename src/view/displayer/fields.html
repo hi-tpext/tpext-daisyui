@@ -1,6 +1,6 @@
 {include file="$labeltempl" /}
 <div class="{$size[1]} fields-div">
-    <div class="{$class} fields-content" {$attr|raw}>
+    <div class="{$class} fields-content{$inline_flow ? ' fields-inline-flow' : ''}" {$attr|raw}>
         {:$fields_content->render()}
     </div>
     {include file="$helptempl" /}

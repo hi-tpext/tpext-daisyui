@@ -20,8 +20,12 @@
             <span class="upload-readonly-view"><i class="mdi mdi-eye"></i></span>
         </a>
         {else/}
-        <a href="{$item['url']}" target="_blank" class="upload-readonly-file" title="{$item['name']}">
-            <i class="mdi mdi-file-outline"></i><span>{$item['name']}</span>
+        {/* 6.484 非图片：与图片缩略同尺寸的占位框（宽高 = thumbnailWidth/Height），
+            内含分格式图标 + 扩展名标签，完整文件名走 title 提示 */}
+        <a href="{$item['url']}" target="_blank" class="upload-readonly-item upload-readonly-item-file"
+            title="{$item['name']}" style="width:{$thumbWidth}px;height:{$thumbHeight}px">
+            <i class="mdi {$item['icon']}"></i>
+            <span class="upload-readonly-file-ext">{$item['ext']}</span>
         </a>
         {/if}
         {/volist}
