@@ -2048,6 +2048,62 @@ table.table .toggle {
   overscroll-behavior: contain;
 }
 
+/*
+   6.489g items 子表容器与主表 .table-wrap 同款滚动模型：容器横向滚动。
+   此前 .table-wrapper 无 overflow，列宽是「零和分账」——拖宽必须有人让位，
+   为此长出一整套上限/让位/兜底/回写机制（6.489c-f）。改为主表模型后这些
+   全部不需要：拖宽超容器即出横向滚动条，记忆宽总和超容器同理。
+   末行 TomSelect 下拉被裁的顾虑由 6.461 同款适配解决：下拉挂 body
+   （builder-elements.js 选择器同步纳入 .table-wrapper）+ 滚动即收起
+   */
+.form-wrapper .table-wrapper {
+  overflow-x: auto;
+  overscroll-behavior: contain;
+}
+
+/*
+   6.489g 末列拖拽手柄整体收进 th 内：手柄默认右缘悬出 3px（上 .col-resizer
+   right:-3px），在横向滚动容器里 ① 被裁掉够不着——只读 items 没有操作列，
+   末个数据列就是表右缘列，手柄悬在容器外拖不了（用户报告）；② 3px 悬出本身
+   够成幻影滚动空间——滚动条常驻但没内容可滚（用户：items 区域总会有滚动条
+   但其实没多少滚动空间）。非末列不受影响：悬出部分落在表内、盖在邻列上。
+   主表末列是操作列（无手柄），此规则对其无感 */
+table th:last-child .col-resizer {
+  right: 0;
+}
+
+/*
+   6.489g items 操作列吸附右侧（与主表操作列同款交互）：横向滚动时操作列
+   常驻可视区。不透明底色配方同冻结列（b1 底、hover 叠 p/0.15 渐变——
+   sticky 格不能透明，否则滚动内容从底下穿过会透视），表头 z 3、单元格 z 2，
+   左缘一条 b2 发丝影与滚动的数据列分隔。td 用专属类（th 早有 items-action-col；
+   td 原是裸 text-center，canAdd&&!canDelete 的组合里末个数据列会被误吸附）
+   */
+.form-wrapper table.form-items th.items-action-col,
+.form-wrapper table.form-items td.items-action-col {
+  position: sticky;
+  right: 0;
+  box-shadow: -1px 0 0 0 oklch(var(--b2));
+}
+.form-wrapper table.form-items th.items-action-col {
+  z-index: 3;
+  /* 6.489j 底色 b1 而非主表冻结表头的 b2：items 表头行其他 th 是透明（渲染出
+     白底），sticky 格必须不透明底色，取底下实际surface b1 与邻列同色（亮暗
+     主题各自对齐）。此前照搬主表 b2，操作列表头比邻列深一档（用户截图） */
+  background-color: var(--fallback-b1, oklch(var(--b1)));
+  /* 6.489i 固定宽：自动布局的 width:100% 按比例摊派富余空间，一枚图标按钮
+     的操作列常被摊到 200px+（虚胖值还会被钉定逻辑冻结）。与 JS 钉定常量
+     COLW_ACTION_W 同值 */
+  width: 56px;
+}
+.form-wrapper table.form-items td.items-action-col {
+  z-index: 2;
+  background-color: var(--fallback-b1, oklch(var(--b1)));
+}
+.form-wrapper table.form-items tbody tr:hover td.items-action-col {
+  background-image: linear-gradient(oklch(var(--p) / 0.15), oklch(var(--p) / 0.15));
+}
+
 /* 表头：文字降饱和 + 适度加粗 + 轻微字距 + 纵向留白，读起来更像现代数据表
    6.362 对比度微调：0.6 → 0.75（用户反馈表头文字偏淡） */
 .table thead th {
@@ -2366,6 +2422,10 @@ html[data-theme="dark"] iframe.layui-layer-load {
    */
 td.row-__action__ {
   position: relative;
+  /* 6.488 曾试 translateZ(0) 合成层方案：层只免逐帧重栅格化，免不了合成时
+     的亚像素取整（scrollLeft 分数化时按钮仍 ±1px 晃），用户实测无效已弃。
+     最终方案见 tpextbuilder.js colwQuantizeIfOverflow——溢出表整数化列宽，
+     边界落整才是治本 */
 }
 
 .action-row.action-row-dropdown .action-dropdown {

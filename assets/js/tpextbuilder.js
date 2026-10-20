@@ -1456,7 +1456,10 @@
     }
 
     /** initShowMore — Show::cut() 截断文本的「展开/收起」切换（6.225 补齐，原库丢漏）。
-     *  模板结构：span.the-field(当前显示) + span.shwo-more(省略号) + span.hidden(全文)。
+     *  模板结构（6.489l/m）：span.the-field > [span.show-text(当前显示) +
+     *  span.shwo-more(省略号) + span.hidden(全文)]——more/full 收进 the-field 内，
+     *  钉定表的块级 nowrap+ellipsis 对整行生效（文本与「...」恒同行、窄格只有
+     *  一个省略号）；more 的左右兄弟仍是 text/full，遍历逻辑不变。
      *  类名保留原库拼写 shwo-more。事件委托：表格 AJAX 刷新后重建的行仍有效 */
     function initShowMore() {
         d.addEventListener('click', function (e) {
@@ -1739,6 +1742,12 @@
     var COLW_MIN = 40;
     var COLW_MAX = 1200;
 
+    /* 6.489i items 操作列固定宽。自动布局下 width:100% 把富余空间按比例摊给
+     * 各列，操作列内容只有一枚图标按钮（~30px）却常被摊到 200px+；钉定时刻
+     * offsetWidth 会把这个虚胖值冻结进记忆，且它无 colKey 无手柄、用户再也
+     * 缩不回去——「滚动条怎么调都消不掉」的主因。按常量钉，CSS 侧同步定宽 */
+    var COLW_ACTION_W = 56;
+
     // 多选框/操作列不参与拖宽（tinyvue 同款：末列定宽）。富余宽度由最后一个
     // 可拖列吸收（见 colwFill），所以这两列也无记忆宽可清理
     var COLW_NO_RESIZE = ['__check__', '__action__'];
@@ -1829,12 +1838,37 @@
     function colwPinTable(table) {
         if (table.__colwFixed__) return;
         var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
-        Array.prototype.forEach.call(headRow.cells, function (th) {
-            if (th.offsetWidth > 0) th.style.width = th.offsetWidth + 'px';
+        // 6.489k 先量后摘：auto 布局列宽互相牵连（服务端 min-width:70% 这类约束
+        // 参与分配），若先摘某个 th 的 min/max 再量，本列与邻列的分配已经重排，
+        // 钉下的就不是用户正看到的宽——首次拖拽瞬间列宽跳变（可选值列实测快速
+        // 缩小）。全部量完再统一摘、统一写，钉定=逐像素冻结当前态
+        var widths = Array.prototype.map.call(headRow.cells, function (th) {
+            return th.offsetWidth;
+        });
+        Array.prototype.forEach.call(headRow.cells, function (th, i) {
+            // 6.489d 服务端注入的 th 行内 min/max-width（TColumn getWrapper()->
+            // addStyle('min-width:..') 等）在 fixed 布局下照样钳住列宽——用户拖宽
+            // th.style.width 被它顶住毫无效果（「关掉重开就调不大」的样式侧根因）。
+            // 钉定 = colw 接管列宽，二者摘除；width 保留（服务端 width 只是初始值，
+            // 随即被实测宽覆写）
+            th.style.maxWidth = '';
+            th.style.minWidth = '';
+            // 6.489i 操作列（无手柄不可拖）不量测——量到的是自动布局摊派的虚胖值
+            if (th.classList.contains('items-action-col')) {
+                th.style.width = COLW_ACTION_W + 'px';
+                return;
+            }
+            if (widths[i] > 0) th.style.width = widths[i] + 'px';
         });
         table.style.tableLayout = 'fixed';
         table.style.maxWidth = 'none'; // max-width:100% 会把表钳回容器宽，超宽列被等比缩
         colwSyncTableWidth(table);
+        // 6.489i border-collapse:collapse 的外缘共享边框渲染在 border-box 之外
+        // （实测 items 表：指定宽 1778 渲染 1779）。「列宽和=容器宽」的精确贴合
+        // 被顶成 1px 幽灵横向滚动条，且与列宽调整无关——怎么拖都消不掉。
+        // 钉定时量测差值存表，colwFill 按「容器宽-差值」贴合，渲染宽恰回容器宽。
+        // cap 2px：只吃边框类亚像素误差，异常大差值不吞（可能另有真溢出源）
+        table.__colwOverhang__ = Math.min(2, Math.max(0, table.offsetWidth - (parseFloat(table.style.width) || 0)));
         table.__colwFixed__ = true;
         table.classList.add('colw-fixed'); // 6.456 钉定后启用单元格溢出裁剪（见 CSS 同名规则）
     }
@@ -1858,10 +1892,20 @@
      * Element/naive「末列吸收」同款。吸收值只写 style.width 不入存储：容器宽
      * 不变、保存宽不变，重应用时吸收值天然复现，翻页/刷新吸收列之外零漂移。
      * 吸收列自己被拖过（存了宽）就不做负向收缩——用户钉的宽神圣 */
+    /** 6.489 列宽滚动容器：主表在 .table-wrap/.table-freeze-head 里；items 子表
+     * 在 .table-wrapper 里。.table-wrapper 仅限带 data-col-key 列的表（builder
+     * 管理的表格），避免误伤其他组件的同名小表 */
+    function colwPort(table) {
+        var p = table.closest('.table-freeze-head') || table.closest('.table-wrap');
+        if (p) return p;
+        if (table.querySelector('th[data-col-key]')) return table.closest('.table-wrapper');
+        return null;
+    }
+
     function colwFill(table) {
         var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
         if (!headRow) return;
-        var port = table.closest('.table-freeze-head') || table.closest('.table-wrap');
+        var port = colwPort(table);
         if (!port) return;
         var portW = port.clientWidth;
         if (!portW) return;
@@ -1872,13 +1916,18 @@
             sum += parseFloat(th.style.width) || 0;
         });
         if (!filler) return;
-        var slack = portW - sum;
+        // 6.489i 扣除 collapse 外缘边框渲染溢出（见 colwPinTable 量测处）：贴合
+        // 目标 = 容器宽 - 溢出，渲染回容器宽整。真溢出（slack<0）不受影响
+        var slack = portW - sum - (table.__colwOverhang__ || 0);
         if (slack > 0) {
             filler.style.width = ((parseFloat(filler.style.width) || 0) + slack) + 'px';
         } else if (slack < 0) {
             var saved = colwRead(table);
             var key = filler.dataset.colKey;
-            if (!(key && saved[key] > 0)) {
+            // 6.489g 拖的正是吸收列自己时不能自吞：拖宽吸收列超出容器的部分
+            // 本该走滚动（滚动模型下任何列都可溢出），负向收缩会把它原样收回
+            // ——只读 items 末列（=吸收列）拖不大（304→305）的根因
+            if (filler !== table.__colwDragging__ && !(key && saved[key] > 0)) {
                 var shrunk = Math.max(colwColMinW(table, filler), (parseFloat(filler.style.width) || 0) + slack);
                 if (shrunk !== parseFloat(filler.style.width)) {
                     filler.style.width = shrunk + 'px';
@@ -1892,6 +1941,24 @@
         table.style.width = sum + 'px';
     }
 
+    /** 6.488 无记忆宽但表格横向溢出时整数化列宽：auto 布局列边界是分数像素
+     * （实测表宽 1671.515625px、操作格在行内 1482.42px），拖横向滚动条时
+     * 逐帧亚像素取整让操作列按钮 ±1px 晃（用户实测：拖宽任意一列可消除——
+     * 拖拽触发 colwPinTable 全列整数化；translateZ(0) 合成层方案实测无效）。
+     * colwPinTable 钉定但**不写存储**：纯显示层量化，AJAX 刷新回 auto 后按需
+     * 再量化；用户一旦真拖拽照常入记忆。无溢出（无滚动条）不动，保持 auto 语义。
+     * **不调 colwFill**：无记忆态下吸收列的负向收缩会把末个可拖列挤成窄条
+     * （实测 times 列 134→40px，表头/单元格全截断），量化只需整数化+同步表宽
+     */
+    function colwQuantizeIfOverflow(table) {
+        if (table.__colwFixed__) return;
+        var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
+        if (!headRow) return;
+        var port = colwPort(table);
+        if (!port || table.scrollWidth <= port.clientWidth) return;
+        colwPinTable(table);
+    }
+
     /** 按存储重应用列宽（initTableFreeze 挂载点调用；须在冻结偏移计算前） */
     function applyColWidths(table) {
         var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
@@ -1903,7 +1970,10 @@
             var key = th.dataset.colKey;
             if (key && saved[key] > 0) hit = true;
         });
-        if (!hit) return;
+        if (!hit) {
+            colwQuantizeIfOverflow(table); // 6.488 无记忆但横向溢出：整数化防滚动晃动
+            return;
+        }
         colwPinTable(table);
         Array.prototype.forEach.call(headRow.cells, function (th) {
             var key = th.dataset.colKey;
@@ -1972,6 +2042,7 @@
         colwResizeTimer = setTimeout(function () {
             Array.prototype.forEach.call(d.querySelectorAll('table'), function (table) {
                 if (table.__colwFixed__) colwFill(table);
+                else colwQuantizeIfOverflow(table); // 6.488 重排后仍是 auto：溢出则整数化防晃
             });
         }, 150);
     });
@@ -1996,6 +2067,7 @@
                 e.preventDefault();
                 e.stopPropagation();
                 colwPinTable(table);
+                table.__colwDragging__ = th;
                 var startX = e.clientX;
                 var startW = th.offsetWidth;
                 var move = function (ev) {
@@ -2010,6 +2082,7 @@
                     document.removeEventListener('mousemove', move, true);
                     document.removeEventListener('mouseup', up, true);
                     d.documentElement.classList.remove('colw-resizing');
+                    table.__colwDragging__ = null;
                     var saved = colwRead(table);
                     saved[th.dataset.colKey] = th.offsetWidth;
                     colwWrite(table, saved);
@@ -2040,8 +2113,50 @@
 
             // 6.452 列宽记忆重应用（必须先于冻结偏移测量：先钉宽再算 left/right）
             // + 拖拽手柄挂载（幂等）。force=true 自愈路径跳过重应用（存值不变，省回流）
-            if (!force) applyColWidths(table);
+            // 6.489b 隐藏容器（页签/折叠面板）里的表此刻不可量宽：colwPinTable
+            // 对零宽 th 不写宽（上侧 1833 行守卫）→ 表宽被钉成「仅记忆列之和」，
+            // 其余列在 fixed 布局下挤成窄条、表头互相叠字，colwFill 又因容器宽 0
+            // 提前返回救不回来，切到该页签即布局塌缩（shopgoods 编辑页库存价格
+            // 页签用户实测）。挂起 colw，首次可见（IntersectionObserver 相交）再重应用
+            if (!force) {
+                if (table.offsetWidth > 0) {
+                    applyColWidths(table);
+                } else if (!table.__colwDeferred__) {
+                    table.__colwDeferred__ = true;
+                    var io = new IntersectionObserver(function (entries) {
+                        for (var i = 0; i < entries.length; i++) {
+                            if (entries[i].isIntersecting) {
+                                io.disconnect();
+                                table.__colwDeferred__ = false;
+                                // 下一帧再量：页签切换的显示类生效同帧几何未必就绪
+                                requestAnimationFrame(function () {
+                                    applyColWidths(table);
+                                    var headRow0 = table.tHead ? table.tHead.rows[0] : table.rows[0];
+                                    var hasMark0 = headRow0 && Array.prototype.some.call(headRow0.cells, function (cell) {
+                                        return cell.classList.contains('freeze-col-left') || cell.classList.contains('freeze-col-right');
+                                    });
+                                    if (hasMark0) applyTableFreeze(table, true); // 首次可见=首次初始化，允许撑列
+                                });
+                                break;
+                            }
+                        }
+                    });
+                    io.observe(table);
+                }
+            }
             mountColResize(table);
+
+            // 6.488 滚动死区钳制：表头行 scrollWidth 比表格实际宽虚高数 px
+            // （实测 1572 vs 1566，整数钉定下仍在），滚到最右会滚出表格右缘一段
+            // 空白（用户截图：邻列文字从空缺处露出）。钳回表格真实右缘 offsetWidth
+            var clampPort = colwPort(table);
+            if (clampPort && !clampPort.__colwClampBound__) {
+                clampPort.__colwClampBound__ = true;
+                clampPort.addEventListener('scroll', function () {
+                    var max = table.offsetWidth - clampPort.clientWidth;
+                    if (max > 0 && clampPort.scrollLeft > max) clampPort.scrollLeft = max;
+                });
+            }
 
             var hasMark = Array.prototype.some.call(headRow.cells, function (cell) {
                 return cell.classList.contains('freeze-col-left') || cell.classList.contains('freeze-col-right');

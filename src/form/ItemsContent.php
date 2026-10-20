@@ -384,10 +384,12 @@ class ItemsContent extends FWrapper implements ReleaseAble
             }
 
             // items 表格是 table-layout:auto（与主数据表一致），td 的 width 虽是首选宽度，
-            // 但列宽由整列所有行共同决定，th 上的 width/min-width 更直接，故同步一份到 th
+            // 但列宽由整列所有行共同决定，th 上的 width/min-width 更直接，故同步一份到 th。
+            // colKey 供前端 colw 列宽拖拽记忆（6.489 items 表格与主表同款体验）
             $this->headers[$key] = [
                 'label' => $headerLabel,
                 'style' => $colunm->getStyle(),
+                'colKey' => $key,
             ];
 
             $displayer->required(false);
@@ -484,6 +486,7 @@ class ItemsContent extends FWrapper implements ReleaseAble
             $this->headers[$arguments[0]] = [
                 'label' => $col->getLabel(),
                 'style' => $col->getStyle(),
+                'colKey' => $arguments[0],
             ];
             $this->cols[$arguments[0]] = $col;
 

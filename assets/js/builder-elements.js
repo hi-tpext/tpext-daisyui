@@ -724,10 +724,12 @@
                 // 6.461 表格内 select：下拉挂到 body。默认挂在 .ts-wrapper（td 内部，
                 // absolute 定位）——底部行的下拉超出 .table-wrap 滚动容器会给滚动
                 // 高度添一笔，撑出竖向滚动条（用户：最后一列的下拉撑开表格高度）。
-                // 表单/表单 items 容器无 overflow，保持默认不受影响。
+                // 6.489g items 子表容器 .table-wrapper 也改为滚动容器（与主表同款
+                // 模型，见 builder-core-layout.css），一并纳入，末行下拉不被裁。
+                // 表单非表格区容器无 overflow，保持默认不受影响。
                 // 注意 6.460 暂存构建期宿主在 body 下的暂存区里、不在 .table-wrap，
                 // 靠 stagedSwapTbody 打的 data-builder-staged 标记一并命中
-                if (self.closest('.table-wrap, [data-builder-staged]')) {
+                if (self.closest('.table-wrap, .table-wrapper, [data-builder-staged]')) {
                     s.dropdownParent = document.body;
                     // 挂 body 后 vendor 不做 JS 定位（top:100% 相对 body 解析到
                     // 视口外、width:100% 解析到视口宽，实测 1900px）——展开时自己
@@ -2390,7 +2392,7 @@
      */
     d.addEventListener('scroll', function (e) {
         var t = e.target;
-        if (!t || t.nodeType !== 1 || !t.classList || !t.classList.contains('table-wrap')) return;
+        if (!t || t.nodeType !== 1 || !t.classList || (!t.classList.contains('table-wrap') && !t.classList.contains('table-wrapper'))) return;
         Array.prototype.forEach.call(t.querySelectorAll('x-select'), function (host) {
             var ts = host.__ts;
             if (ts && ts.isOpen) {

@@ -1,11 +1,7 @@
-{if condition="$inline"}<span class="the-field {$class}" {$attr|raw}>{$value}</span>{if condition="$subed" }<span class="shwo-more">{$more}</span><span class="hidden">{$full}</span>{/if}{else/}
+{if condition="$inline"}<span class="the-field {$class}{if condition="$subed" } has-more{/if}" {$attr|raw}><span class="show-text">{$value}</span>{if condition="$subed" }<span class="shwo-more">{$more}</span><span class="hidden">{$full}</span>{/if}</span>{else/}
 {include file="$labeltempl" /}
 <div class="{$size[1]}">
-    <span class="the-field {$class}" {$attr|raw}>{$value}</span>
-    {if condition="$subed" }
-    <span class="shwo-more">{$more}</span>
-    <span class="hidden">{$full}</span>
-    {/if}
+    <span class="the-field {$class}{if condition="$subed" } has-more{/if}" {$attr|raw}><span class="show-text">{$value}</span>{if condition="$subed" }<span class="shwo-more">{$more}</span><span class="hidden">{$full}</span>{/if}</span>
     {include file="$helptempl" /}
 </div>
 {/if}

@@ -219,7 +219,7 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      */
     public function action($val)
     {
-        $this->action = (string)$val;
+        $this->action = (string) $val;
         return $this;
     }
 
@@ -661,13 +661,13 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      * 创建左侧字段区域（fields分组），可传入回调立即填充字段
      *
      * @param integer $colSize col大小
-     * @param Closure|null $fieldsCall
+     * @param \Closure|null $fieldsCall
      * @return Fields
      */
     public function left($colSize = 6, $fieldsCall = null)
     {
         $this->fieldsEnd(); //清理，避免被包含到其他fields中。因为fields可以包含fields的
-        $displayer =  $this->fields('left' . mt_rand(10, 99), '', $colSize)->size(0, 12)->showLabel(false);
+        $displayer = $this->fields('left' . mt_rand(10, 99), '', $colSize)->size(0, 12)->showLabel(false);
 
         if ($fieldsCall) {
             if (!($fieldsCall instanceof \Closure)) {
@@ -686,13 +686,13 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      * 创建中间字段区域（fields分组），可传入回调立即填充字段
      *
      * @param integer $colSize col大小
-     * @param Closure|null $fieldsCall
+     * @param \Closure|null $fieldsCall
      * @return Fields
      */
     public function middle($colSize = 6, $fieldsCall = null)
     {
         $this->fieldsEnd(); //同上
-        $displayer =  $this->fields('middle' . mt_rand(10, 99), '', $colSize)->size(0, 12)->showLabel(false);
+        $displayer = $this->fields('middle' . mt_rand(10, 99), '', $colSize)->size(0, 12)->showLabel(false);
 
         if ($fieldsCall) {
             if (!($fieldsCall instanceof \Closure)) {
@@ -709,13 +709,13 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      * 创建右侧字段区域（fields分组），可传入回调立即填充字段
      *
      * @param integer $colSize col大小
-     * @param Closure|null $fieldsCall
+     * @param \Closure|null $fieldsCall
      * @return Fields
      */
     public function right($colSize = 6, $fieldsCall = null)
     {
         $this->fieldsEnd(); //同上
-        $displayer =  $this->fields('right' . mt_rand(10, 99), '', $colSize)->size(0, 12)->showLabel(false);
+        $displayer = $this->fields('right' . mt_rand(10, 99), '', $colSize)->size(0, 12)->showLabel(false);
 
         if ($fieldsCall) {
             if (!($fieldsCall instanceof \Closure)) {
@@ -733,14 +733,14 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      *
      * @param string $label
      * @param array|Collection|\IteratorAggregate $dataList
-     * @param Closure|null $itemsCall
+     * @param \Closure|null $itemsCall
      * @param array $size 大小 [12, 12] 为上下结构，[2, 10]为左右结构
      * @return Items
      */
     public function logs($label, $dataList, $itemsCall = null, $size = [12, 12])
     {
         $this->itemsEnd();
-        $displayer =  $this->items('logs' . mt_rand(10, 99), $label, 12)->size($size[0], $size[1])->readonly();
+        $displayer = $this->items('logs' . md5($label), $label, 12)->size($size[0], $size[1])->readonly();
 
         if (is_array($dataList)) {
             $displayer->fill($dataList);

@@ -4,7 +4,7 @@
     <thead>
       <tr>
         {volist name="headers" id="header"}
-        <th class="text-center"{if condition="$header['style']"} style="{$header['style']|raw}"{/if}>
+        <th data-col-key="{$header.colKey}" class="text-center"{if condition="$header['style']"} style="{$header['style']|raw}"{/if}>
           {$header['label']|raw}
         </th>
         {/volist}
@@ -23,7 +23,7 @@
         </td>
         {/foreach}
         {if condition="$canDelete"}
-        <td class="text-center">
+        <td class="text-center items-action-col">
           <input type="hidden" name="{$name}[{$ids[$key]}][__del__]" value="0" />
           {if condition="$col.__can_delete__"}
           <button type="button" class="btn btn-xs btn-error action-delete" id="bar-delete-{$key}" data-id="{$ids[$key]}" title="{:__blang('builder_remove')}">
@@ -41,7 +41,7 @@
         {volist name="cols" id="col"}
         <td class="p-0"><input type="text" class="input input-bordered input-sm w-full hidden" /></td>
         {/volist}
-        <td class="text-center">
+        <td class="text-center items-action-col">
           <button type="button" id="items-{$name}-add" class="btn btn-xs btn-success" title="{:__blang('builder_new_one_item')}"><i class="mdi mdi-plus-circle-outline"></i></button>
         </td>
       </tr>
