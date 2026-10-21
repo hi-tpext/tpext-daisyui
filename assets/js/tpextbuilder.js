@@ -17,6 +17,12 @@
 (function (w, d) {
     'use strict';
 
+    // 6.489p 运行版本标记（用户建议）：aver 时间戳只能保证 URL 拉新，fetch 检查
+    // 拉到的也是磁盘上现文件，无法证明页面里跑的实例是新版。boot 时输出到控制台，
+    // 一眼确认当前页面执行的 JS 是哪一版——改本文件后必须递增
+    var VERSION = '1.0.11';
+    w.__tpextBuilderVersion = VERSION;
+
     /* ============================================================
      * 1. 全局语言包占位（PHP 通过 View::share 注入后会覆盖此默认值）
      * ============================================================ */
@@ -1299,7 +1305,8 @@
     /** layerOpen — 打开 iframe 弹窗（actionbtn/linkbtn 模板的 layer 分支经 onclick 调用）
      *  基于 layer v3.1.1（layer/layer.js，支持拖拽/最小化/最大化/关闭按钮）；
      *  url 依次取显式参数、元素 data-url / url / href；标题取 data-title / title / 按钮文字；
-     *  data-layer-size="宽,高" 指定尺寸，高为 auto/0/空 时按 iframe 内容自适应（内容+标题 ~ 窗口高-顶部偏移） */
+     *  data-layer-size="宽,高" 指定尺寸（size 参数也可直接传 '宽,高' 逗号串或数组），
+     *  高为 auto/0/空 时按 iframe 内容自适应（内容+标题 ~ 窗口高-顶部偏移） */
     w.layerOpen = function (obj, size, url) {
         if (!w.layer) { console.error('[tpextbuilder] layer 未加载，无法打开弹窗'); return 0; }
         obj = obj || {};
@@ -1309,8 +1316,12 @@
         var text = attr('data-title') || attr('title') || (obj.textContent || '').trim() || ' ';
         var ls = attr('data-layer-size');
         if (ls) { size = ls.split(','); }
-        // 弹窗顶部固定偏移 7px，可占用的最大总高相应扣减（底部不留空隙）
-        var winheight = w.innerHeight - 7;
+        // 6.489n 兼容 '1000px,auto' 逗号串直接传参（原先整串当宽度，layui 解析失败回退 300px）
+        if (typeof size === 'string') { size = size.split(','); }
+        // 弹窗顶部固定偏移 7px，可占用的最大总高相应扣减；底部同样留 12px 间距
+        //（6.489q 用户：内容很多被钳到上限时不能贴死窗口底，与表格弹窗最大高
+        // innerHeight-7-12 保持一致）
+        var winheight = w.innerHeight - 7 - 12;
         var area = size || ['90%', '400px'];
         if (typeof area === 'string') { area = [area, '']; }
         var autoH = !size || !area[1] || area[1] === 'auto' || area[1] === '0';
@@ -1318,7 +1329,13 @@
         // 原库行为：弹窗顶部贴近页顶（7px），高度 100% 时贴顶为 0；layer 默认垂直居中，需显式指定
         var offset = (size && size.length > 1 && size[1] == '100%') ? '0' : '7px';
 
-        return w.layer.open({
+        // 6.489n 复测循环句柄提到 open 外：maxmin 的 full/restore 回调也要能停掉它
+        var refit = null;
+        // 用户最大化/还原时停掉复测：自动高度只管「打开时贴住内容」，
+        // 之后用户明确掌管尺寸，复测不能把弹窗拽回去（layui maxmin 的回调）
+        var userResize = function () { if (refit) { clearInterval(refit); refit = null; } };
+
+        var layerIdx = w.layer.open({
             type: 2,
             title: text,
             content: href,
@@ -1326,22 +1343,74 @@
             offset: offset,
             maxmin: true,
             shadeClose: false,
+            full: userResize,
+            restore: userResize,
             success: function (layero, idx) {
                 if (!autoH) return;
+                // 6.489 表格弹窗定高锁：子页是表格页就 postMessage（见 boot 末尾），
+                // 父页收到后一次性把弹窗定到最大可用高，并在弹窗节点上落标记锁死
+                // ——之后 load 事件/复测 tick 一律不再改高。标记必须挂在节点上：
+                // layui 会在 iframe load 时重调 success（新闭包、局部变量归零），
+                // 闭包内的标记挡不住。非表格页（表单/详情）不广播，走下方自适应
+                var lastH = 0;
                 var fit = function () {
+                    var node = document.getElementById('layui-layer' + idx) || (layero && layero[0]);
+                    if (!node || !node.isConnected) {
+                        // 弹窗已关：停复测循环
+                        userResize();
+                        return false;
+                    }
+                    if (node.__tpextLayerLocked) { userResize(); return true; }
+                    var iframe = node.querySelector('iframe');
+                    if (!iframe) return false;
                     try {
-                        var node = document.getElementById('layui-layer' + idx) || (layero && layero[0]);
-                        var iframe = node && node.querySelector('iframe');
-                        if (!iframe) return;
-                        // style() 设的是弹窗总高：内容高之外只补一次标题栏；iframe 视口 = 总高 - 标题，正好容纳内容
+                        // idx 以节点实测为准（layui 传入值在 shim/异步模块加载时序下
+                        // 可能失配）；style() 设的是弹窗总高：内容高之外只补一次标题栏，
+                        // iframe 视口 = 总高 - 标题，正好容纳内容
+                        var numIdx = parseInt(node.id.replace('layui-layer', ''), 10);
                         var title = node.querySelector('.layui-layer-title');
                         var titleH = title ? title.offsetHeight : 42;
-                        var h = iframe.contentDocument.body.scrollHeight + titleH + 2;
+                        var ch = iframe.contentDocument.body.scrollHeight;
+                        var h = ch + titleH + 2;
                         h = Math.max(400 + titleH, Math.min(h, winheight));
-                        if (w.layer.style) { w.layer.style(idx, { height: h + 'px' }); }
-                        else if (node) { node.style.height = h + 'px'; }
+                        // 6.489n 微差死区：小于 24px 的变化视为噪声不写入——子页冻结
+                        // 限高让内容高度跟随 iframe 视口伸缩，逐拍照写会每拍 +2px 追涨
+                        // 不收敛；真正的数据到位是整块几百 px，远超阈值
+                        if (lastH > 0 && Math.abs(h - lastH) < 24) return true;
+                        lastH = h;
+                        // 双写：layer.style 同步 iframe 显式高；node.style.height 兜底
+                        // （layui 模块异步就绪前 window.layer 是 tpb shim、无 style()）
+                        node.style.height = h + 'px';
+                        if (w.layer && w.layer.style && !isNaN(numIdx)) {
+                            try { w.layer.style(numIdx, { height: h + 'px' }); } catch (e2) { /* 层已关等场景 */ }
+                        }
                     } catch (e) { /* 跨域 iframe 内容不可读，保持默认高度 */ }
+                    return true;
                 };
+                // 6.489n 持续复测到内容稳定。**表格页不走这里**：子页 boot 即广播
+                // tpext:layerTable，父页直接定到最大可用高、循环被 userResize 停掉
+                // （见 onLayerMsg）。此循环服务其余页面（表单/详情等）：组件水合、
+                // 图片加载发生在 load 之后，一次性 fit 量到的是壳高度。前 2.5s+
+                // 快速期每 300ms 一拍（fit 内部有死区+去重，微差/不变均零副作用），
+                // 高度连续 6 拍不变视为稳定，之后降频为 1.5s/拍常驻兜底（后期变化
+                // 也兜住，fit 死区保证常驻期零写入）；弹窗关闭（节点移除）或用户
+                // 最大化/还原彻底停。
+                // 注意 refit 必须先注册：fit() 若在首个 tick 抛错，循环仍在下拍重试
+                var ticks = 0, stable = 0, settled = false;
+                var tick = function () {
+                    ticks++;
+                    var h0 = lastH;
+                    var ok = fit();
+                    if (!ok) { if (settled || ticks > 10) userResize(); return; }
+                    if (settled) return; // 常驻兜底期：只适配不计数
+                    stable = (lastH === h0) ? stable + 1 : 0;
+                    if (ticks * 300 >= 2500 && stable >= 6) {
+                        settled = true;
+                        clearInterval(refit);
+                        refit = setInterval(tick, 1500);
+                    }
+                };
+                refit = setInterval(tick, 300);
                 // 找到 layer 节点里的 iframe 后挂 load 监听（layer 内部创建 iframe，时机不定，轮询定位）
                 var tries = 0;
                 var timer = setInterval(function () {
@@ -1351,13 +1420,44 @@
                     if (iframe) {
                         clearInterval(timer);
                         iframe.addEventListener('load', fit);
-                        fit();
                     } else if (tries > 10) {
                         clearInterval(timer);
                     }
                 }, 300);
+                // 6.489 表格页的消息监听不在这里注册——已移到 layerOpen 尾部
+                // onOpenMsg（open 返回后立即挂）。曾在 success 里注册：实测子页
+                // DCL 的广播可早于 success 执行（用户日志：广播行在 success#1 前），
+                // 注册晚了消息必丢
             }
         });
+
+        // 6.489 表格弹窗消息监听：open() 一返回就注册（不等 success）。open 同步
+        // 返回 idx、弹窗 DOM 已建，而子页的 postMessage 最早也要等本同步代码跑完
+        // 后的事件循环才会派发——在此注册必能收到子页 boot 时的广播。收到后定
+        // 最大可用高（顶 7px 偏移外底部留 12px）并在弹窗节点上落锁；success 里的
+        // fit 循环见到锁自行停止。监听常驻：子页整页刷新会再广播，重贴最大高
+        //（幂等）；弹窗节点没了才自摘。非表格页（表单等）不广播，不受影响
+        var onOpenMsg = function (ev) {
+            if (!ev.data || ev.data.type !== 'tpext:layerTable') return;
+            var node = document.getElementById('layui-layer' + layerIdx);
+            if (!node || !node.isConnected) {
+                w.removeEventListener('message', onOpenMsg);
+                return;
+            }
+            var iframe = node.querySelector('iframe');
+            if (!iframe || ev.source !== iframe.contentWindow) return;
+            node.__tpextLayerLocked = true; // 锁死（挂节点：fit/tick 见锁自停）
+            var title = node.querySelector('.layui-layer-title');
+            var titleH = title ? title.offsetHeight : 42;
+            var h = Math.max(400 + titleH, w.innerHeight - 7 - 12);
+            node.style.height = h + 'px';
+            var numIdx = parseInt(node.id.replace('layui-layer', ''), 10);
+            if (w.layer && w.layer.style && !isNaN(numIdx)) {
+                try { w.layer.style(numIdx, { height: h + 'px' }); } catch (e2) { /* 层已关等场景 */ }
+            }
+        };
+        w.addEventListener('message', onOpenMsg);
+        return layerIdx;
     };
 
     /* ============================================================
@@ -2321,6 +2421,13 @@
             d.fonts.ready.then(function () {
                 initTableFreeze(null, true);
             });
+        }
+
+        // 6.489 表格页在 iframe（弹层）里时广播父页：是表格页（.table-wrap 只有
+        // 表格模板输出）就发 tpext:layerTable，父页收到直接把弹窗定到最大可用高
+        // 并锁死。启动即发、不等表格内容加载完
+        if (w.parent && w.parent !== w && d.querySelector('.table-wrap')) {
+            try { w.parent.postMessage({ type: 'tpext:layerTable' }, '*'); } catch (e) { /* 跨域等场景 */ }
         }
     }
 

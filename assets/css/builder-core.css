@@ -17,6 +17,10 @@ body {
   color: oklch(var(--bc) / 1);
 }
 
+a {
+  color: #33cabb;
+}
+
 /*
    6.339 主题切换器色板（layout.html）：色值单一来源 = tailwind.config.js
    主题定义。span 上动态挂 data-theme="t[0]"，daisyUI 的主题块是属性选择器
@@ -1904,8 +1908,14 @@ samp {
    disabled/onclick 处理，不在本块范围；hidden 载体（month/year 等）无视觉，
    一并排除。
    */
-.form-wrapper input[readonly]:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
-.form-wrapper textarea[readonly] {
+   /*
+   6.489o 去掉 .form-wrapper 作用域：表格单元格里同样有 readonly 输入件
+   （$table->text(...)->readonly()），原先只有表单页有灰底——表格里的只读
+   输入框白底 + 文本光标，看上去与可编辑无差别（用户报「表格 text readonly
+   无效仍可输入」，实为视觉无区分）。规则改全站生效，搜索区/表单/表格统一
+   */
+input[readonly]:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+textarea[readonly] {
   pointer-events: none;
   background-color: oklch(var(--b2) / 1);
 }
@@ -1918,7 +1928,7 @@ samp {
    （->disabled(true)，无 readonly）保持 daisyUI 原生淡显语义。灰底/不可
    交互 daisyUI 已处理，无需重复
    */
-.form-wrapper select[readonly]:disabled {
+select[readonly]:disabled {
   color: oklch(var(--bc) / 1);
 }
 

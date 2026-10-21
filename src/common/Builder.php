@@ -127,7 +127,11 @@ class Builder implements Renderable, ReleaseAble
 
     protected static $minify = false;
 
-    protected static $aver = '1.0.3';
+    /* 6.489n 资源版本号：JS/CSS 改动后须递增（URL 变了浏览器才会重新拉取）。
+       注意 myadmin8 的 AppService 会 aver(time()) 覆盖为 worker 启动时刻——
+       那意味着改前端资源也必须 touch 一个 app 文件触发 worker 重载，
+       否则 aver 不变、浏览器继续吃旧缓存（本条注释即 6.489n 部署踩坑记录） */
+    protected static $aver = '1.0.4';
 
     protected static $instance = null;
 

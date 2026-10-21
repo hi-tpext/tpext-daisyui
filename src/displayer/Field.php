@@ -1391,10 +1391,22 @@ EOT;
 
         $value = $this->renderValue();
 
+        // 6.489r addClass('readonly')/mapClass(..., 'readonly'|'disabled') 加的是
+        // 「类」——表格/items 按行数据动态只读/禁用全靠它。类落在包装/宿主元素
+        // 上，内部控件拿不到真属性（键盘可进、日期面板可点、select 可下拉）。
+        // 命中这两个类时补同款属性，与 ->readonly()/->disabled() 静态路径行为
+        // 完全一致：各模板的 {$attr} 都渲染在真控件上（x-* 系宿主再由
+        // carryFormAttrs 搬到内部 input），一处生效全组件覆盖
+        $classAll = ' row-' . $this->getClassName() . $this->getClass() . $mapClass;
+        $clsDisabled = $this->disabled || preg_match('/(\s|^)disabled(\s|$)/', $classAll);
+        $clsReadonly = $this->readonly || preg_match('/(\s|^)readonly(\s|$)/', $classAll);
+
         $extendAttr = '';
 
         if ($this->isInput) {
-            $extendAttr = ($this->isRequired() ? ' required="true"' : '') . ($this->disabled ? ' disabled' : '') . ($this->readonly ? ' readonly onclick="return false;"' : '');
+            $extendAttr = ($this->isRequired() ? ' required="true"' : '')
+                . ($clsDisabled ? ' disabled' : '')
+                . ($clsReadonly ? ' readonly onclick="return false;"' : '');
         }
 
         $vars = [
@@ -1408,7 +1420,7 @@ EOT;
             'extKey' => $this->extKey,
             'extNameKey' => $this->extNameKey,
             'value' => $value,
-            'class' => ' row-' . $this->getClassName() . $this->getClass() . $mapClass,
+            'class' => $classAll,
             'attr' => $this->getAttrWithStyle() . $extendAttr,
             'error' => $this->error,
             'size' => $this->adjustSize(),
