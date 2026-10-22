@@ -20,7 +20,7 @@
     // 6.489p 运行版本标记（用户建议）：aver 时间戳只能保证 URL 拉新，fetch 检查
     // 拉到的也是磁盘上现文件，无法证明页面里跑的实例是新版。boot 时输出到控制台，
     // 一眼确认当前页面执行的 JS 是哪一版——改本文件后必须递增
-    var VERSION = '1.0.11';
+    var VERSION = '1.0.12';
     w.__tpextBuilderVersion = VERSION;
 
     /* ============================================================
@@ -2063,6 +2063,19 @@
     function applyColWidths(table) {
         var headRow = table.tHead ? table.tHead.rows[0] : table.rows[0];
         if (!headRow) return;
+        // 6.489z 延迟表格 boot 时机守卫：delay 默认 true，首渲染 tbody 无数据行，
+        // formSubmit AJAX 交换后才来数据。boot 的 initTableFreeze 走到这里时 auto
+        // 布局只有表头行参与分配，量出的「自然宽」是纯表头摊派值（实测刷新恢复：
+        // id 55→192、username 81→288、data 694→175），colwPinTable 把这组错值
+        // 逐像素冻结——前两列异常大、操作列被挤出视口随滚动条跑、总宽超容器且
+        // 怎么拖都消不掉（恢复态被全列显式宽钉死，fixed 布局不再按内容重排）。
+        // 数据未到达时不钉不定宽，直接挂起：search.html 的 tbody 交换与整容器
+        // 替换两条路径都会重跑 initTableFreeze→本函数，届时按真实内容量宽钉定
+        //（与 6.489b 隐藏容器挂起同思路；空结果是常态路径，同样跳过保持 auto）
+        var body0 = table.tBodies[0];
+        if (body0 && (body0.rows.length === 0 || (body0.rows.length === 1 && body0.rows[0].cells.length === 1))) {
+            return;
+        }
         colwMigrateLegacy(table);
         var saved = colwRead(table);
         var hit = false;

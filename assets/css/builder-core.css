@@ -32,6 +32,17 @@ a {
 }
 
 /*
+   6.489w 表单 divider 行高压到 32px：daisyUI 原始 .divider 是 height:1rem +
+   上下 margin 各 1rem = 48px，在表单行里偏高。本库分割线是「行内弱分隔」，
+   margin 收到 0.5rem：8+16+8 = 32px。作用域 .field-row（表单行容器），
+   不影响别处 divider 用法
+   */
+.field-row .divider {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+/*
    6.339 主题切换器色板（layout.html）：色值单一来源 = tailwind.config.js
    主题定义。span 上动态挂 data-theme="t[0]"，daisyUI 的主题块是属性选择器
    （[data-theme=blue]{--p:…}），作用于任意宿主元素，故小色块自身即可解析

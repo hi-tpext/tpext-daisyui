@@ -919,9 +919,14 @@ td .choice-group > label {
    6.456 钉定表格的单元格溢出裁剪：auto 布局时代列随内容长，td 的
    nowrap+overflow:visible 永不跨列；钉定 fixed 后长文本会直接画过格线
    跨到邻列（用户：「文字会跨列显示」）。钉定表（.colw-fixed，colwPinTable
-   挂/全清记忆时摘）统一 td 裁剪 + 纯文字 .the-field 省略号（Element 同款）。
-   th 不裁：拖拽手柄是 th 子元素、右缘悬出 3px，overflow:hidden 会削掉手柄尖
-   （表头文字换行不受影响，不会跨列）。仅作用于钉定表，auto 表维持现状 */
+   挂/全清记忆时摘）统一 td 裁剪 + .the-field 硬截断。
+   6.489x 终版（用户裁定）：不用 text-overflow:ellipsis——省略号按「整颗
+   内联盒」取舍，列里 raw/badge 等任意 HTML 的原子内联元素（inline-flex/
+   inline-block）放不下会被整体丢弃、原位画 …、右侧留白；且省略号本身
+   占位（「省略号的地方还不如多显示两个字」）。clip 下文字与任意内联内容
+   按实际几何铺排，越界由 td+the-field 双层 overflow:hidden 收边。
+   th 不裁：拖拽手柄是 th 子元素、右缘悬出 3px，overflow:hidden 会削掉
+   手柄尖（表头文字换行不受影响，不会跨列）。仅作用于钉定表，auto 表维持现状 */
 .table.colw-fixed td {
   overflow: hidden;
 }
@@ -933,14 +938,20 @@ td .choice-group > label {
   overflow: visible;
 }
 .table.colw-fixed td .the-field {
-  display: block; /* 原 inline-flex：ellipsis 只对块级生效 */
+  display: block;
   overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .table.colw-fixed td .the-field:has(> .tline) {
   /* 树形列保留 flex 拉伸链（6.286 参考线满格依赖），裁剪交给 td 本身 */
   display: flex;
+}
+/*
+   6.489x 徽章宿主恢复胶囊：mapClass 把 badge 类挂到 .the-field 自身时，
+   上面的 display:block 会把它拉成通栏色条——恢复 daisyUI badge 的
+   inline-flex，胶囊外观保持，超宽部分由 td 裁剪（与任意内联内容同待遇） */
+.table.colw-fixed td .the-field.badge {
+  display: inline-flex;
 }
 html.colw-resizing,
 html.colw-resizing * {
