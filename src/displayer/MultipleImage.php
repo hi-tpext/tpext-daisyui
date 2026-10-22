@@ -17,6 +17,8 @@ class MultipleImage extends MultipleFile
     {
         parent::created($fieldType);
         $this->jsOptions['fileSingleSizeLimit'] = 2 * 1024 * 1024;
+
+        return $this;
     }
 
     /**

@@ -60,6 +60,44 @@
                             var fresh = doc.getElementById(that.searchFor);
                             if (!fresh) { target.outerHTML = data; return; } // 结构异常兜底：退回整替换
 
+                            // 6.489v 显示列切换：列集合变化时 thead 必须随响应重建。常驻
+                            // thead（6.453 骨架分离）的列数/列宽/手柄/冻结标记对不上新
+                            // tbody——applyTableFreeze 遇列数不一致整行跳过，全表错位。
+                            // 以表头 data-col-key 签名对比检测（仅列数挡不住「列数同、
+                            // 字段不同」的边缘情形）；命中则整容器替换 + initTableFreeze
+                            // 全量自愈：列宽重应用（按字段名记忆，隐藏列条目不命中，
+                            // 恢复显示宽度不丢）、冻结偏移重算（无状态 DOM 实测，冻结列
+                            // 被隐藏则偏移自动从下一列起算）、手柄重挂、限高 RO 重挂，
+                            // 全部幂等。普通筛选/翻页签名不变，不走此分支
+                            var headSig = function (root) {
+                                var thead = root.querySelector('.table-wrap thead');
+                                if (!thead || !thead.rows[0]) return '';
+                                return Array.prototype.map.call(thead.rows[0].cells, function (th) {
+                                    return th.getAttribute('data-col-key') || '';
+                                }).join(',');
+                            };
+                            if (headSig(fresh) !== headSig(target)) {
+                                var newRoot = document.importNode(fresh, true);
+                                target.parentNode.replaceChild(newRoot, target);
+                                // 片段脚本重执行（importNode 的 script 不自动执行，
+                                // afterSwap 同款手法；页码回写/renderFiles 等都在内）
+                                newRoot.querySelectorAll('script').forEach(function (old) {
+                                    var s = document.createElement('script');
+                                    s.textContent = old.textContent;
+                                    newRoot.appendChild(s);
+                                    s.parentNode.removeChild(s);
+                                });
+                                if (window.tpextbuilder && window.tpextbuilder.initTableFreeze) {
+                                    window.tpextbuilder.initTableFreeze();
+                                }
+                                // 行选中态随新 DOM 归零，同步批量按钮禁用态（工具栏在
+                                // 替换片段之外，afterSwap 同款）
+                                if (window.tpextbuilder && window.tpextbuilder.updateBatchBtnState) {
+                                    window.tpextbuilder.updateBatchBtnState();
+                                }
+                                return;
+                            }
+
                             // 1) tbody（列表数据本体）
                             // 6.460 不再直接换入：新行里的 x-select 等宿主带着原生
                             // 控件（select 宽度=最长 option）直接参与可见布局，组件

@@ -28,5 +28,7 @@ class Hidden extends Field
     public function created($fieldType = '')
     {
         $this->getWrapper()->addStyle('display:none;');
+
+        return $this;
     }
 }

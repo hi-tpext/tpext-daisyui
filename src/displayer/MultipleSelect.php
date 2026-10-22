@@ -41,6 +41,8 @@ class MultipleSelect extends Select
         parent::created($fieldType);
         $this->jsOptions['closeOnSelect'] = false;
         $this->jsOptions['maxItems'] = null; // 多选不限制数量（覆盖 Select 的单选默认 1）
+
+        return $this;
     }
 
     /**

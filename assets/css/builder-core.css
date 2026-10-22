@@ -22,6 +22,16 @@ a {
 }
 
 /*
+   6.489s 下拉面板/菜单的选项也是 a 标签——恢复主题文字色，不吃上面的默认
+   链接色（daisyUI .menu/.dropdown-content 选项文字应为 base-content；
+   hover/active 态的 daisyUI 规则特异性更高，不受本条影响）
+   */
+.dropdown-content a,
+.menu :where(li) > a {
+  color: oklch(var(--bc) / 1);
+}
+
+/*
    6.339 主题切换器色板（layout.html）：色值单一来源 = tailwind.config.js
    主题定义。span 上动态挂 data-theme="t[0]"，daisyUI 的主题块是属性选择器
    （[data-theme=blue]{--p:…}），作用于任意宿主元素，故小色块自身即可解析

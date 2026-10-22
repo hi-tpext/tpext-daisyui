@@ -17,6 +17,7 @@ use tpext\builder\common\Builder;
 use tpext\builder\displayer\Field;
 use tpext\builder\displayer\Items;
 use tpext\builder\displayer\Button;
+use tpext\builder\displayer\Divider;
 use tpext\builder\displayer\Fields;
 use tpext\builder\form\ItemsContent;
 use tpext\builder\inface\Renderable;
@@ -961,7 +962,9 @@ EOT;
                 $this->__when__->toggle($displayer);
             }
 
-            if ($this->defaultDisplayerSize && !($displayer instanceof Button)) {
+            // 6.489u Divider 也不吃 defaultDisplayerSize：分割线独占整行（size(0,12)
+            // 在 created 里定死），被表单默认尺寸覆写会把空 label 列挤回来
+            if ($this->defaultDisplayerSize && !($displayer instanceof Button) && !($displayer instanceof Divider)) {
                 $displayer->size($this->defaultDisplayerSize[0], $this->defaultDisplayerSize[1]);
             }
 
