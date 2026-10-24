@@ -81,16 +81,9 @@ class Button extends Field
         //   btn-xs → 不再改写 btn-sm：btn-xs 本就是 DaisyUI 原生紧凑档
         //     （工具条/搜索 24px 档），早期运行时改写会让 CSS 作用域规则
         //     必须两头兼顾，6.393 统一后各层直接发出声明档位
-        $bsToDaisy = [
-            'btn-danger'  => 'btn-error',
-            'btn-default' => 'btn-secondary',
-        ];
-        foreach ($bsToDaisy as $bs => $daisy) {
-            if (strpos($this->class, $bs) !== false) {
-                $this->class = trim(str_replace($bs, $daisy, $this->class));
-            }
-        }
-
+        // 6.489ah 曾收口到 Builder::compatBsBtnClass，用户裁定撤回：CSS 兜底
+        // （builder-core.css .btn-danger/.btn-default/.btn-dark 软色组）已覆盖
+        // 全部场景，PHP 侧不再做类名改写
         $vars = $this->commonVars();
 
         $vars = array_merge($vars, [

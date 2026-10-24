@@ -1076,16 +1076,28 @@ html.colw-resizing * {
    DaisyUI/Tailwind 给 label 加了 leading-5 (20px)，
    但 content 里的 inline span 用浏览器默认 line-height (≈21px)，
    即使 flex 居中了 div，文字本身还是因为 line-height 不同而视觉错位
-   统一 line-height 为 1.25（= 14px * 1.25 = 17.5px，合理）
+   6.489ag：1.25(17.5px) → 1rem(16px)——label 过长换行时两行 35px 超过表单
+   控件默认高 32px，16px×2=32 封顶；单行场景 label 在 min-height 盒内 flex
+   居中，视觉无变化
    */
 .field-row > label,
 .field-row > div > label,
 .field-row label.control-label {
-  line-height: 1.25 !important;
+  line-height: 1rem !important;
   padding-top: 0 !important; /* 覆盖 Tailwind lg:pt-2 等额外 padding，让 label 纯靠 flex 居中 */
   padding-bottom: 0;
   margin-top: 0 !important;
   margin-bottom: 0 !important;
+}
+
+/*
+   搜索表单 label 行高另档：字号 13px、控件行高 28px，14px×2=28 封顶
+   （特异性高于上面的 1rem 规则，同 !important 下按特异性取胜、不依赖文件序）
+   */
+.search-form .field-row > label,
+.search-form .field-row > div > label,
+.search-form .field-row label.control-label {
+  line-height: 0.875rem !important;
 }
 
 .field-row > div:nth-child(2),
@@ -1747,7 +1759,8 @@ main .card.bg-base-100 {
 .batch-action-btn.btn-cyan.batch-disabled:hover { background-color: #f2fafc; border-color: #57c7d4; }
 .batch-action-btn.btn-yellow.batch-disabled:hover { background-color: #fefaed; border-color: #fcc525; }
 .batch-action-btn.btn-brown.batch-disabled:hover { background-color: #f6f3f2; border-color: #8d6658; }
-.batch-action-btn.btn-default.batch-disabled:hover { background-color: #fcfdfe; border-color: #ebebeb; }
+/* 6.489aj default 有专属灰蓝色（#617389 ≈ 55.1% 0.046 257），disabled hover 用同色加深 */
+.batch-action-btn.btn-default.batch-disabled:hover { background-color: oklch(55.1% 0.046 257 / 0.14); border-color: oklch(55.1% 0.046 257 / 0.8); }
 
 /*
    6.356：回退 6.353——.btn-default/.btn-secondary 恢复主题自适应浅灰底+深字
@@ -1762,18 +1775,10 @@ main .card.bg-base-100 {
    —— 用户参考原版 UI 发现：default/secondary 本就是【浅底 + 深/灰字】，并非深底白字。
    6.439 按钮描边化：secondary 改由 builder-core.css 灰组接管（--bc 变量 tint，
    深浅主题自适应）——6.358 硬编码 #e4e7ea 在暗色主题下是一块刺眼白，已删。
-   .btn-default 保留 6.358 原值（存量控制器 legacy 兼容，使用面小）。
+   6.489ai：.btn-default 白底块（6.358 原值 #fcfdfe/#ebebeb，边框近不可见）
+   也删除——用户裁定 default 与旧 secondary 灰观感统一（builder-core.css
+   灰组的 .btn.btn-default 接管，--bc 变量 tint），secondary 拆色见 6.489ai。
    */
-.btn-default {
-    background-color: #fcfdfe;
-    border-color: #ebebeb;
-    color: #8b95a5;
-}
-.btn-default:hover, .btn-default:focus, .btn-default:active {
-    background-color: #f1f3f5;
-    border-color: #ebebeb;
-    color: #6b7683;
-}
 
 /*
    旧版状态标记类兼容（6.266；6.267 扩展作用域；6.271 纯文字化；6.273 两类分治）
@@ -1882,14 +1887,15 @@ main .card.bg-base-100 {
     color: var(--fallback-pc, oklch(var(--pc) / 1));
 }
 
-.label-secondary, .label.label-secondary, .the-field.label-secondary {
-    background-color: var(--fallback-s, oklch(var(--s) / 1));
-    color: var(--fallback-sc, oklch(var(--sc) / 1));
-}
-
+/* 6.489aj label-secondary 与 label-default 同为中性灰徽章：原 --s 实底在主题里
+   是近白（92.65% 0.005 248）+ --sc 白字 = 白底白字不可读（存量遗留，非本次按钮
+   分色引入；app/旧库均无实际使用，改动零风险）。观感对齐 6.489ae 的 label-default */
+.label-secondary, .label.label-secondary, .the-field.label-secondary,
 .label-default, .label.label-default, .the-field.label-default {
-    background-color: var(--fallback-n, oklch(var(--n) / 1));
-    color: var(--fallback-nc, oklch(var(--nc) / 1));
+    /* 6.489ae 恢复旧 Bootstrap label-default 浅灰观感：--n 实底深底太重（用户给图，
+       浅灰底深字），换 base-200 浅底 + 主题文字色；徽章形状/尺寸走上面的共用规则 */
+    background-color: var(--fallback-b2, oklch(var(--b2) / 1));
+    color: oklch(var(--bc) / 0.75);
 }
 
 /*

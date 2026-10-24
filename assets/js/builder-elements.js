@@ -279,6 +279,15 @@
             input.className = 'input input-bordered w-full date-input';
             if (id) input.setAttribute('id', id + '-range'); // 旧模板可见框 id 派生形态，CSS/脚本按它定位
             input.readOnly = true; // 旧模板可见框固定 readonly，区间模式不支持手输
+            // 6.489ag 区分两种 readonly：宿主带 readonly attr（PHP ->readonly()/
+            // mapClass('readonly') 落的，外界真只读）→ input 标 readonly-external
+            // （灰底+面板禁开+图标失效）；宿主无 attr（常态）→ 标 readonly-native
+            // （区间模式自带不可手输，但面板可点开、白底）。6.477 曾预想「JS property
+            // 不匹配 input[readonly] 属性选择器」实现豁免，被 flatpickr 初始化补写
+            // readonly attr 打破（allowInput 缺省 false 时其标准行为），此处以显式
+            // 标记类恢复该形态
+            var externalRo = this.hasAttribute('readonly');
+            input.classList.add(externalRo ? 'readonly-external' : 'readonly-native');
             var placeholder = this.getAttribute('placeholder');
             if (placeholder !== null) {
                 input.setAttribute('placeholder', placeholder);
@@ -298,10 +307,16 @@
             icon.className = 'mdi ' + (this.getAttribute('data-icon') || 'mdi-calendar-range');
             btn.appendChild(icon);
             var self = this;
-            btn.addEventListener('click', function () {
-                // 6.476 只读时图标按钮不再聚焦/开面板（input 的 readonly 挡键盘输入）
-                if (self.__input && self.__input.readOnly) return;
-                self.__input.focus();
+            btn.addEventListener('click', function (e) {
+                // 6.489ag 仅外界真只读（readonly-external）/禁用时失效；
+                // 自带 readonly（readonly-native）面板可点开
+                if (self.__input.disabled || self.__input.classList.contains('readonly-external')) return;
+                // 直接 open() 而非 focus()：flatpickr 在 body 冒泡段挂「点外关闭」，
+                // focus 触发的 open 会被随后冒泡上来的本次点击立刻关闭（实测面板闪没）；
+                // stopPropagation 阻断该路径
+                e.stopPropagation();
+                if (self.__fp) self.__fp.open();
+                else self.__input.focus();
             });
 
             this.appendChild(carrier);
@@ -319,6 +334,12 @@
                 opts[k] = this.cfg[k];
             }
 
+            // 6.489ag 外界真只读（readonly-external）/禁用：点击不开面板；
+            // 自带 readonly（readonly-native）保持默认可点开
+            if (this.__input.disabled || this.__input.classList.contains('readonly-external')) {
+                opts.clickOpens = false;
+            }
+
             // 6.167 显示/提交契约统一走 separator（默认 ','）：
             // zh 语言包 rangeSeparator=「至」会让输入框回显与 onChange 的 dateStr 都变成「至」拼接，
             // 覆盖实例 l10n 后 dateStr 即按 separator 拼接，载体直接采用。
@@ -331,8 +352,31 @@
                 }
             }
 
+            var dateFormat = this.cfg.dateFormat;
+            var self = this;
+            // 显示与提交契约统一为两段：flatpickr 对同日起止的输入框显示同样不带
+            // 分隔符（用户实测「点今天还是一个日期」）。onValueUpdate 在 flatpickr
+            // 每次写完输入框后触发，就地改写为「起<sep>止」；自身直接赋值不再回流
+            var twoPartValue = function (selectedDates) {
+                if (selectedDates.length === 2 && selectedDates[0] && selectedDates[1]) {
+                    return self.__fp.formatDate(selectedDates[0], dateFormat) + sep +
+                        self.__fp.formatDate(selectedDates[1], dateFormat);
+                }
+                return null;
+            };
             opts.onChange = [function (selectedDates, dateStr) {
-                carrier.value = dateStr;
+                // 6.489ag 载体值契约恒为「起<sep>止」两段：flatpickr 对起止同日
+                // （快捷预设「今天」实测）输出的 dateStr 不带分隔符，服务端按
+                // 分隔符 explode 会只拿到 1 段。选中完整（两段）时一律自行按
+                // dateFormat 拼接；单段（选择中间态/同日手点的原样输出）维持 dateStr
+                var joined = twoPartValue(selectedDates);
+                carrier.value = joined !== null ? joined : dateStr;
+            }];
+            opts.onValueUpdate = [function (selectedDates) {
+                var joined = twoPartValue(selectedDates);
+                if (joined !== null) {
+                    self.__input.value = joined;
+                }
             }];
 
             this.__fp = w.flatpickr(this.__input, opts);

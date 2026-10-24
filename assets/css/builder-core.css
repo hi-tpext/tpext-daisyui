@@ -817,6 +817,65 @@ textarea.textarea {
 }
 
 /*
+   6.489af 横排字段的 label 与控件留距：上面的列间隙清零对「label+控件双列横排」
+   的场景（left()/right() 窄组里 size[0]≠12）会把 label 文字贴死输入框左缘
+   （testformMini 用户实测）。列间隙不能恢复（11×16px 的 min-content 会重新
+   撑破窄组），改在 label 自身加右内边距——只占 label 自己的轨道。
+   label 的列类是响应式的（col-span-12 sm:col-span-4 md:col-span-2 …基础恒为
+   12、sm 起横排），:not([class*=col-span-12]) 会被基础类误伤，故镜像断点：
+   ≥640px（sm，横排）才加留距；窄屏纵排（label 在上）不加
+   */
+@media (min-width: 640px) {
+  .fields-content > .field-row > label {
+    padding-right: 1rem;
+  }
+}
+
+/*
+   6.489ag 容器查询：fields 组合在自身宽度过窄时自动转上下布局。
+   label 的 sm:/md:/lg: 列类是视口媒体查询，只看窗口宽度，管不到「窗口很宽、
+   但 left()/right()/fields() 组只占 4/12」的场景——组内 label 2/12 只剩
+   ~100px，与输入框挤压。容器查询改看 .fields-content 自身宽度（=组宽）：
+   ≤24rem(384px) 时行内 label 与控件都改为整行（上下排），即窄容器的纵排形态。
+   兼容：Chrome 105+ / Firefox 110+ / Safari 16+；不支持的浏览器既无容器声明
+   也无 @container 匹配，维持横排 + 上面 6.489af 的 label 留距，安全降级。
+   作用域 .form-wrapper[x-data]：search.html 搜索表单同用 form-wrapper 类
+   但无 x-data 属性——搜索栏每个字段格本来就接近 24rem，容器化会把整排搜索
+   字段误触发纵排；表格/items 组合列宽度由 colw 管理，同样不在作用域内。
+   */
+.form-wrapper[x-data] .fields-content {
+  container-type: inline-size;
+}
+
+/* 表单内嵌 items 表格（table.form-items）的组合列同样命中上面的作用域，
+   但其宽度由表格列布局/colw 管理，不容器化（避免单元格内意外纵排与
+   inline-size 包含改变 min-content 影响 colw 布局） */
+.form-wrapper[x-data] table .fields-content {
+  container-type: normal;
+}
+
+@container (max-width: 24rem) {
+  .form-wrapper[x-data] .fields-content > .field-row > label {
+    grid-column: 1 / -1;
+    /* 纵排 label 左对齐——labeltempl 硬编码的 justify-end 是给横排贴控件用的；
+       与 <640px 移动端纵排（builder-core-layout.css 的 flex-start 规则）同形态 */
+    justify-content: flex-start;
+    /* 同 <640px 纵排：去掉左右布局对齐输入框用的 min-height:2rem 盒高
+       （文字垂直居中会让 label 下方留 ~5px 空白，显得没贴紧输入框） */
+    min-height: 0;
+  }
+
+  .form-wrapper[x-data] .fields-content > .field-row > div {
+    grid-column: 1 / -1;
+  }
+
+  /* 同 <640px 纵排节奏：label 与控件 2px 呼吸感（替代横排的 gap-y-1 4px） */
+  .form-wrapper[x-data] .fields-content > .field-row {
+    row-gap: 2px;
+  }
+}
+
+/*
    6.482 表格/items 单元格内的 fields 组合列（如 名称/spu）：直接子项是
    col-span-12 整宽 div（无 field-row 类），上面的清零规则不命中——11 条
    16px 列间隙仍构成 176px min-content 底，拖列宽（colw）把列压到 ~190px
@@ -885,6 +944,30 @@ textarea.textarea {
   cursor: pointer;
   position: relative;
   z-index: 1;
+}
+
+/*
+   6.489aa 表单水平页签（radio）加高 30→36px：padding-y 5→7.5px、行高整数化
+   19px（7.5×2 + 19 + 上下边框 2 = 36 整）。a.tab（表格 tabLink，30px）不走本
+   规则保持原高；垂直页签有自己的 padding-y/行高覆写（特异性更高），不受影响。
+   激活态不覆写 padding——尺寸不变只变颜色，切换时文字不上下移动
+   */
+.tabs > input.tab {
+  padding-top: 0.46875rem;
+  padding-bottom: 0.46875rem;
+  line-height: 19px;
+}
+
+/*
+   6.489aa 选中页签加粗：600 只挂 radio 页签（表单水平/垂直同族）——激活规则
+   是与 a.tab 共用的，直接写进去会连带表格 tabLink；checked:hover 单列一条
+   （与上面 hover 钉色同思路）：hover 时 font-weight 与静止态零变化，避免
+   加粗/复原的字宽抖动。600 与 400 的字宽差会让激活页签略宽于静止态，
+   相邻页签位置随之微移——加粗的常规代价，用户明确要求
+   */
+.tabs > input.tab:checked,
+.tabs > input.tab:checked:hover {
+  font-weight: 600;
 }
 
 /* hover：完全无边框，只有文字加深（残留的浅边框痕迹用户不要） */
@@ -1190,31 +1273,13 @@ textarea.textarea {
 
 /*
    BS3 按钮颜色类 → DaisyUI 语义色兼容（btn-danger）
-   —— 旧库 Actionbar::btnDelete() / MultipleToolbar::btnDelete() 默认传 'btn-danger'，
-   Items 的 JS 也会动态切换 btn-danger；DaisyUI 没有 .btn-danger 这个类，
-   → --btn-color 为空 → .btn 退回 var(--b2)，表现为灰底黑字。
-   这里把 btn-danger 映射到 DaisyUI 的 error 语义色（solid / hover / active）。
+   旧库 Actionbar::btnDelete() / MultipleToolbar::btnDelete() 默认传 'btn-danger'，
+   Items 的 JS 也会动态切换 btn-danger；DaisyUI 没有 .btn-danger 这个类。
+   6.489ah 撤销 6.393 的实心红兜底——项目的彩色按钮设计语言是软色
+   （浅 tint 底+深边框+深字，见下方 6.443 着色体系），实心红与 btn-error
+   软色形态不一致（raw 组件手写 btn-danger 实测比色发现）。改为把
+   .btn.btn-danger 并入下方 .btn.btn-error 的三组软色选择器，形态完全一致。
    */
-.btn-danger {
-  --btn-color: var(--er);
-  color: var(--fallback-erc, oklch(var(--erc) / 1));
-  outline-color: var(--fallback-er, oklch(var(--er) / 1));
-}
-.btn-danger:hover,
-.btn-danger.btn-active {
-  background-color: oklch(var(--er) / 1);
-  border-color: oklch(var(--er) / 1);
-}
-
-/* color-mix 需要 Safari 16.2+；包 @supports 降级到原色（daisyUI 对 .btn:hover 的同款策略），
-   使浏览器底线对齐 daisyUI 4 的 oklch 基线（Safari 15.4） */
-@supports (color: color-mix(in oklab, black, black)) {
-  .btn-danger:hover,
-  .btn-danger.btn-active {
-    background-color: color-mix(in oklab, oklch(var(--er) / 1) 90%, #000);
-    border-color: color-mix(in oklab, oklch(var(--er) / 1) 90%, #000);
-  }
-}
 
 /*
    6.398 撤销 6.397 的 .btn.btn-secondary 深灰底+白字覆盖（用户反馈「还是
@@ -1824,7 +1889,7 @@ x-editor {
 
 .tpb-toast::before {
   flex: none;
-  font-size: 1rem;
+  font-size: 0.75rem; /* 6.489ad 1rem→0.75rem：图标比 0.875rem 正文略小（用户：× 太大） */
   line-height: 1;
   font-weight: 700;
 }
@@ -1868,17 +1933,26 @@ samp {
 /* —— 文字色（深色同相） —— —— —— —— —— —— —— —— —— —— —— —— —— —— ——*/
 .btn.btn-primary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--p) / 0.92); }
 .btn.btn-info:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--in) / 0.92); }
+/* 6.489aj 旧 BS3 类 btn-default 专属色：用户提供的 Neutral 灰蓝（取色
+   #617389 ≈ oklch(55.1% 0.046 257)）。饱和度仅 primary(0.228) 的 1/5、
+   与 neutral 深灰(L22%)拉开明度——实测不撞色。分量串直写 --btn-color，
+   hover 公式（下方声明组）自动复用 */
+.btn.btn-default:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(55.1% 0.046 257 / 0.92); }
 .btn.btn-success:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--su) / 0.92); }
 .btn.btn-warning:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--wa) / 0.92); }
 .btn.btn-error:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--er) / 0.92); }
+/* 6.489ah 旧 BS3 类 btn-danger 软色兜底（raw 组件手写 HTML/JS 动态注入，形态与 btn-error 一致） */
+.btn.btn-danger:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--er) / 0.92); }
 .btn.btn-accent:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--a) / 0.92); }
 
 /* —— 默认态：浅 tint 底 + 深边框 —— —— —— —— —— —— —— —— —— —— —— ——*/
 .btn.btn-primary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--p); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
+.btn.btn-default:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: 55.1% 0.046 257; --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
 .btn.btn-info:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--in); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
 .btn.btn-success:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--su); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
 .btn.btn-warning:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--wa); --tw-bg-opacity: 0.1; --tw-border-opacity: 0.6; }
 .btn.btn-error:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--er); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
+.btn.btn-danger:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--er); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
 .btn.btn-accent:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--a); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
 
 /* —— hover：tint 加深、边框更实。
@@ -1891,7 +1965,9 @@ samp {
 .btn.btn-success:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
 .btn.btn-warning:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
 .btn.btn-error:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
-.btn.btn-accent:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
+.btn.btn-accent:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-danger:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-default:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
   background-color: oklch(var(--btn-color, var(--b2)) / var(--tw-bg-opacity, 1));
   border-color: oklch(var(--btn-color, var(--b2)) / var(--tw-border-opacity, 1));
 }
@@ -1901,19 +1977,32 @@ samp {
 .btn.btn-warning:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.16; --tw-border-opacity: 0.8; }
 .btn.btn-error:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
 .btn.btn-accent:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
+.btn.btn-danger:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
 
-/* —— 次级/无色按钮（secondary/neutral/裸 .btn）：灰系描边，bc 变量深浅主题自适应。
+/* —— 无色按钮（neutral/default/dark/裸 .btn）：灰系描边，bc 变量深浅主题自适应。
       6.358 的 secondary 硬编码块已删（暗色主题下白块刺眼），此处统一接管。
-      6.440 边框再浅一档（用户反馈）：0.35 → 0.22，hover 0.5 → 0.38 —— ——*/
+      6.440 边框再浅一档（用户反馈）：0.35 → 0.22，hover 0.5 → 0.38
+/* —— 无色按钮（secondary/neutral/dark/裸 .btn）：灰系描边，bc 变量深浅主题自适应。
+      6.358 的 secondary 硬编码块已删（暗色主题下白块刺眼），此处统一接管。
+      6.440 边框再浅一档（用户反馈）：0.35 → 0.22，hover 0.5 → 0.38
+      6.489ah 并入旧 BS3 类 btn-default/btn-dark 兜底。6.489ah 后期用户裁定
+      撤回 PHP 侧 compatBsBtnClass 映射（raw/JS 注入场景终究要 CSS 兜底，
+      双轨无意义）——本组样式成为旧 BS3 颜色类的唯一兜底：builder 渲染、
+      裸模板（agent 模块 dispatch_jump.tpl 实测）、JS 动态注入统一在此接管。
+      6.489ai 曾把 secondary 拆出本组换紫罗兰、default 归灰——6.489aj 用户裁定
+      回摆：secondary 使用面大（重置/导出/显示列/分页等）恢复灰观感，
+      default 换专属灰蓝色（见文字组注释）—— ——*/
 .btn.btn-secondary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
-.btn.btn-neutral:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
+.btn.btn-neutral:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-dark:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
   --btn-color: var(--bc); --tw-bg-opacity: 0.05; --tw-border-opacity: 0.22;
   color: oklch(var(--bc) / 0.78);
 }
 .btn.btn-secondary:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
-.btn.btn-neutral:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
+.btn.btn-neutral:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn.btn-dark:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
   background-color: oklch(var(--btn-color, var(--b2)) / var(--tw-bg-opacity, 1));
-  border-color: oklch(var(--btn-color, var(--b2)) / var(--tw-border-opacity, 1));
+  border-color: oklch(var(--btn-color, var(--b2)) / var(--tw-bg-opacity, 1));
   --tw-bg-opacity: 0.09; --tw-border-opacity: 0.38;
 }
 
@@ -1923,7 +2012,7 @@ samp {
    pointer-events:none 让点击直接穿透（不聚焦、不出文本光标）；键盘 Tab 聚焦
    不拦（本就无编辑可能，且保住 textarea 键盘滚动能力）。灰底取 --b2
    （base-200）按主题推导，夜间自动为深灰。
-   —— 只用属性选择器：日期区间可见框的固定 readonly 是 JS 设的 property
+   —— 只用属性选择器：日期区间可见框的固定 readonly 原以为是 JS 设的 property
    （无 attr，XDateRange），不匹配即保持白底——那里日历按钮仍可用，灰底会
    让人误判整组已禁用。checkbox/radio 只读由 6.337 choice 规则 + 模板
    disabled/onclick 处理，不在本块范围；hidden 载体（month/year 等）无视觉，
@@ -1935,7 +2024,15 @@ samp {
    输入框白底 + 文本光标，看上去与可编辑无差别（用户报「表格 text readonly
    无效仍可输入」，实为视觉无区分）。规则改全站生效，搜索区/表单/表格统一
    */
-input[readonly]:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']),
+   /*
+   6.489ag 上述「property 不匹配」的设想不成立：flatpickr 初始化（allowInput
+   缺省 false）会自己给区间可见框补写 readonly attr，灰底+pointer-events:none
+   全命中（用户报「dateRange 自动变只读、图标点不开」）。改为显式标记类豁免：
+   XDateRange.build 按宿主有无 readonly attr 给 input 标 readonly-native
+   （自带只读，面板可点开→白底可点击）或 readonly-external（外界真只读，
+   继续命中本规则灰底锁死）
+   */
+input[readonly]:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='hidden']):not(.readonly-native),
 textarea[readonly] {
   pointer-events: none;
   background-color: oklch(var(--b2) / 1);

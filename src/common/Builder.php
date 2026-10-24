@@ -130,8 +130,26 @@ class Builder implements Renderable, ReleaseAble
     /* 6.489n 资源版本号：JS/CSS 改动后须递增（URL 变了浏览器才会重新拉取）。
        注意 myadmin8 的 AppService 会 aver(time()) 覆盖为 worker 启动时刻——
        那意味着改前端资源也必须 touch 一个 app 文件触发 worker 重载，
-       否则 aver 不变、浏览器继续吃旧缓存（本条注释即 6.489n 部署踩坑记录） */
-    protected static $aver = '1.0.4';
+       否则 aver 不变、浏览器继续吃旧缓存（本条注释即 6.489n 部署踩坑记录）。
+       6.489ag：1.0.4 → 1.0.5（容器查询纵排 CSS；实测当前 myadmin8 worker
+       并无 time() 覆盖、touch 后仍输出 1.0.4，纯 CSS 部署必须手动递增本值）
+       1.0.5 → 1.0.6（label 换行行高压缩 16px/搜索 14px）
+       1.0.6 → 1.0.7（区间日期 readonly 标记类：readonly-native/readonly-external）
+       1.0.7 → 1.0.8（区间图标改 fp.open()+stopPropagation，focus 会被点外关闭立即合上）
+       1.0.8 → 1.0.9（区间载体值契约：起止同日也强制两段「起,止」，onChange 统一自拼）
+       1.0.9 → 1.0.10（输入框显示同步两段：onValueUpdate 改写，同日也显示「起,止」）
+       1.0.10 → 1.0.11（BS3 按钮色类 CSS 兜底 btn-default/btn-dark；PHP 侧
+         compatBsBtnClass 映射后经用户裁定撤回——raw/JS 注入场景终究要 CSS 兜底，
+         双轨维护无意义，统一只走 CSS：markup 保留旧类由样式接管）
+       1.0.11 → 1.0.12（btn-danger 兜底改软色形态并入 error 组，撤销 6.393 实心红）
+       1.0.12 → 1.0.13（仅注释措辞：compatBsBtnClass 撤回后 CSS 兜底为旧类唯一接管层）
+       1.0.13 → 1.0.14（--s 回填紫罗兰 + secondary 拆入彩色软色组；default 白底块
+         删除归入灰组=旧 secondary 观感，二者分色）
+       1.0.14 → 1.0.15（6.489ai 回摆：secondary 使用面大恢复灰组原观感、--s 回填
+         撤销；default 换用户提供的 Neutral 灰蓝专属色 #617389）
+       1.0.15 → 1.0.16（label-secondary 徽章白底白字不可读修复：并入 label-default
+         浅灰规则——主题 --s/--sc 近白所致的存量遗留，app/旧库零使用） */
+    protected static $aver = '1.0.16';
 
     protected static $instance = null;
 

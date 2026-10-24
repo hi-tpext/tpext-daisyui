@@ -20,7 +20,7 @@
     // 6.489p 运行版本标记（用户建议）：aver 时间戳只能保证 URL 拉新，fetch 检查
     // 拉到的也是磁盘上现文件，无法证明页面里跑的实例是新版。boot 时输出到控制台，
     // 一眼确认当前页面执行的 JS 是哪一版——改本文件后必须递增
-    var VERSION = '1.0.12';
+    var VERSION = '1.0.13';
     w.__tpextBuilderVersion = VERSION;
 
     /* ============================================================
@@ -456,9 +456,21 @@
         });
         var line = formEl.querySelector('.builder-form-error');
         if (line && line.parentNode) line.parentNode.removeChild(line);
+        // 6.489ab 同步清空 #help-block 挂载点上的错误文字
+        var label = formEl.querySelector('#help-block .error-label');
+        if (label) label.textContent = '';
     }
 
     function showFormError(formEl, msg) {
+        // 6.489ab 错误提示回归表单底部自带的 #help-block 挂载点（.error-label，
+        // min-h 20px 常驻撑高）——不再自绘 .builder-form-error 行插在提交按钮
+        // 上方（6.429 的做法，用户不要：按钮上方多一行且与挂载点重复）。
+        // 表单无挂载点时（自定义模板）兜底退回按钮上方自绘行
+        var label = formEl.querySelector('#help-block .error-label');
+        if (label) {
+            label.textContent = msg;
+            return;
+        }
         var box = d.createElement('div');
         box.className = 'builder-form-error';
         var span = d.createElement('span');

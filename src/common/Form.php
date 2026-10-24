@@ -566,7 +566,12 @@ class Form extends FWrapper implements Renderable, ReleaseAble
             return $this;
         }
         $this->allContentsEnd();
-        $this->html('', '', '12 col-lg-12 col-sm-12 col-xs-12')->value('')->getWrapper()->addStyle('height: 20px;'); //这里时一个空行
+        // 6.489af 恢复按钮上方的空行：它不是装饰性留白——空行
+        // col-span-12 独占一行，把后面的按钮行顶到下一栅格行；删掉后 left()/right()
+        // 等窄行布局里按钮行会挤到字段行同一行（testformMini 用户实测）。
+        // 6.489ag 高度 20→10→1px：只承担换行职责，留白交给栅格行距
+        // 校验错误仍走底部 #help-block 挂载点（与本行无关）
+        $this->html('', '', '12 col-lg-12 col-sm-12 col-xs-12')->value('')->getWrapper()->addStyle('height: 1px;');
         //此处开启了一个fields装载后面的操作按钮，不会调用fieldsEnd了，正常情况下，底部按钮后面不会有其他元素了。如果有，需要调用fieldsEnd结束按钮区域
         //col-lg 比例:      左(4) | 中部按钮组(4) | 右(4)
         //clo-md 比例:      左(4) | 中部按钮组(4) | 右(4)
