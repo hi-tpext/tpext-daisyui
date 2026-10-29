@@ -12,7 +12,18 @@
   {/block}
 </head>
 
-<body class="bg-base-200/50 min-h-screen">
+<!-- 6.489ap 去掉 body 的 bg-base-200/50：半透明灰底罩在装饰渐变斑上整体发灰
+     （用户报「页面灰蒙蒙」）。移除后透出 html 的 base-100 底 + 全浓度渐变斑，
+     玻璃卡片模糊取样更透亮 -->
+<body class="min-h-screen">
+  <!-- 6.489an layer 弹窗页标记：layui 的 iframe 带 layui-layer-iframe 类，命中即给 body
+       打 in-layer——整页撑满视口的 CSS（main/card 弹性伸展）据此排除弹窗页，
+       否则弹窗内容 min-height 链会与 layer 自适应测高互相抬升、小弹窗被撑成整屏 -->
+  <script>
+    if (window.frameElement && /(^|\s)layui-layer-iframe(\s|$)/.test(window.frameElement.className)) {
+      document.body.classList.add('in-layer');
+    }
+  </script>
   <!--页面主要内容-->
   <main class="p-1 md:p-2">
     {block name="content"}{/block}

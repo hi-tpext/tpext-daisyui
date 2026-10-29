@@ -10,7 +10,8 @@
 }
 
 .num-spinner-input {
-  padding-right: 2.5rem; /* 留出按钮空间 40px（比之前宽一点，按钮区域更大气） */
+  /* 6.489as 加 !important：右侧是 +/- 按钮区（贴右 4px）的功能性让位，防通用规则压缩 */
+  padding-right: 2.5rem !important;
   width: 100%;
 }
 
@@ -91,7 +92,7 @@
 }
 
 .num-spinner-prefix {
-  left: 0.75rem; /* 12px，与其他组件文字左缘一致 */
+  left: 0.375rem; /* 6.489as 6px，与其他组件文字左缘一致 */
 }
 
 /* 放在 +/- 按钮左侧（按钮区 right:4px + 宽 22px = 26px，再留 4px 间距） */
@@ -99,10 +100,11 @@
   right: 1.875rem; /* 30px */
 }
 
-/* 无 JS 时的兜底预留（JS 会用实测宽度覆盖成精确值） */
+/* 无 JS 时的兜底预留（JS 会用实测宽度覆盖成精确值）；6.489as 前缀左让位随
+   减半同步收窄并加 !important（防 .form-wrapper 通用规则压成 0.375 后前缀压字） */
 @supports selector(:has(*)) {
   .num-spinner:has(.num-spinner-prefix) .num-spinner-input {
-    padding-left: 2rem; /* 32px ≈ 12 + 单字符 + 间距 */
+    padding-left: 1.75rem !important; /* 28px ≈ 6 + 单字符 + 间距 */
   }
 
   .num-spinner:has(.num-spinner-postfix) .num-spinner-input {
@@ -138,7 +140,9 @@
 }
 
 .pwd-eye-input {
-  padding-right: 2.25rem; /* 36px：图标 24px + 贴右 8px + 4px 缝隙，与日期组件一致 */
+  /* 6.489as 加 !important：右侧是眼睛图标（24px 贴右 8px）的功能性让位，
+     无重要值会被 .form-wrapper .input 的通用右 padding 压成 0.5rem 文字压图标 */
+  padding-right: 2.25rem !important;
 }
 
 /*
@@ -153,9 +157,10 @@
   width: 100%;
 }
 
-/* 编码输入框：右侧给图标按钮让路（与 .date-input 单图标 2.25rem 同基准） */
+/* 编码输入框：右侧给图标按钮让路（与 .date-input 单图标 2.25rem 同基准）；
+   6.489as 左留白随输入组件整体减半（12→6px），右侧功能性让位 !important 保留 */
 .icon-picker-wrap .icon-code-input {
-  padding-left: 0.75rem !important; /* 12px 对齐其他组件 */
+  padding-left: 0.375rem !important;
   padding-right: 2.25rem !important; /* 36px = 8 边距 + 24 按钮 + 4 间距 */
 }
 

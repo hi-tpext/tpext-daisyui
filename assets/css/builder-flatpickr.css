@@ -21,9 +21,10 @@
 
 .date-range-cell .input {
   width: 100%;
-  /* 图标在右：左内边距对齐其他组件，右侧留给图标 */
-  padding-left: 0.75rem;
-  padding-right: 2rem;
+  /* 图标在右：左内边距对齐其他组件（6.489as 减半 6px），右侧留给图标
+     （两侧都加 !important，与日期/地图组件同构防通用规则漂移） */
+  padding-left: 0.375rem !important;
+  padding-right: 2rem !important;
 }
 
 /* 与单日期互相矛盾——6.138 删除，统一走「输入框内嵌图标按钮统一规范」 */

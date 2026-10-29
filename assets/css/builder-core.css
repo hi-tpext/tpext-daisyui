@@ -42,6 +42,14 @@ a {
   margin-bottom: 0.5rem;
 }
 
+/* 6.489bc 分割线减细：daisyUI 原生 .divider:before/:after 是 0.125rem（2px）粗条，
+   用户反馈偏重——改 1px 发丝线（全局作用域，分隔线到处都是，观感应一致；
+   同特异性本文件后加载即胜原生） */
+.divider:after,
+.divider:before {
+  height: 1px;
+}
+
 /*
    6.339 主题切换器色板（layout.html）：色值单一来源 = tailwind.config.js
    主题定义。span 上动态挂 data-theme="t[0]"，daisyUI 的主题块是属性选择器
@@ -1336,22 +1344,25 @@ textarea.textarea {
   width: 100%;
 }
 
-/* 文字左缘与其他组件对齐（12px），右侧留给图标（36px，与日期/密码一致） */
+/* 文字左缘与其他组件对齐（6.489as 减半 6px），右侧留给图标（36px，与日期/密码一致）；
+   右 padding 是地图图标的功能性让位，加 !important 防 .form-wrapper 通用规则压缩 */
 .map-input-wrap .map-input {
-  padding-left: 0.75rem; /* 12px — 对齐其他组件 */
-  padding-right: 2.25rem; /* 36px — 给右侧图标 + 间距 */
+  padding-left: 0.375rem !important; /* 本文件在 .form-wrapper 通用规则之前，须加重要值 */
+  padding-right: 2.25rem !important;
   width: 100%;
 }
 
-/* 搜索区缩小 */
+/* 搜索区缩小（6.489as 左随搜索区整体减半 10→5px；本规则 (0,3,0) 压过
+   .search-form .input，须在此改值） */
 .search-form .map-input-wrap .map-input {
-  padding-left: 0.625rem !important;
+  padding-left: 0.3125rem !important;
   padding-right: 2rem !important;
 }
 
-/* 表格内缩小 */
+/* 表格内缩小（左 4px/右 1.75rem 的生效值在 layout css .table 紧凑节——本文件
+   在其前加载，同特异性会被压过；此处值仅为兜底一致） */
 .table .map-input {
-  padding-left: 0.5rem !important;
+  padding-left: 0.25rem !important;
   padding-right: 1.75rem !important;
 }
 
@@ -1848,10 +1859,12 @@ x-editor {
   width: 100%;
 }
 
-/* 图标在右侧（6.63 恢复）：左内边距与其他组件一致（12px 对齐），右侧留给图标 */
+/* 图标在右侧（6.63 恢复）：左内边距与其他组件一致（6.489as 减半 6px），右侧留给
+   图标——右 padding 是日期图标的功能性让位，加 !important 防 .form-wrapper
+   通用规则压缩成 0.5rem 后文字压图标 */
 .date-input-wrap .date-input {
-  padding-left: 0.75rem;
-  padding-right: 2.25rem;
+  padding-left: 0.375rem !important; /* 本文件在 .form-wrapper 通用规则之前，须加重要值 */
+  padding-right: 2.25rem !important;
   width: 100%;
 }
 
@@ -1938,22 +1951,57 @@ samp {
    与 neutral 深灰(L22%)拉开明度——实测不撞色。分量串直写 --btn-color，
    hover 公式（下方声明组）自动复用 */
 .btn.btn-default:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(55.1% 0.046 257 / 0.92); }
+/* 6.489ak 裸 .btn（无任何主题色类）兜底 = 同 btn-default 灰蓝。特异性 (0,5,0)
+   低于彩色组 (0,6,0)：按钮带任一主题色类时彩色组自然胜出，无需排除表 */
+.btn:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(55.1% 0.046 257 / 0.92); }
 .btn.btn-success:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--su) / 0.92); }
 .btn.btn-warning:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--wa) / 0.92); }
 .btn.btn-error:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--er) / 0.92); }
 /* 6.489ah 旧 BS3 类 btn-danger 软色兜底（raw 组件手写 HTML/JS 动态注入，形态与 btn-error 一致） */
 .btn.btn-danger:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--er) / 0.92); }
 .btn.btn-accent:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(var(--a) / 0.92); }
+/* 6.489az 旧版字面色按钮（LightYear 调色板；myadmin8 实际用量 purple/pink/
+   brown/cyan）。固定 oklch 分量串不随主题 --p 漂移（理由同 6.489aj 的
+   default 灰蓝：类名即字面色语义）。软色公式复用：不设直接 border-color，
+   靠原生公式与裸 .btn 兜底线的变量解析取色（本组 (0,6,0) 的 --btn-color
+   压过裸线 (0,5,0) 的灰蓝）；hover 走通用 .btn:hover 公式线自动生效 */
+.btn.btn-purple:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(55% 0.22 294 / 0.92); }
+.btn.btn-pink:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(59% 0.22 5 / 0.92); }
+.btn.btn-brown:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(50% 0.09 55 / 0.92); }
+.btn.btn-cyan:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(59% 0.11 217 / 0.92); }
+/* yellow：旧库测试页 14 色中最后一个缺口（6.489ba 补齐）——黄比 warning 的橙
+   偏黄相（85 vs --wa 橙），文字档 L 压到 66% 保白底可读 */
+.btn.btn-yellow:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { color: oklch(66% 0.14 85 / 0.92); }
 
 /* —— 默认态：浅 tint 底 + 深边框 —— —— —— —— —— —— —— —— —— —— —— ——*/
-.btn.btn-primary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--p); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
-.btn.btn-default:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: 55.1% 0.046 257; --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
-.btn.btn-info:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--in); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
-.btn.btn-success:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--su); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
-.btn.btn-warning:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--wa); --tw-bg-opacity: 0.1; --tw-border-opacity: 0.6; }
-.btn.btn-error:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--er); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
-.btn.btn-danger:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--er); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
-.btn.btn-accent:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--a); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.6; }
+.btn.btn-primary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--p); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-default:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: 55.1% 0.046 257; --btn-border-color: 55.1% 0.028 257; --tw-bg-opacity: 0.08; --tw-border-opacity: 0.3; border-color: oklch(var(--btn-border-color, var(--btn-color, var(--b2))) / var(--tw-border-opacity, 1)); }
+/* 6.489am 裸 .btn 基线带直接 border-color 声明——彩色组静态边框靠 daisyUI 原生
+   (0,1,0) 公式取色，裸声明 (0,5,0) 会压过它污染全部彩色按钮（1.0.19 实测），
+   故必须排除全部主题色类，只匹配真·无色按钮 */
+.btn:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass):not(.btn-primary):not(.btn-info):not(.btn-success):not(.btn-warning):not(.btn-error):not(.btn-danger):not(.btn-accent):not(.btn-secondary):not(.btn-neutral):not(.btn-dark):not(.btn-default) { --btn-color: 55.1% 0.046 257; --btn-border-color: 55.1% 0.028 257; --tw-bg-opacity: 0.08; --tw-border-opacity: 0.3; border-color: oklch(var(--btn-border-color, var(--btn-color, var(--b2))) / var(--tw-border-opacity, 1)); }
+.btn.btn-info:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--in); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-success:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--su); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-warning:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--wa); --tw-bg-opacity: 0.1; --tw-border-opacity: 0.4; }
+.btn.btn-error:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--er); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-danger:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--er); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-accent:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: var(--a); --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-purple:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: 55% 0.22 294; --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-pink:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: 59% 0.22 5; --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-brown:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: 50% 0.09 55; --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-cyan:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: 59% 0.11 217; --tw-bg-opacity: 0.08; --tw-border-opacity: 0.4; }
+.btn.btn-yellow:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --btn-color: 66% 0.14 85; --tw-bg-opacity: 0.1; --tw-border-opacity: 0.4; }
+
+/*
+   6.489ay 按钮圆角 2px→4px（用户反馈与徽章 6.489ax 同步的观感）——主题
+   --rounded-btn 构建值 0.125rem，全库输入框/按钮共用；只在 .btn 上覆盖令牌，
+   输入框等其他消费者的 2px 基准不动（令牌作用域覆盖，daisyUI .btn 的
+   border-radius: var(--rounded-btn) 公式自动取新值，join/group 内的分位
+   圆角规则同样跟随）
+   */
+.btn {
+  --rounded-btn: 0.25rem;
+}
 
 /* —— hover：tint 加深、边框更实。
       6.443：必须直接声明 bg/border —— daisyUI .btn:hover 有一条直接生效的
@@ -1967,22 +2015,23 @@ samp {
 .btn.btn-error:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
 .btn.btn-accent:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
 .btn.btn-danger:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
-.btn.btn-default:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
+.btn.btn-default:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
+.btn:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
   background-color: oklch(var(--btn-color, var(--b2)) / var(--tw-bg-opacity, 1));
-  border-color: oklch(var(--btn-color, var(--b2)) / var(--tw-border-opacity, 1));
+  /* 6.489al 边框允许独立色相/饱和：--btn-border-color 未设时回落 --btn-color（其余组行为不变） */
+  border-color: oklch(var(--btn-border-color, var(--btn-color, var(--b2))) / var(--tw-border-opacity, 1));
 }
-.btn.btn-primary:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
-.btn.btn-info:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
-.btn.btn-success:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
-.btn.btn-warning:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.16; --tw-border-opacity: 0.8; }
-.btn.btn-error:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
-.btn.btn-accent:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
-.btn.btn-danger:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.8; }
+.btn.btn-primary:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.6; }
+.btn.btn-info:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.6; }
+.btn.btn-success:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.6; }
+.btn.btn-warning:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.16; --tw-border-opacity: 0.6; }
+.btn.btn-error:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.6; }
+.btn.btn-accent:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.6; }
+.btn.btn-danger:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.6; }
+.btn.btn-default:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.6; }
+.btn:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) { --tw-bg-opacity: 0.14; --tw-border-opacity: 0.6; }
 
-/* —— 无色按钮（neutral/default/dark/裸 .btn）：灰系描边，bc 变量深浅主题自适应。
-      6.358 的 secondary 硬编码块已删（暗色主题下白块刺眼），此处统一接管。
-      6.440 边框再浅一档（用户反馈）：0.35 → 0.22，hover 0.5 → 0.38
-/* —— 无色按钮（secondary/neutral/dark/裸 .btn）：灰系描边，bc 变量深浅主题自适应。
+/* —— 无色按钮（secondary/neutral/dark）：灰系描边，bc 变量深浅主题自适应。
       6.358 的 secondary 硬编码块已删（暗色主题下白块刺眼），此处统一接管。
       6.440 边框再浅一档（用户反馈）：0.35 → 0.22，hover 0.5 → 0.38
       6.489ah 并入旧 BS3 类 btn-default/btn-dark 兜底。6.489ah 后期用户裁定
@@ -1991,7 +2040,8 @@ samp {
       裸模板（agent 模块 dispatch_jump.tpl 实测）、JS 动态注入统一在此接管。
       6.489ai 曾把 secondary 拆出本组换紫罗兰、default 归灰——6.489aj 用户裁定
       回摆：secondary 使用面大（重置/导出/显示列/分页等）恢复灰观感，
-      default 换专属灰蓝色（见文字组注释）—— ——*/
+      default 换专属灰蓝色（见文字组注释）；6.489ak 裸 .btn 也改为同款灰蓝，
+      本组不再含裸 .btn —— ——*/
 .btn.btn-secondary:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
 .btn.btn-neutral:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
 .btn.btn-dark:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
@@ -2002,8 +2052,75 @@ samp {
 .btn.btn-neutral:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass),
 .btn.btn-dark:hover:not(.btn-outline):not(.btn-ghost):not(.btn-link):not(.btn-glass) {
   background-color: oklch(var(--btn-color, var(--b2)) / var(--tw-bg-opacity, 1));
-  border-color: oklch(var(--btn-color, var(--b2)) / var(--tw-bg-opacity, 1));
+  border-color: oklch(var(--btn-border-color, var(--btn-color, var(--b2))) / var(--tw-border-opacity, 1));
   --tw-bg-opacity: 0.09; --tw-border-opacity: 0.38;
+}
+
+/*
+   6.489av 状态徽章软色化（用户指定图样「支付成功」：浅 tint 底 + 同色细边 +
+   同相深字）。daisyUI 原生 badge-success/-error/-warning/-info 是实心底 +
+   内容色白字 + 透明边；本库按钮 6.439 起已是软色语言，徽章跟进统一。
+   浓度取徽章档：底 0.1、边 0.3（徽章小、0.6 会显重，比按钮档淡一档）、
+   字 0.92 同按钮。直接声明三属性压原生（builder.css 在本文件前加载，
+   同特异性靠后即胜；badge-outline/-ghost 等变体 (0,2,0) 不受影响）。
+   注意按用户要求不改 label-* 系列旧徽章（实心底语义保留，见 layout css 6.273）
+   —— 6.489ax 用户反馈：边再淡一档（0.3/0.35 → 0.2/0.25）、圆角加大
+   （主题 --rounded-badge=0.125rem 太方 → 固定 0.25rem，与裸词类同步）
+   —— 6.489bi 用户反馈 badge-primary 仍是原生实心蓝、与状态徽章观感不一，
+   primary 并入本组（底 0.1/边 0.2/字 0.92，跟随主题 --p）
+   —— 6.489bj 与裸词类统一：原生 .badge 是 14px/400/9px 左右留白，裸词
+   徽章是 12px/600/8px——同屏并排文字大小与盒子观感不一，软色组整体
+   对齐裸词配方；badge-sm/lg 尺寸类与 outline/ghost 变体保持 daisyUI
+   原生，不参与对齐。底/边再淡一档：0.1/0.2 → 0.07/0.14
+   （warning 0.12/0.25 → 0.08/0.17）
+   —— 6.489bk 用户实测两族高度仍差 3px（带 badge- 20、裸词 23），裁定
+   统一为 24px：本组与裸词组同升 1.5rem。裸词 23 的成因是表格里
+   `.table td .the-field`(0,2,1) 的 height:100%/line-height:21px 压过
+   裸词组(0,2,0)，td 不定高时 100% 按 auto 解 → 21px 行盒 + 2px 边框；
+   解除规则见 layout css 同名 6.489bk
+   —— 6.489bl 去掉 line-height:1（与裸词组同步）：生产环境字体度量不同，
+   行盒=字号时字形挤压/偏移；垂直居中由 inline-flex+定高负责，行高回落
+   daisyUI 原生的 1.25rem
+   ============================================================ */
+:where(.badge-primary, .badge-success, .badge-error, .badge-danger, .badge-warning, .badge-info):not(.badge-sm):not(.badge-lg):not(.badge-outline):not(.badge-ghost) {
+  height: 1.5rem;
+  padding: 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  vertical-align: middle;
+  border-radius: 0.25rem;
+}
+
+.badge-primary {
+  background-color: oklch(var(--p) / 0.07);
+  border-color: oklch(var(--p) / 0.14);
+  color: oklch(var(--p) / 0.92);
+}
+
+.badge-success {
+  background-color: oklch(var(--su) / 0.07);
+  border-color: oklch(var(--su) / 0.14);
+  color: oklch(var(--su) / 0.92);
+}
+
+.badge-error,
+.badge-danger {
+  background-color: oklch(var(--er) / 0.07);
+  border-color: oklch(var(--er) / 0.14);
+  color: oklch(var(--er) / 0.92);
+}
+
+.badge-warning {
+  background-color: oklch(var(--wa) / 0.08);
+  border-color: oklch(var(--wa) / 0.17);
+  color: oklch(var(--wa) / 0.92);
+}
+
+.badge-info {
+  background-color: oklch(var(--in) / 0.07);
+  border-color: oklch(var(--in) / 0.14);
+  color: oklch(var(--in) / 0.92);
 }
 
 /*
@@ -2050,3 +2167,41 @@ select[readonly]:disabled {
   color: oklch(var(--bc) / 1);
 }
 
+
+/* ============================================================
+   6.489aq 表单/搜索表单输入组件左右内边距减半（用户反馈：输入框内部左右空白过大）
+   「当前值」以实际生效为准，非 daisyUI 基准——327 行 .form-wrapper input.input
+   (0,2,1) 已把文本框左内边距锁在 0.75rem，首个版本只发 (0,2,0) 的
+   .form-wrapper .input 被它压住，左侧纹丝不动（用户复测「没变化」）。
+   本版同选择器同文件靠后覆盖，按当前生效值取半：
+   文本框左 0.75→0.375rem、右 1rem→0.5rem；select 箭头侧受 chevron
+   calc(100%-20px) 位置限制取 1.5rem/1.375rem，起始侧减半。
+   仅作用 form-wrapper（表单 + 搜索表单）；日期/图标选择等复合组件自带
+   !important 功能性留白不受影响；表格内联编辑（无 form-wrapper）不变。
+   x-text/x-textarea build 时宿主摘除 input/textarea 类，只有内层真控件命中，
+   不会双重内边距
+   ============================================================ */
+.form-wrapper input.input,
+.form-wrapper button.input {
+  padding-left: 0.375rem;
+  padding-right: 0.5rem;
+}
+.form-wrapper .input {
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+.form-wrapper .input-sm {
+  padding-left: 0.375rem;
+  padding-right: 0.375rem;
+}
+.form-wrapper .select {
+  padding-inline-start: 0.5rem;
+  padding-inline-end: 1.5rem;
+}
+.form-wrapper .select-sm {
+  padding-left: 0.375rem;
+  padding-right: 1.375rem;
+}
+.form-wrapper .textarea {
+  padding: 0.5rem;
+}

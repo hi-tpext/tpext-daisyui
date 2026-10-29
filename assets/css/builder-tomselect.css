@@ -106,7 +106,9 @@
   border-color: oklch(var(--bc) / 0.2) !important;
   border-radius: var(--rounded-btn, 0.375rem) !important;
   background-color: oklch(var(--b1) / 1);
-  padding: 0 0.5rem !important;
+  /* 6.489ar 左右留白减半：左 8→6px（6px+1px 边框 = 减半后 .input 的文字起点），
+     右 8→4px（箭头侧还有 vendor 强制的 ts-control ≥0.75rem 功能性预留） */
+  padding: 0 0.25rem 0 0.375rem !important;
 }
 
 /* TomSelect 的 items/buttons 在 DaisyUI themed wrapper 内对齐 */
@@ -322,9 +324,9 @@
   font-size: inherit !important;
   min-width: 2rem;
   line-height: inherit !important;
-  /* 左留白 4px：wrapper(8px)+边框(1px)+ts-control(4px)+input(4px)=17px，
-     与 .input 的文字起点（16px padding+1px 边框）对齐 */
-  padding: 0 0 0 4px !important;
+  /* 6.489ar 去掉旧的内层 4px 左留白（旧注释按 .input=16px 时代算的 17px 对齐，
+     减半后 wrapper 6px+1px 边框即文字起点，与 .input 完全一致），归零防叠加 */
+  padding: 0 !important;
   background: transparent !important;
 }
 

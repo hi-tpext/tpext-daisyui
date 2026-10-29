@@ -120,8 +120,12 @@
   line-height: 1.75rem !important;
   padding-top: 0 !important;
   padding-bottom: 0 !important;
-  padding-left: 0.75rem !important; /* 12px — 与主表单一致 */
-  padding-right: 0.625rem !important;
+  /* 6.489ar 左右留白减半（与主表单 6.489aq 同步）：left 12→6px、right 10→5px。
+     注意本规则带 !important，6.489aq 的 .form-wrapper 无重要值规则压不过它——
+     搜索区的减半必须改在这里。wrapper（TomSelect 初始化后被 JS 挂上 .input 类，
+     tpextbuilder.js）也命中本规则，可见 select 的左留白即由此提供 */
+  padding-left: 0.375rem !important; /* 6px */
+  padding-right: 0.3125rem !important; /* 5px；select 箭头侧由 ts-control 的功能性 10px 兜底 */
   border-radius: var(
     --rounded-btn,
     0.375rem
@@ -136,8 +140,10 @@
   min-height: calc(
     1.75rem - 2px
   ) !important; /* 26px = 28px wrapper 内容区（2px 边框） */
-  /* 左留白由 wrapper 提供（10px padding + 1px 边框），ts-control 不再叠加，
-     否则下拉文字比旁边的输入框深 14px（6.38 组件左侧留白统一） */
+  /* 左留白由 wrapper 提供（6.489ar 后为 6px padding + 1px 边框），ts-control 不再叠加，
+     否则下拉文字比旁边的输入框深 14px（6.38 组件左侧留白统一）。
+     右侧 10px 是功能性预留：vendor 强制 padding-right ≥ 0.75rem，
+     自绘箭头（css 三角）画在 right 3~11px，再小文字会顶进箭头 */
   padding: 0 0.625rem 0 0 !important;
 }
 .search-form .ts-wrapper.multi .ts-control {
@@ -146,7 +152,7 @@
 .search-form .ts-wrapper.single .ts-control {
   height: calc(1.75rem - 2px) !important;
 }
-/* 内层 input 同理不叠加左留白，文字起点 = wrapper 10px + 1px 边框 = 输入框一致 */
+/* 内层 input 同理不叠加左留白，文字起点 = wrapper 6px + 1px 边框 = 输入框一致 */
 .search-form .ts-wrapper .ts-control > input {
   padding-left: 0 !important;
 }
@@ -210,11 +216,28 @@
   font-size: 0.8125rem !important;
 }
 
-/* 搜索区日期图标在右侧——28px 高度输入框右侧留白给图标（图标缩小规则在统一规范节） */
+/* 搜索区日期图标在右侧——28px 高度输入框右侧留白给图标（图标缩小规则在统一规范节）；
+   6.489ar 左留白随搜索区整体减半（10→5px），右侧 2rem 是图标功能性预留不动 */
 .search-form .date-input,
 .search-form .date-range-cell .input {
-  padding-left: 0.625rem !important;
+  padding-left: 0.3125rem !important;
   padding-right: 2rem !important;
+}
+
+/*
+   6.489as 复合组件右缘功能位——本文件 115 行的 .search-form .input 紧凑规则
+   （同特异性、更靠后）会把带 .input 类的复合输入框右 padding 压成 5px，而
+   色块/眼睛/上传按钮都是绝对定位在输入框右缘内的元素，右 padding 是它们的
+   功能性让位，须按「统一规范」搜索档重新钉住（日期已在上方规则处理）
+   */
+.search-form .color-input {
+  padding-right: 2rem !important; /* 32px = 6 + 22 色块 + 4 */
+}
+.search-form .pwd-eye-input {
+  padding-right: 2rem !important; /* 32px = 6 + 20 眼睛 + 6 */
+}
+.search-form .upload-input-wrap .file-url-input {
+  padding-right: 5rem !important; /* 上传按钮兜底，同主表单（JS 会按实测回写内联） */
 }
 
 /* 搜索区 label 也缩小 */
@@ -475,12 +498,29 @@ table.table-freeze-on {
   left: -1px;
 }
 
-/* 表格内日期选择器 */
+/* 表格内日期选择器（6.489as 补 padding：通用 .table .input 4px 右 padding 会把
+   文字压到右缘 18px 日历图标下面——右 padding 是图标功能性让位，28px = 4 + 18 + 6） */
 .table .date-input,
 .table .flatpickr-input {
   height: 1.75rem !important;
   min-height: 1.75rem !important;
   font-size: 0.8125rem !important;
+  padding-left: 0.25rem !important;
+  padding-right: 1.75rem !important;
+}
+
+/* 6.489as 表格内复合组件右缘功能位（眼睛 18px/地图图标 18px/色块 20px，
+   统一 28px 让位；左无功能位随通用 4px） */
+.table .pwd-eye-input {
+  padding-right: 1.75rem !important;
+}
+.table .map-input {
+  padding-left: 0.25rem !important;
+  padding-right: 1.75rem !important;
+}
+.table .color-input {
+  padding-left: 0.25rem !important;
+  padding-right: 1.75rem !important; /* 28px = 4 + 20 色块 + 4 */
 }
 
 /* 表格内 tag 输入 */
@@ -1491,9 +1531,13 @@ label.full-label {
 [data-theme] {
   /* 6.424 增强：用户反馈效果不明显。玻璃感来自「背后有东西可透」——色斑层
      （body::before）同步加大浓度才是主杠杆；α 再往下降文字对比度开始吃紧，
-     blur/sat/高光补足质感。仍无动画。 */
+     blur/sat/高光补足质感。仍无动画。
+     6.489au 用户反馈「页面发蓝、窗口越小越明显」：色斑用固定 rem 尺寸，小视口
+     里占比失衡放大蓝底；饱和度增益把取样色进一步放大。取样增益 1.8→1.3
+     （modal/layer 的硬编码 saturate 同步并轨到本令牌），色斑浓度减半 +
+     min(rem, vmin) 封顶（下方 body::before）。 */
   --glass-blur: 22px;
-  --glass-sat: 1.8;
+  --glass-sat: 1.3;
   --glass-card-bg: oklch(var(--b1) / 0.52);
   --glass-float-bg: oklch(var(--b1) / 0.60);
   --glass-modal-bg: oklch(var(--b1) / 0.70);
@@ -1523,12 +1567,15 @@ body::before {
   z-index: -1;
   pointer-events: none;
   /* 6.424 浓度约翻倍 + 加一枚中部小斑：玻璃透出的色彩层次才看得见。
-     斑心从画布四角往内收（卡片几乎占满视口，斑太靠边透不过玻璃） */
+     斑心从画布四角往内收（卡片几乎占满视口，斑太靠边透不过玻璃）。
+     6.489au 浓度减半（0.22/0.17/0.14/0.12 → 0.11/0.09/0.07/0.06，发蓝主因），
+     尺寸 min(rem, vmin) 封顶——固定 rem 在小窗口占比失衡（窗口越小越蓝），
+     封顶后小视口斑不超过短边 60%，比例回归大窗口观感 */
   background:
-    radial-gradient(48rem 48rem at 18% -6%, oklch(var(--p) / 0.22), transparent 62%),
-    radial-gradient(56rem 50rem at 104% 22%, oklch(var(--s) / 0.17), transparent 64%),
-    radial-gradient(52rem 46rem at 46% 112%, oklch(var(--a) / 0.14), transparent 62%),
-    radial-gradient(38rem 38rem at 62% 46%, oklch(var(--p) / 0.12), transparent 60%);
+    radial-gradient(min(48rem, 60vmin) min(48rem, 60vmin) at 18% -6%, oklch(var(--p) / 0.11), transparent 62%),
+    radial-gradient(min(56rem, 70vmin) min(50rem, 62vmin) at 104% 22%, oklch(var(--s) / 0.09), transparent 64%),
+    radial-gradient(min(52rem, 65vmin) min(46rem, 58vmin) at 46% 112%, oklch(var(--a) / 0.07), transparent 62%),
+    radial-gradient(min(38rem, 48vmin) min(38rem, 48vmin) at 62% 46%, oklch(var(--p) / 0.06), transparent 60%);
 }
 
 /* 卡面档：半透明底 + 模糊 + 顶缘高光 + 1px 分离边（阴影沿用 6.347） */
@@ -1559,8 +1606,8 @@ main .card.bg-base-100 {
 /* 模态框：最高层，扩散范围与深度都更大一档，玻璃也最厚（透明度最高） */
 .modal-box {
     background-color: var(--glass-modal-bg);
-    -webkit-backdrop-filter: blur(28px) saturate(1.9);
-    backdrop-filter: blur(28px) saturate(1.9);
+    -webkit-backdrop-filter: blur(28px) saturate(var(--glass-sat)); /* 6.489au 并轨到令牌 */
+    backdrop-filter: blur(28px) saturate(var(--glass-sat));
     box-shadow:
         var(--glass-highlight),
         0 2px 4px rgb(0 0 0 / 0.08),
@@ -1759,8 +1806,9 @@ main .card.bg-base-100 {
 .batch-action-btn.btn-cyan.batch-disabled:hover { background-color: #f2fafc; border-color: #57c7d4; }
 .batch-action-btn.btn-yellow.batch-disabled:hover { background-color: #fefaed; border-color: #fcc525; }
 .batch-action-btn.btn-brown.batch-disabled:hover { background-color: #f6f3f2; border-color: #8d6658; }
-/* 6.489aj default 有专属灰蓝色（#617389 ≈ 55.1% 0.046 257），disabled hover 用同色加深 */
-.batch-action-btn.btn-default.batch-disabled:hover { background-color: oklch(55.1% 0.046 257 / 0.14); border-color: oklch(55.1% 0.046 257 / 0.8); }
+/* 6.489aj default 有专属灰蓝色（#617389 ≈ 55.1% 0.046 257），disabled hover 用同色加深；
+   6.489al 边框降饱和提亮（55.1% 0.028 257），与 builder-core 默认态边框一致 */
+.batch-action-btn.btn-default.batch-disabled:hover { background-color: oklch(55.1% 0.046 257 / 0.14); border-color: oklch(55.1% 0.028 257 / 0.6); }
 
 /*
    6.356：回退 6.353——.btn-default/.btn-secondary 恢复主题自适应浅灰底+深字
@@ -1792,50 +1840,150 @@ main .card.bg-base-100 {
    .label 的 display:flex/padding，不依赖加载顺序）。
    注意：不能重定义裸 .label（daisyUI 保留类），只用复合选择器。
    —— 6.273（用户澄清两类是【不同类型】，6.271 一刀切纯文字化对 label-X 是误伤）：
-   ① 裸词类（the-field 上的 success/danger/...）：同旧库
-   `span.the-field.success { color:#72b754 }` 式【纯文字着色】——只设 color，
-   不设背景/高度/内边距/圆角，字号字重随所在单元格继承；
+   ① 裸词类（the-field 上的 success/danger/...）：6.273 曾定纯文字着色，
+   6.489aw 用户裁定升级为软色徽章（与 badge-* 同语言，见下方规则）——
+   纯文字着色的原始依据（同旧库 `span.the-field.success { color:#72b754 }`）作废；
    ② label-X 系列（含内嵌 <label class="label label-X">、the-field 上的
    label-X、独立 .label-X）：Bootstrap/LightYear 徽章语义，【实心底 + 内容色
    白字】（6.269 定稿尺寸 20px 高 badge-sm 档），恢复徽章版式。
+   6.489av 用户再次确认 label-* 不动（实心底语义保留，与软色系并存）。
    颜色均用主题 oklch 变量，13 主题自动适配；裸词 default 用 bc/0.6 中性灰。
    —— 裸 success/danger 等单词类过泛，仍限定 .the-field 作用域防误伤；
    新代码需要徽章观感请直接用 badge badge-*。
    */
 
-/* ① 裸词类：纯文字着色（6.271/6.273） */
+/* ① 裸词类：6.489aw（用户要求）从 6.273 的纯文字着色升级为软色徽章——与
+   badge-* 同款语言（tint 底 0.1 + 同色细边 + 同相深字 0.92，warning 各加
+   一档），版式与 label-* 同档（20px 高 / 0.75rem / 600）。
+   6.489ax 用户反馈：边再淡一档（0.3/0.35 → 0.2/0.25）、圆角加大
+   （主题 --rounded-badge=0.125rem 太方 → 固定 0.25rem，与 badge-* 同步）。
+   6.489be 对照原库补齐字面色 default #8b95a5 与 dark/purple/pink/cyan/yellow
+   （primary 曾随 6.489be 用旧库 teal，6.489bg 用户裁定收回、跟随主题 --p）。
+   6.489bf 用户要求裸词全员徽章化（字面色组此前只有文字色）：字面 hex 以
+   rgba tint 作底/细边、原色作文字；secondary 一并入组用主题自适应灰
+   （旧 #e4e7ea 白底不可见，6.273 的可读性裁定维持）。
+   tailwind preflight 把边框宽度归零，细边须用 border 简写带宽度
+   6.489bj 底/边再淡一档（0.1/0.2 → 0.07/0.14，warning 档 0.08/0.17），
+   与 badge-* 软色组同步
+   6.489bk 高度与 badge-* 统一为 24px（用户实测 23 vs 20，裁定 24）：
+   表格里本组(0,2,0)压不过 `.table td .the-field`(0,2,1) 的
+   height:100%/line-height:21px，td 不定高时 100% 按 auto 解 → 行盒
+   21px + 边框 2px = 23px；表格上下文的定高收回规则见 6.386 之后
+   6.489bl 去掉 line-height:1：生产环境字体度量不同，行盒=字号时
+   字形溢出行盒，观感上文字偏/被裁（用户实测注释掉即正常）。垂直居中
+   由 inline-flex + 定高负责，行高交还上下文（表格内 21px） */
+.the-field.success,
+.the-field.danger, .the-field.error,
+.the-field.warning,
+.the-field.info,
+.the-field.default,
+.the-field.primary,
+.the-field.secondary,
+.the-field.dark,
+.the-field.purple,
+.the-field.pink,
+.the-field.cyan,
+.the-field.yellow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 1.5rem;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    vertical-align: middle;
+    border-radius: 0.25rem;
+}
+
 .the-field.success {
-    color: var(--fallback-su, oklch(var(--su) / 1));
+    background-color: oklch(var(--su) / 0.07);
+    border: 1px solid oklch(var(--su) / 0.14);
+    color: oklch(var(--su) / 0.92);
 }
 
 .the-field.danger, .the-field.error {
-    color: var(--fallback-er, oklch(var(--er) / 1));
+    background-color: oklch(var(--er) / 0.07);
+    border: 1px solid oklch(var(--er) / 0.14);
+    color: oklch(var(--er) / 0.92);
 }
 
 .the-field.warning {
-    color: var(--fallback-wa, oklch(var(--wa) / 1));
+    background-color: oklch(var(--wa) / 0.08);
+    border: 1px solid oklch(var(--wa) / 0.17);
+    color: oklch(var(--wa) / 0.92);
 }
 
 .the-field.info {
-    color: var(--fallback-in, oklch(var(--in) / 1));
+    background-color: oklch(var(--in) / 0.07);
+    border: 1px solid oklch(var(--in) / 0.14);
+    color: oklch(var(--in) / 0.92);
 }
 
+/* —— 字面色组（hex 取自原库 tpextbuilder.css，rgba = 同色 tint） —— */
+.the-field.default {
+    background-color: rgba(139, 149, 165, 0.07);
+    border: 1px solid rgba(139, 149, 165, 0.14);
+    color: #8b95a5;
+}
+
+/* primary 跟随主题色（6.489bg 用户裁定，收回 6.489be 的字面 teal——
+   语义色随主题，字面色仅用于 purple/pink 等无语义歧义的类名） */
 .the-field.primary {
-    color: var(--fallback-p, oklch(var(--p) / 1));
+    background-color: oklch(var(--p) / 0.07);
+    border: 1px solid oklch(var(--p) / 0.14);
+    color: oklch(var(--p) / 0.92);
+}
+
+.the-field.secondary {
+    background-color: oklch(var(--bc) / 0.04);
+    border: 1px solid oklch(var(--bc) / 0.12);
+    color: oklch(var(--bc) / 0.6);
+}
+
+.the-field.dark {
+    background-color: rgba(70, 81, 97, 0.07);
+    border: 1px solid rgba(70, 81, 97, 0.14);
+    color: #465161;
+}
+
+/* dark 字面色 #465161 在 dark 主题深底上文字近不可见（旧库无主题适配），提亮一档保读 */
+[data-theme='dark'] .the-field.dark {
+    color: #9aa5b1;
+}
+
+.the-field.purple {
+    background-color: rgba(146, 109, 222, 0.07);
+    border: 1px solid rgba(146, 109, 222, 0.14);
+    color: #926dde;
+}
+
+.the-field.pink {
+    background-color: rgba(249, 97, 151, 0.07);
+    border: 1px solid rgba(249, 97, 151, 0.14);
+    color: #f96197;
+}
+
+.the-field.cyan {
+    background-color: rgba(87, 199, 212, 0.07);
+    border: 1px solid rgba(87, 199, 212, 0.14);
+    color: #57c7d4;
+}
+
+.the-field.yellow {
+    background-color: rgba(252, 197, 37, 0.08);
+    border: 1px solid rgba(252, 197, 37, 0.17);
+    color: #fcc525;
 }
 
 .the-field.secondary {
     /*
    原取 --s（次级【背景】色 #e4e7ea，L≈0.93 近白）当文字色：落在浅色白卡上
    几乎不可读；而 --sc 系 sharedColors 恒定值（夜间仍是深灰）也会翻车。
-   改指主题自适应的浅灰（同 .default 用 --bc 的做法），语义上「次要＝弱化文字」，
-   深浅主题都可读，且比 .the-field.default(bc/.6) 再淡一档以区分。
+   改指主题自适应的浅灰，语义上「次要＝弱化文字」，深浅主题都可读。
+   6.489be 后 default 已走旧库字面色（#8b95a5，见上方），不再与本规则同源。
    */
     color: oklch(var(--bc) / 0.5);
-}
-
-.the-field.default {
-    color: var(--fallback-bc, oklch(var(--bc) / 0.6));
 }
 
 /* ② label-X 系列：徽章版式（实心底 + 内容色白字，6.269 尺寸） */
@@ -1846,7 +1994,12 @@ main .card.bg-base-100 {
 .label-info, .label.label-info, .the-field.label-info,
 .label-primary, .label.label-primary, .the-field.label-primary,
 .label-secondary, .label.label-secondary, .the-field.label-secondary,
-.label-default, .label.label-default, .the-field.label-default {
+.label-default, .label.label-default, .the-field.label-default,
+.label-purple, .label.label-purple, .the-field.label-purple,
+.label-pink, .label.label-pink, .the-field.label-pink,
+.label-cyan, .label.label-cyan, .the-field.label-cyan,
+.label-yellow, .label.label-yellow, .the-field.label-yellow,
+.label-brown, .label.label-brown, .the-field.label-brown {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -1896,6 +2049,35 @@ main .card.bg-base-100 {
        浅灰底深字），换 base-200 浅底 + 主题文字色；徽章形状/尺寸走上面的共用规则 */
     background-color: var(--fallback-b2, oklch(var(--b2) / 1));
     color: oklch(var(--bc) / 0.75);
+}
+
+/* 6.489bb LightYear 字面色 label 补齐（对照旧库 style.css 全 13 色清点：
+   新库原有 8 色，缺 purple/pink/cyan/yellow/brown）。hex 原样取自
+   lightyear-admin style.css，实心底白字形态与本族一致（该族按 6.489av
+   用户裁定不做软色化，与 badge-*/裸词类的软色语言并存） */
+.label-purple, .label.label-purple, .the-field.label-purple {
+    background-color: #926dde;
+    color: oklch(1 0 0 / 0.95);
+}
+
+.label-pink, .label.label-pink, .the-field.label-pink {
+    background-color: #f96197;
+    color: oklch(1 0 0 / 0.95);
+}
+
+.label-cyan, .label.label-cyan, .the-field.label-cyan {
+    background-color: #57c7d4;
+    color: oklch(1 0 0 / 0.95);
+}
+
+.label-yellow, .label.label-yellow, .the-field.label-yellow {
+    background-color: #fcc525;
+    color: oklch(1 0 0 / 0.95);
+}
+
+.label-brown, .label.label-brown, .the-field.label-brown {
+    background-color: #8d6658;
+    color: oklch(1 0 0 / 0.95);
 }
 
 /*
@@ -2072,10 +2254,16 @@ table.table .toggle {
    全部不需要：拖宽超容器即出横向滚动条，记忆宽总和超容器同理。
    末行 TomSelect 下拉被裁的顾虑由 6.461 同款适配解决：下拉挂 body
    （builder-elements.js 选择器同步纳入 .table-wrapper）+ 滚动即收起
+
+   6.489bh 纵向例外：本容器没有高度约束，overflow-x:auto 令 overflow-y
+   计算为 auto，但纵向永远没有可滚内容——整条 contain 会把纵向滚轮链
+   一并截断（Chrome 144 起对不可滚动的滚动容器同样生效），items 内
+   滚轮滚不动页面（用户报告）。只保留横向隔离——防止触控板横滑到边界
+   触发浏览器前进/后退
    */
 .form-wrapper .table-wrapper {
   overflow-x: auto;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: contain;
 }
 
 /*
@@ -2240,8 +2428,8 @@ td.row-__action__ .action-row {
    */
 .layui-layer {
   background-color: var(--glass-modal-bg, oklch(var(--b1)));
-  -webkit-backdrop-filter: blur(28px) saturate(1.9);
-  backdrop-filter: blur(28px) saturate(1.9);
+  -webkit-backdrop-filter: blur(28px) saturate(var(--glass-sat)); /* 6.489au 并轨到令牌 */
+  backdrop-filter: blur(28px) saturate(var(--glass-sat));
   border-radius: 0.25rem;
   box-shadow:
     var(--glass-highlight, inset 0 1px 0 oklch(1 0 0 / 0.25)),
@@ -2266,7 +2454,12 @@ html[data-theme="dark"] iframe.layui-layer-load {
   font-size: 0.9375rem;
   font-weight: 600;
   color: oklch(var(--bc) / 0.85);
-  background-color: transparent; /* 6.411 透出弹层玻璃底，整框一块材质 */
+  /* 6.489at 原为 transparent 透出弹层玻璃底（6.411 整框一块材质）——但玻璃底
+     是 70% 半透明 + 背后取样，标题条实际呈灰色，与 iframe 内容区的不透明
+     base-100 白不一致（用户反馈）。改为不透明 base-100 同内容区同底色，
+     dark 主题自动跟 --b1；边框下的玻璃层对弹层整体观感无影响（其余区域
+     均被 iframe/内容不透明底覆盖） */
+  background-color: oklch(var(--b1));
   border-bottom-color: oklch(var(--b2));
   border-radius: 0.25rem 0.25rem 0 0;
 }
@@ -2498,6 +2691,19 @@ td.row-__action__ {
 }
 
 /*
+   6.489bk 裸词徽章在表格里收回 6.386 的撑满：`.table td .the-field`(0,2,1)
+   的 height:100%/line-height:21px 压过 `.the-field.success` 组(0,2,0)——
+   td 不定高时百分比按 auto 解，行盒 21px + 边框 2px = 23px，与 badge-*
+   的 20px 并排差 3px（用户实测）。徽章定高 24px（6.489bk 统一裁定），
+   树列 .tline 不含这些类，6.386 的满行拉伸不受影响。
+   line-height 不再在此钉 1（6.489bl）：垂直居中由 flex+定高负责，
+   行高交还 `.table td .the-field` 的 21px，避免行盒过紧挤压字形
+   */
+.table td .the-field:is(.success, .danger, .error, .warning, .info, .default, .primary, .secondary, .dark, .purple, .pink, .cyan, .yellow) {
+  height: 1.5rem;
+}
+
+/*
    6.485c raw/show 的 inline(true) 是行内组件（模板输出裸 the-field span）：
    多个 inline 在 fields 组合列里应同行并排（用户契约），但上面 6.408 的
    「无 col-span 子项占满整行」兜底把每个 span 各自顶成一行。
@@ -2541,4 +2747,34 @@ td.row-__action__ {
 .table td .the-field > .tline {
   align-self: stretch;
   height: auto;
+}
+
+/*
+   6.489an 整页表格卡片撑满视口（用户反馈：数据少时卡片下方一大片背景空底）
+   —— body 拉成视口高纵向 flex，main 弹性伸展；工具条 card-body（表格页独有
+   border-b 特征，表单页/含 items 表单均不匹配）所在卡片弹性伸展，内容
+   card-body 吃掉剩余高度，卡片白底直达视口底。layer 弹窗页由 layout.html
+   打的 body.in-layer 排除——弹窗内容若也 min-height 视口，会与 layer
+   自适应测高互相抬升，小弹窗被撑成整屏
+   */
+body:not(.in-layer) {
+  display: flex;
+  flex-direction: column;
+}
+body:not(.in-layer) > main {
+  flex: 1 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+body:not(.in-layer) main > .card:has(> .card-body.border-b) {
+  flex: 1 0 auto;
+}
+/* daisyUI 原生 .card-body 自带 flex:1 1 auto——卡片拉高后多余高度会在
+   标题条与内容区之间平分，标题条被撑高、文字垂直居中成一条过扁的头部带
+   （用户报「头部高度不对」）。全部归零增长，只让内容区（最后一个）吃剩余 */
+main > .card:has(> .card-body.border-b) > .card-body {
+  flex: 0 0 auto;
+}
+main > .card:has(> .card-body.border-b) > .card-body:last-child {
+  flex: 1 0 auto;
 }
