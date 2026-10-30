@@ -573,7 +573,14 @@ class Search extends SWrapper implements Renderable, ReleaseAble
                 // btn-search 展开/收起
                 if (e.target.closest('#btn-search' + extKey)) {
                     var searchForm = document.querySelector('#' + formId + ' form');
-                    if (searchForm) searchForm.classList.toggle('hidden');
+                    if (searchForm) {
+                        searchForm.classList.toggle('hidden');
+                        // 6.489bp 搜索区收放改变表格顶部偏移/可用高，须强制重算限高，
+                        // 否则表格停在旧 maxHeight，多出的空间白白空着
+                        if (window.tpextbuilder && window.tpextbuilder.refitTableHeight) {
+                            window.tpextbuilder.refitTableHeight();
+                        }
+                    }
                     return;
                 }
 

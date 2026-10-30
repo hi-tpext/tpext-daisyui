@@ -20,7 +20,7 @@
     // 6.489p 运行版本标记（用户建议）：aver 时间戳只能保证 URL 拉新，fetch 检查
     // 拉到的也是磁盘上现文件，无法证明页面里跑的实例是新版。boot 时输出到控制台，
     // 一眼确认当前页面执行的 JS 是哪一版——改本文件后必须递增
-    var VERSION = '1.0.13';
+    var VERSION = '1.0.14';
     w.__tpextBuilderVersion = VERSION;
 
     /* ============================================================
@@ -2332,6 +2332,11 @@
 
     /** 供 table.html 局部刷新脚本调用（单元格重建后重新分配偏移） */
     w.tpextbuilder.initTableFreeze = initTableFreeze;
+    /** 6.489bp 页面顶部几何变化（如搜索区展开/收起）后强制重算全部表格限高：
+        applyHeadFreeze 见已设 maxHeight 会直接返回，非 force 调用表格停在旧可用高度 */
+    w.tpextbuilder.refitTableHeight = function () {
+        initTableFreeze(d, true);
+    };
     // 6.254 公开确认弹窗（tpb/lightyear.confirm 封装，带回退），供 searchScript 等处使用
     w.tpextbuilder.confirm = confirmModal;
 

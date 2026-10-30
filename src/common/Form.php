@@ -91,21 +91,22 @@ class Form extends FWrapper implements Renderable, ReleaseAble
     protected $__tabs__ = null;
 
     /**
-     * 当前fields分组
+     * 当前内容容器栈，栈顶即当前写入目标
+     * fields/items 不再有优先级，按“最近打开的容器”归属，结束即回到下一层
+     *
+     * @var array<int, array{type: string, content: FieldsContent|ItemsContent}>
+     */
+    protected $__contexts__ = [];
+
+    /**
+     * 栈顶fields容器（兼容保留，与栈顶同步）
      *
      * @var FieldsContent|null
      */
     protected $__fields__ = null;
 
     /**
-     * fields分组栈（嵌套fields时使用）
-     *
-     * @var FieldsContent[]
-     */
-    protected $__fields__bag__ = [];
-
-    /**
-     * 当前items分组
+     * 栈顶items容器（兼容保留，与栈顶同步）
      *
      * @var ItemsContent|null
      */
@@ -294,6 +295,7 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      */
     public function tab($label, $active = false, $name = '')
     {
+        $this->__contexts__ = [];
         $this->__fields__ = null;
         $this->__items__ = null;
 
@@ -332,6 +334,7 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      */
     public function step($label, $description = '', $active = false, $name = '')
     {
+        $this->__contexts__ = [];
         $this->__fields__ = null;
         $this->__items__ = null;
 
@@ -346,22 +349,21 @@ class Form extends FWrapper implements Renderable, ReleaseAble
     }
 
     /**
-     * 创建一个新的fields分组（旧分组压栈）
+     * 创建一个新的fields分组（压入容器栈，成为当前写入目标）
      *
      * @return FieldsContent
      */
     public function createFields()
     {
-        if ($this->__fields__) {
-            $this->__fields__bag__[] = $this->__fields__;
-        }
         $this->__fields__ = new FieldsContent();
         $this->__fields__->setForm($this);
+        $this->__items__ = null;
+        $this->__contexts__[] = ['type' => 'fields', 'content' => $this->__fields__];
         return $this->__fields__;
     }
 
     /**
-     * 创建一个新的items分组
+     * 创建一个新的items分组（压入容器栈，成为当前写入目标）
      *
      * @return ItemsContent
      */
@@ -369,6 +371,8 @@ class Form extends FWrapper implements Renderable, ReleaseAble
     {
         $this->__items__ = new ItemsContent();
         $this->__items__->setForm($this);
+        $this->__fields__ = null;
+        $this->__contexts__[] = ['type' => 'items', 'content' => $this->__items__];
         return $this->__items__;
     }
 
@@ -393,7 +397,7 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      */
     public function fieldsEnd()
     {
-        $this->__fields__ = array_pop($this->__fields__bag__);
+        $this->popContext('fields');
         return $this;
     }
 
@@ -404,8 +408,36 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      */
     public function itemsEnd()
     {
-        $this->__items__ = null;
+        $this->popContext('items');
         return $this;
+    }
+
+    /**
+     * 弹出栈顶容器（仅当类型匹配）；类型不匹配时忽略，避免误关外层容器
+     *
+     * @param string $type
+     * @return void
+     */
+    protected function popContext($type)
+    {
+        $top = $this->__contexts__ ? $this->__contexts__[count($this->__contexts__) - 1] : null;
+
+        if ($top && $top['type'] === $type) {
+            array_pop($this->__contexts__);
+            $this->syncContextPointers();
+        }
+    }
+
+    /**
+     * 同步 __fields__/__items__ 兼容指针为栈顶容器
+     *
+     * @return void
+     */
+    protected function syncContextPointers()
+    {
+        $top = $this->__contexts__ ? $this->__contexts__[count($this->__contexts__) - 1] : null;
+        $this->__fields__ = $top && $top['type'] === 'fields' ? $top['content'] : null;
+        $this->__items__ = $top && $top['type'] === 'items' ? $top['content'] : null;
     }
 
     /**
@@ -451,6 +483,7 @@ class Form extends FWrapper implements Renderable, ReleaseAble
      */
     public function allContentsEnd()
     {
+        $this->__contexts__ = [];
         $this->__fields__ = null;
         $this->__tabs__ = null;
         $this->__items__ = null;
@@ -941,20 +974,26 @@ EOT;
 
             $row = FRow::make($arguments[0], $count > 1 ? $arguments[1] : '', $count > 2 ? $arguments[2] : ($name == 'button' ? 1 : $this->defaultDisplayerColSize));
 
-            if ($this->__fields__) {
-                $this->__fields__->addRow($row);
-            } else if ($this->__items__) {
+            // 栈顶即当前写入目标；创建Fields/Items会压入新容器，故须在创建displayer前记录
+            $target = '';
+            $context = $this->__contexts__ ? $this->__contexts__[count($this->__contexts__) - 1] : null;
+
+            if ($context && $context['type'] === 'fields') {
+                $context['content']->addRow($row);
+                $target = 'fields';
+            } else if ($context) {
                 if ($name == 'hidden') {
                     throw new \InvalidArgumentException(__blang('builder_not_allowed') . ' : ' . $name);
                 }
                 $row->class('text-center');
-                $this->__items__->addCol($arguments[0], $row);
+                $context['content']->addCol($arguments[0], $row);
+                $target = 'items';
             } else if ($this->__tabs__) {
-
                 $this->__tabs__->addRow($row);
+                $target = 'tabs';
             } else {
-
                 $this->rows[] = $row;
+                $target = 'rows';
             }
 
             $row->setForm($this);
@@ -977,7 +1016,7 @@ EOT;
                 $displayer->extKey('-' . $this->id . mt_rand(10, 99));
             }
 
-            if ($this->__items__) {
+            if ($target === 'items') {
                 if (!($displayer instanceof Items)) {
                     $displayer->showLabel(false);
                 }

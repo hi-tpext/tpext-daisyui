@@ -2248,6 +2248,20 @@ table.table .toggle {
 }
 
 /*
+   6.489bq 页面滚动模式（freezeHeader(false)，无 .table-freeze-head）：
+   容器不限高、跟随内容长高，纵向没有真正的可滚内容。但 overflow-x:auto 令
+   overflow-y 计算为 auto，表格整高的取整残差（实测 scrollHeight-clientHeight
+   =1px）会画出一条无滚动空间的纵向滚动条（用户报「有滚动条但滚不动」）；
+   6.467 的 contain 又把滚轮链截在这 1px 上，鼠标停在表格内滚不动整个页面
+   （用户报）。纵向出口关掉并把滚动链交还页面；横向仍隔离，防触控板横滑
+   触发浏览器前进/后退（同 6.489bh items 容器）
+   */
+.table-wrap:not(.table-freeze-head) {
+  overflow-y: hidden;
+  overscroll-behavior-y: auto;
+}
+
+/*
    6.489g items 子表容器与主表 .table-wrap 同款滚动模型：容器横向滚动。
    此前 .table-wrapper 无 overflow，列宽是「零和分账」——拖宽必须有人让位，
    为此长出一整套上限/让位/兜底/回写机制（6.489c-f）。改为主表模型后这些
