@@ -1883,7 +1883,13 @@ main .card.bg-base-100 {
    21px + 边框 2px = 23px；表格上下文的定高收回规则见 6.386 之后
    6.489bl 去掉 line-height:1：生产环境字体度量不同，行盒=字号时
    字形溢出行盒，观感上文字偏/被裁（用户实测注释掉即正常）。垂直居中
-   由 inline-flex + 定高负责，行高交还上下文（表格内 21px） */
+   由 inline-flex + 定高负责，行高交还上下文（表格内 21px）
+   6.489bw 行高与定高统一为 24px：用户反馈高度已由 21 改 24，但行高仍是
+   .badge 1.25rem / .the-field 21px，两族并排时文字分布不一致。此处给全
+   上下文定值，表格里 21px 的覆盖见下方 6.489bk/bw 表格规则
+   6.489bx 用户指定 success 字面色 #72b754（旧库值）；底/边同步改成同色
+   tint——主题 --su 是薄荷绿(约156°)，#72b754 是黄绿(约102°)，只换字色会
+   不同相 */
 .the-field.success,
 .the-field.danger, .the-field.error,
 .the-field.warning,
@@ -1900,6 +1906,7 @@ main .card.bg-base-100 {
     align-items: center;
     justify-content: center;
     height: 1.5rem;
+    line-height: 1.5rem;
     padding: 0 0.5rem;
     font-size: 0.75rem;
     font-weight: 600;
@@ -1908,10 +1915,11 @@ main .card.bg-base-100 {
     border-radius: 0.25rem;
 }
 
+/* 6.489bx 用户指定：#72b754（旧库 success 字面色），底/边用同色 tint */
 .the-field.success {
-    background-color: oklch(var(--su) / 0.07);
-    border: 1px solid oklch(var(--su) / 0.14);
-    color: oklch(var(--su) / 0.92);
+    background-color: rgba(114, 183, 84, 0.07);
+    border: 1px solid rgba(114, 183, 84, 0.14);
+    color: #72b754;
 }
 
 .the-field.danger, .the-field.error {
@@ -2722,11 +2730,15 @@ td.row-__action__ {
    td 不定高时百分比按 auto 解，行盒 21px + 边框 2px = 23px，与 badge-*
    的 20px 并排差 3px（用户实测）。徽章定高 24px（6.489bk 统一裁定），
    树列 .tline 不含这些类，6.386 的满行拉伸不受影响。
-   line-height 不再在此钉 1（6.489bl）：垂直居中由 flex+定高负责，
-   行高交还 `.table td .the-field` 的 21px，避免行盒过紧挤压字形
+   6.489bw 行高一并钉 1.5rem，且把 badge-* 宿主类（.the-field.badge-*）
+   纳入同一组：否则 `.table td .the-field` 的 21px 压过软色组，line-height
+   仍停在 21px（用户反馈「高度 24、行高 21」）。badge-sm/lg/outline/ghost
+   变体排除，保持 daisyUI 原生尺寸语义
    */
-.table td .the-field:is(.success, .danger, .error, .warning, .info, .default, .primary, .secondary, .dark, .purple, .pink, .cyan, .yellow) {
+.table td .the-field:is(.success, .danger, .error, .warning, .info, .default, .primary, .secondary, .dark, .purple, .pink, .cyan, .yellow,
+  .badge-primary, .badge-success, .badge-error, .badge-danger, .badge-warning, .badge-info):not(.badge-sm):not(.badge-lg):not(.badge-outline):not(.badge-ghost) {
   height: 1.5rem;
+  line-height: 1.5rem;
 }
 
 /*

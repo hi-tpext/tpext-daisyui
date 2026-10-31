@@ -2081,9 +2081,13 @@ samp {
    —— 6.489bl 去掉 line-height:1（与裸词组同步）：生产环境字体度量不同，
    行盒=字号时字形挤压/偏移；垂直居中由 inline-flex+定高负责，行高回落
    daisyUI 原生的 1.25rem
+   —— 6.489bw 行高与定高统一：高度已是 24px，行高却还是 daisyUI 的
+   1.25rem(20px)、表格里又吃 .the-field 的 21px（用户反馈两族并存不一致），
+   此处钉 1.5rem；表格宿主类由 layout css 的 6.489bw 规则接管
    ============================================================ */
 :where(.badge-primary, .badge-success, .badge-error, .badge-danger, .badge-warning, .badge-info):not(.badge-sm):not(.badge-lg):not(.badge-outline):not(.badge-ghost) {
   height: 1.5rem;
+  line-height: 1.5rem;
   padding: 0 0.5rem;
   font-size: 0.75rem;
   font-weight: 600;
@@ -2098,10 +2102,12 @@ samp {
   color: oklch(var(--p) / 0.92);
 }
 
+/* 6.489bx 用户指定：#72b754（旧库 success 字面色），底/边用同色 tint，
+   与布局层裸词 .the-field.success 同步 */
 .badge-success {
-  background-color: oklch(var(--su) / 0.07);
-  border-color: oklch(var(--su) / 0.14);
-  color: oklch(var(--su) / 0.92);
+  background-color: rgba(114, 183, 84, 0.07);
+  border-color: rgba(114, 183, 84, 0.14);
+  color: #72b754;
 }
 
 .badge-error,
