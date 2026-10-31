@@ -91,6 +91,20 @@ class Table extends TWrapper implements Renderable, ReleaseAble
      */
     protected $freezeColsExplicit = false;
 
+    /**
+     * 6.489bu 是否显式调用过 freezeDefaultColumns()（主动要求注入默认列）。
+     * 与 $freezeColsExplicit 独立：显式冻结了某列后仍可补充默认列；
+     * 为 true 时优先于全局配置 table_freeze_columns=0。
+     * @var bool
+     */
+    protected $freezeColsDefault = false;
+
+    /**
+     * 6.489bu 被 unfreezeColumn($name) 显式剔除的列（默认注入时跳过）
+     * @var array
+     */
+    protected $unfreezeCols = [];
+
     protected $pageSize = 0;
 
     protected $emptyText = '';
@@ -367,6 +381,7 @@ class Table extends TWrapper implements Renderable, ReleaseAble
     public function freezeColumn($name, $direction = 'left')
     {
         $this->freezeColsExplicit = true;
+        unset($this->unfreezeCols[$name]);
         if ('right' === strtolower($direction)) {
             $this->freezeRightCols[$name] = $name;
         } else {
@@ -376,46 +391,74 @@ class Table extends TWrapper implements Renderable, ReleaseAble
     }
 
     /**
+     * 6.489bu 主动启用默认列冻结：复选框列+主键列（左）、操作列（右）。
+     * 全局配置 table_freeze_columns=0 时，个别页面调用本方法即可恢复默认冻结，
+     * 无需逐个写列名；可与 freezeColumn 混用，unfreezeColumn($name) 剔除的列不注入。
+     * @return $this
+     */
+    public function freezeDefaultColumns()
+    {
+        $this->freezeColsDefault = true;
+        return $this;
+    }
+
+    /**
      * 6.244 撤销某列的冻结（也可在默认注入后用于去掉不想要的默认列）
+     * 6.489bt 参数为空（''或null）时清空全部列冻结：用户显式设置的、默认注入的
+     * （复选框列/主键列/操作列）一并清除，并取消 freezeDefaultColumns() 的默认注入；
+     * 与 freezeColumn 一样，调用后默认注入不再介入。
+     * 6.489bu 非空调用会把该列记入剔除名单，之后 freezeDefaultColumns() 注入默认列时跳过。
      * @param string $name
      * @return $this
      */
-    public function unfreezeColumn($name)
+    public function unfreezeColumn($name = '')
     {
         $this->freezeColsExplicit = true;
-        unset($this->freezeLeftCols[$name], $this->freezeRightCols[$name]);
+        if ($name === '' || $name === null) {
+            $this->freezeLeftCols = [];
+            $this->freezeRightCols = [];
+            $this->unfreezeCols = [];
+            $this->freezeColsDefault = false;
+        } else {
+            unset($this->freezeLeftCols[$name], $this->freezeRightCols[$name]);
+            $this->unfreezeCols[$name] = $name;
+        }
         return $this;
     }
 
     /**
      * 6.244 冻结默认值：所有表格默认 冻结表头 + 左冻结(复选框列、主键列) + 右冻结(操作列)。
      * 仅在未显式配置时注入；未显示的列（无复选框/无操作列/主键列未展示）自动跳过。
+     * 6.489bt 全局开关（config.php，控制器显式调用优先）：
+     * - table_freeze_head=0：表头不冻结、容器不限高，整页滚动（旧库模式）；
+     * - table_freeze_columns=0：不注入默认列冻结，显式 freezeColumn 不受影响。
+     * 6.489bu freezeDefaultColumns() 优先于全局开关（全局关闭时单页恢复默认列冻结）。
      * 在 render() 构建模板变量前调用。
      * @return void
      */
     protected function applyFreezeDefaults()
     {
         if ($this->freezeHead === null) {
-            $this->freezeHead = true;
+            $this->freezeHead = Module::config('table_freeze_head', 1) == 1;
         }
 
-        if ($this->freezeColsExplicit) {
+        if (!$this->freezeColsDefault && ($this->freezeColsExplicit || Module::config('table_freeze_columns', 1) != 1)) {
             return;
         }
 
         // 复选框列：与模板 useCheckbox 变量条件保持一致
-        if ($this->useCheckbox && $this->useToolbar) {
+        if ($this->useCheckbox && $this->useToolbar && !isset($this->unfreezeCols['__check__'])) {
             $this->freezeLeftCols['__check__'] = '__check__';
         }
 
         // 主键列：仅当它作为数据列显示时（列键名等于 pk）
         $pk = isset($this->pk) ? $this->pk : '';
-        if ($pk && isset($this->cols[$pk])) {
+        if ($pk && isset($this->cols[$pk]) && !isset($this->unfreezeCols[$pk])) {
             $this->freezeLeftCols[$pk] = $pk;
         }
 
         // 操作列
-        if ($this->useActionbar) {
+        if ($this->useActionbar && !isset($this->unfreezeCols['__action__'])) {
             $this->freezeRightCols['__action__'] = '__action__';
         }
     }

@@ -993,6 +993,18 @@ td .choice-group > label {
 .table.colw-fixed td .the-field.badge {
   display: inline-flex;
 }
+/*
+   6.489bs 裸词/label-* 徽章在钉定表里同样恢复胶囊（6.489x 只豁免了 .badge）：
+   宽表首次加载即被 colwQuantizeIfOverflow 自动量化（用户没拖过列宽也会挂
+   colw-fixed），上面的 display:block 会把 mapClass 挂的 success/warning/
+   label-* 照样拉成整列通栏色条（用户截图：支付信息列整列色块）。胶囊外观
+   恢复，超宽部分仍由 td 裁剪（与任意内联内容同待遇）
+ */
+.table.colw-fixed td .the-field:is(.success, .danger, .error, .warning, .info, .default, .primary, .secondary, .dark, .purple, .pink, .cyan, .yellow,
+  .label-success, .label-danger, .label-error, .label-warning, .label-info, .label-primary, .label-secondary, .label-default,
+  .label-purple, .label-pink, .label-cyan, .label-yellow, .label-brown) {
+  display: inline-flex;
+}
 html.colw-resizing,
 html.colw-resizing * {
   cursor: col-resize !important;

@@ -549,10 +549,12 @@
 }
 
 /* 只读下清空 ×、pills 删除 × 均无意义，藏掉（pills 本体保留）。
-   第三条镜像 368 行的归一规则（特异性 (0,5,1)），否则多选 clear × 藏不掉 */
-.ts-wrapper.ts-readonly .clear-button,
-.ts-wrapper .ts-control > .clear-button,
-.ts-wrapper.multi .ts-control > div.clear-button,
+   6.489bv：必须整体限定 .ts-readonly——原先第二、三条选择器漏写只读前缀，
+   把普通 select 的 ×（含单选/多选）也永久 display:none（vendor 只靠 opacity
+   切显隐，用户反馈「清除 × 不见了」）。特异性仍要高于 368 行归一规则：
+   > .clear-button (0,4,0) 压 (0,3,0)，.multi > div.clear-button (0,5,1) 压 (0,4,1) */
+.ts-wrapper.ts-readonly .ts-control > .clear-button,
+.ts-wrapper.ts-readonly.multi .ts-control > div.clear-button,
 .ts-wrapper.ts-readonly .ts-control .item .remove {
   display: none !important;
 }

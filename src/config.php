@@ -27,6 +27,8 @@ return [
     //
     // '__hr__' => '地图api，按需配置',
     'table_empty_text' => '<div class="text-center"><img src="/assets/tpextdaisyui/images/empty.png" /><p>暂无相关数据~</p></div>',
+    'table_freeze_head' => 1,
+    'table_freeze_columns' => 1,
     'export_only_choosed_columns' => 1,
     'amap_js_key' => '//webapi.amap.com/maps?v=1.4.15&key=您申请的key&jscode=你的jscode',
     'baidu_map_js_key' => '//api.map.baidu.com/api?v=3.0&ak=您的密钥',
@@ -53,6 +55,8 @@ return [
         $form->right(8)->with(function () use ($form) {
             $form->textarea('allow_suffix', '允许上传的文件后缀')->help('以英文,号分割');
             $form->textarea('table_empty_text', '列表无数据显示')->help('支持html');
+            $form->radio('table_freeze_head', '表格内部上下滚动')->options([1 => '是', 0 => '否'])->help('开启后表格按视口限高、表头固定，滚动发生在表格内部；关闭后表格不限高、表头不固定，改为整页滚动（旧库模式）。控制器中显式调用 freezeHeader() 时以调用为准');
+            $form->radio('table_freeze_columns', '默认列冻结')->options([1 => '是', 0 => '否'])->help('开启后默认冻结复选框列、主键列（左）和操作列（右）；关闭后不注入任何默认列。个别页面需要默认冻结时可调用 $table->freezeDefaultColumns()，也可用 freezeColumn() 指定固定列');
             $form->radio('export_only_choosed_columns', '只导出已选列')->options([1 => '是', 0 => '否'])->help('全局设置，只导出用户前端页面选择的列，也可在控制器中`$this->exportOnlyChoosedColumns=true|false`单独控制');
             $form->text('amap_js_key', '高德地图js')->help('[高德]自2021年12月02日升级之后所申请的`key`必须配备安全密钥`jscode`一起使用。两个参数按`&key=你的key&jscode=你的jscode`');
             $form->text('baidu_map_js_key', '百度地图js');
