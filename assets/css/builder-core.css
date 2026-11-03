@@ -190,12 +190,24 @@ a {
    line-height 20px，height 撑到 42）。
    6.447 表头单独压到最小 36px（用户反馈）。table-cell 的 height 表现为
    「最小高」，多行内容 / 内嵌组件（按钮组、textarea 等）会自动撑开，不受影响。
+   6.489by form items 单元格单独降为 36px（用户反馈 42 太高，见下方规则）。
    */
 .table :where(td) {
   height: 42px;
 }
 
 .table :where(th) {
+  height: 36px;
+}
+
+/*
+   6.489by form items 单元格最小高度 36px（用户反馈 42 太高）：
+   items 表带 table 类，默认吃上面数据行的 42px；items 是紧凑录入网格，
+   行高与表头 36px 一档。选择器 (0,2,1) 压过 .table :where(td) 的 (0,1,1)，
+   只作用于表单内 items，不影响主数据表。table-cell 的 height 是「最小高」，
+   内容更高（控件 28 + 上下 padding）时照旧撑开，与 42px 规则同语义。
+   */
+.form-wrapper table.form-items :where(td) {
   height: 36px;
 }
 
@@ -967,15 +979,19 @@ textarea.textarea {
 }
 
 /*
-   6.489aa 选中页签加粗：600 只挂 radio 页签（表单水平/垂直同族）——激活规则
-   是与 a.tab 共用的，直接写进去会连带表格 tabLink；checked:hover 单列一条
-   （与上面 hover 钉色同思路）：hover 时 font-weight 与静止态零变化，避免
-   加粗/复原的字宽抖动。600 与 400 的字宽差会让激活页签略宽于静止态，
-   相邻页签位置随之微移——加粗的常规代价，用户明确要求
+   6.489aa 选中页签加粗：只挂 radio 页签（表单水平/垂直同族）——激活规则
+   是与 a.tab 共用的，直接写进去会连带表格 tabLink；checked:hover 单列一条：
+   hover 时字重与静止态零变化，避免加粗/复原的字宽抖动。
+   —— 6.489bz 用户反馈 600 会增加文字宽度，切换页签时相邻标签水平位移：
+   标签是内容宽，600 与 400 的字形步进不同，任何真加粗都必然重排。改用
+   -webkit-text-stroke 描边加粗——只扩字形轮廓、不改前进宽度，零位移；
+   0.4px 与 600 观感最接近（0.3 偏细，text-shadow 发虚）。描边色用
+   currentColor 跟随激活字色；描边为继承属性，radio 的 aria-label 伪元素
+   一并生效
    */
 .tabs > input.tab:checked,
 .tabs > input.tab:checked:hover {
-  font-weight: 600;
+  -webkit-text-stroke: 0.4px currentColor;
 }
 
 /* hover：完全无边框，只有文字加深（残留的浅边框痕迹用户不要） */
