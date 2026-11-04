@@ -7,7 +7,7 @@ use tpext\common\Module as baseModule;
 
 class DaisyUI extends baseModule
 {
-    protected $version = '1.2.0';
+    protected $version = '1.2.1';
 
     protected $name = 'tpext.daisyui';
 

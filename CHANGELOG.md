@@ -112,3 +112,10 @@
 1.0.43 → 1.0.44（6.489bl 去掉两族 line-height:1：生产字体度量下
  行盒=字号挤压字形，垂直居中交由 flex+定高，行高回落上下文/
  daisyUI 原生值）
+1.0.44 → 1.0.45（6.489ca SelectTree 下拉面板不能滚动：overflow:hidden
+ 覆盖 vendor 的 max-height:300px+overflow-y:auto，改 overflow-x:hidden/
+ overflow-y:auto，此前写死的 6px 细滚动条美化随之复活；6.489cb/cc 左树
+ 展开与选中彻底分离——行首箭头独立 toggleClick（stopPropagation，只展开/
+ 收起），参考线伪元素上探 -13px 恰命中箭头中心导致点箭头选中子行，改
+ .tree-widget .tline pointer-events:none；点文字只选中不再切换展开，
+ x-data 第 5 参交回 PHP expandNodeOnclick（默认 false）；扩展版本 1.2.0 → 1.2.1）

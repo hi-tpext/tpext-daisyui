@@ -12,7 +12,7 @@
  *   expandNodeOnclick 点击父节点自动展开
  */}
 <div class="tree-div"
-     x-data='treeWidget("{$id}", {$data|raw}, {$expandAll|raw}, "{$trigger}", true)'>
+     x-data='treeWidget("{$id}", {$data|raw}, {$expandAll|raw}, "{$trigger}", {$expandNodeOnclick ? 'true' : 'false'})'>
     <button type="button" class="hide-left" title="{:__blang('builder_action_close_left_tree')}">
         <i class="mdi mdi-format-horizontal-align-left"></i>
     </button>
@@ -22,18 +22,20 @@
              支持任意层级。样式见 builder-core-layout.css 的「左侧树参考线」段。
              与旧模板的差异：不再有 x-collapse 展开动画（行是兄弟节点，无折叠容器），
              展开/收起即时生效。
-             6.385 tree 命令式形态：行点击 = 选中 + 有子级时展开/收起（x-data 第 5 参强制 true），
-             展开态由子行可见性表达，形态即 tree 命令输出。
+             6.385 tree 命令式形态：行点击 = 选中（x-data 第 5 参改为传 PHP 的
+             expandNodeOnclick，默认 false；6.489cc 起行点击不再强制展开）。
              6.403 行首恢复三角箭头（用户：箭头和 tree 命令结构不冲突）：父行 ▾（展开）/▸（收起）
              随 flatNodes 的 open 响应式翻转，叶子空占位保住文字列对齐（6.384 同款）；
-             标记无独立点击处理，冒泡到行走 select() 的选中+展开逻辑 */}
+             6.489cb 箭头独立点击：toggleClick 内 stopPropagation，只切换展开态，
+             不选中/不联动表单；叶子空占位不拦截，点行仍走 select()
+             6.489cc 选中与展开完全分离：点文字只选中，不再切换展开/收起 */}
         <template x-for="item in flatNodes" :key="item.id">
             <li>
                 <div class="flex items-center gap-1 cursor-pointer hover:bg-base-200 rounded px-1"
                      :class="{ 'tree-node-selected': selected && selected.id === item.id }"
                      @click="select(item.node)">
                     <span class="tline" x-show="item.guides || item.elbow"><template x-for="g in item.guides" :key="g"><i class="tline-guide"></i></template><i class="tline-elbow" :class="{ 'tline-elbow-last': item.last }"></i></span>
-                    <span class="tree-marker" x-text="item.hasChildren ? (item.open ? '▾' : '▸') : ''"></span>
+                    <span class="tree-marker" @click="toggleClick(item, $event)" x-text="item.hasChildren ? (item.open ? '▾' : '▸') : ''"></span>
                     <span x-text="item.text"
                           :title="item.text"
                           :class="{ 'font-semibold': selected && selected.id === item.id }"></span>

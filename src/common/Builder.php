@@ -127,7 +127,7 @@ class Builder implements Renderable, ReleaseAble
 
     protected static $minify = false;
 	
-    protected static $aver = '1.0.44';
+    protected static $aver = '1.0.45';
 
     protected static $instance = null;
 

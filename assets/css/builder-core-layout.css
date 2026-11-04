@@ -2681,6 +2681,16 @@ td.row-__action__ {
 }
 
 /*
+   6.489cb 左侧树参考线不参与命中：竖线 ::before 上探 -13px 到上一行箭头中心，
+   x=32 恰与三角箭头中心同列，可命中——点箭头实际落到下一行的 <i> 上，
+   触发的是子行 select()（实测点「白菜」箭头选中了「小白菜」）。
+   装饰线统一 pointer-events:none，让事件落到箭头/行本身；表格树不在此列。
+   */
+.tree-widget .tline {
+  pointer-events: none;
+}
+
+/*
    -13px 连接父行中心、下探 -6px 与下一行衔接；elbow-last（└）竖线 -13px 起
    止于 50%。行首标记字符由模板的 ↓/→/* span 承担（见 tree.html）
    */

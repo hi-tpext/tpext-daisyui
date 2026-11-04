@@ -188,7 +188,12 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08) !important;
   margin-top: 4px !important;
   padding: 0 !important;
-  overflow: hidden !important;
+  /* 6.489ca 只能是纵向 auto：此处曾是 overflow:hidden（早期为裁圆角），
+     把 vendor 的 max-height:300px + overflow-y:auto 覆盖成不可滚动，
+     选项超过 300px 时底部被截断且滚轮无效（Testselecttree 20 项复现，
+     scrollHeight 610/clientHeight 298 却 overflow:hidden）。圆角 2px 不需要裁切。 */
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
   z-index: 900 !important;
   font-size: 0.875rem !important;
 }

@@ -378,6 +378,16 @@
                     }
                 },
 
+                // 6.489cb 行首箭头独立处理器：只展开/收起，不选中、不联动搜索、不触发 onClick。
+                // 叶子行的空占位不拦截（点它等同点行，维持「点行即选中」原行为）。
+                toggleClick(item, event) {
+                    if (!item.hasChildren) {
+                        return;
+                    }
+                    event.stopPropagation();
+                    this.toggle(item.node);
+                },
+
                 select(node) {
                     this.selected = node;
 
