@@ -276,7 +276,7 @@ trait HasIndex
             return $data;
         }
 
-        $total = $this->dataModel->where($where)->count();
+        $total = $this->dataModel->where($where)->where($this->dateScope)->count();
         if ($total == 0) {
             return $data;
         }
@@ -300,13 +300,16 @@ trait HasIndex
         if ($this->isExporting) { //如果是导出
             $data = $this->dataModel->with($this->indexWith)
                 ->where($where)
+                ->where($this->dateScope)
                 ->order($sortOrder)
                 ->field($this->indexFieldsOnly)
                 ->withoutField($this->indexFieldsExcept)
                 ->cursor(); //select和cursor均可，最好是返回cursor
         } else {
             $data = $this->dataModel->with($this->indexWith)
-                ->where($where)->order($sortOrder)
+                ->where($where)
+                ->where($this->dateScope)
+                ->order($sortOrder)
                 ->limit(($page - 1) * $this->pagesize, $this->pagesize)
                 ->field($this->indexFieldsOnly)
                 ->withoutField($this->indexFieldsExcept)

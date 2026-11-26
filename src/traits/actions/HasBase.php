@@ -37,6 +37,7 @@ trait HasBase
     protected $viewText = ''; //查看
     protected $enableField = 'enable';
     protected $pk = 'id';
+    protected $dateScope = []; //如 [['store_id', '=', 1]],限制 index/edit/autopost/view/delete 的数据范围
 
     /**
      * 表单是否为编辑模式
@@ -104,7 +105,7 @@ trait HasBase
         $res = 0;
 
         if ($id) {
-            $exists = $this->dataModel->where([$this->getPk() => $id])->find();
+            $exists = $this->dataModel->where([$this->getPk() => $id])->where($this->dateScope)->find();
             if ($exists) {
                 $res = $exists->force()->save($data);
             }
@@ -196,6 +197,7 @@ trait HasBase
         $this->viewText = '';
         $this->enableField = 'enable';
         $this->pk = 'id';
+        $this->dateScope = [];
         $this->isEdit = false;
 
         if (isset($this->table)) {

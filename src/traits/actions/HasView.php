@@ -28,7 +28,7 @@ trait HasView
 
             $builder = $this->builder($this->pageTitle, $this->viewText ?: __blang('builder_page_view_text'), 'view');
 
-            $data = $this->dataModel->field(true)->where($this->getPk(), $id)->find();
+            $data = $this->dataModel->field(true)->where($this->getPk(), $id)->where($this->dateScope)->find();
             if (!$data) {
                 return $builder->layer()->close(0, __blang('builder_data_not_found'));
             }

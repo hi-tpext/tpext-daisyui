@@ -40,7 +40,7 @@ trait HasAutopost
         }
 
         //单独修改一个字段，好多字段是未设置的，处理模型事件容易出错。不触发模型事件，不触发[update_time]修改
-        $res = $this->dataModel->where($this->getPk(), $id)->update([$name => $value]);
+        $res = $this->dataModel->where($this->getPk(), $id)->where($this->dateScope)->update([$name => $value]);
 
         if ($res) {
             $this->success(__blang('builder_update_succeeded'));
