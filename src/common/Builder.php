@@ -126,7 +126,7 @@ class Builder implements Renderable, ReleaseAble
     protected static $auth;
 
     protected static $minify = false;
-	
+
     protected static $aver = '1.0.45';
 
     protected static $instance = null;
@@ -785,6 +785,12 @@ class Builder implements Renderable, ReleaseAble
      */
     public static function minify($val)
     {
+        if (is_null(self::$isWebmanContext)) {
+            self::$isWebmanContext = class_exists(Context::class);
+        }
+        if (self::$isWebmanContext) {
+            Context::set(static::class . '::minify', $val);
+        }
         static::$minify = $val;
     }
 
@@ -795,10 +801,10 @@ class Builder implements Renderable, ReleaseAble
      */
     public static function isMinify()
     {
-		if (self::$isWebmanContext) {
+        if (self::$isWebmanContext) {
             return Context::get(static::class . '::minify');
         }
-		
+
         return static::$minify;
     }
 
@@ -984,5 +990,3 @@ class Builder implements Renderable, ReleaseAble
         $this->__destroyed__ = true;
     }
 }
-
-
